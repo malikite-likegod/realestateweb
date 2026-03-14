@@ -64,10 +64,10 @@ export function Footer() {
         {/* Contact strip */}
         <div className="border-t border-charcoal-800 py-6 flex flex-wrap items-center justify-between gap-4 text-sm text-charcoal-500">
           <div className="flex flex-wrap gap-6">
-            <a href="tel:+16471234567" className="flex items-center gap-2 hover:text-white transition-colors">
+            <a href="tel:+14168888352" className="flex items-center gap-2 hover:text-white transition-colors">
               <Phone size={14} /> (416) 888-8352
             </a>
-            <a href="mailto:hello@luxerealty.ca" className="flex items-center gap-2 hover:text-white transition-colors">
+            <a href="mailto:miketaylor.realty@gmail.com" className="flex items-center gap-2 hover:text-white transition-colors">
               <Mail size={14} /> miketaylor.realty@gmail.com
             </a>
             <span className="flex items-center gap-2">

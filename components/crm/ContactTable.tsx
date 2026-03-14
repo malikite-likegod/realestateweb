@@ -43,7 +43,20 @@ export function ContactTable({ contacts }: ContactTableProps) {
                   {c.status.replace('_', ' ')}
                 </Badge>
               </td>
-              <td className="px-4 py-3 text-charcoal-700 font-medium">{c.leadScore}</td>
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 rounded-full bg-charcoal-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        c.leadScore >= 75 ? 'bg-green-500' :
+                        c.leadScore >= 40 ? 'bg-gold-500' : 'bg-charcoal-300'
+                      }`}
+                      style={{ width: `${Math.min(c.leadScore, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-charcoal-600 font-medium tabular-nums">{c.leadScore}</span>
+                </div>
+              </td>
               <td className="px-4 py-3 text-charcoal-400 text-xs">{formatDate(c.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
             </tr>
           ))}

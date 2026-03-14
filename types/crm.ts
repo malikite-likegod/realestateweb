@@ -24,10 +24,13 @@ export type DealWithDetails = {
   title: string
   value: number | null
   stage: { id: string; name: string; color: string }
+  assignee: { id: string; name: string; avatarUrl: string | null } | null
   participants: Array<{ contact: { firstName: string; lastName: string } }>
   expectedClose: Date | null
   probability: number
+  notes: string | null
   createdAt: Date
+  updatedAt: Date
 }
 
 export type PipelineColumn = {

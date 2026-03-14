@@ -73,7 +73,7 @@ export default async function HomePage() {
           <SearchBar variant="hero" />
         </div>
         <div className="mt-6 flex justify-center gap-8 text-white/70 text-sm">
-          <span>🏠 100+ Transations</span>
+          <span>🏠 100+ Transactions</span>
           <span>⭐ 4.9/5 Rating</span>
           <span>🏆 19+ Years of Experience</span>
         </div>
@@ -109,7 +109,7 @@ export default async function HomePage() {
             title="First Time Home Buyer & Upsizer Real Estate Specialist"
             phone="(416) 888-8352"
             email="miketaylor.realty@gmail.com"
-            bio="With over 19 years of experience in The Greater Toronto Area's real estate market, Alexandra has built a reputation for exceptional results and unparalleled client service. He has deep market knowledge and strategic approach consistently deliver above-market outcomes for his clients."
+            bio="With over 19 years of experience in The Greater Toronto Area's real estate market, Michael has built a reputation for exceptional results and unparalleled client service. His deep market knowledge and strategic approach consistently deliver above-market outcomes for his clients."
             photo="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80"
             stats={[
               { value: '100+', label: 'Transactions' },

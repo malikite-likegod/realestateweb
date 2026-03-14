@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { sendWebhook } from '@/services/ai/webhooks'
+import { enqueueJob } from '@/lib/automation/job-queue'
 
 const createContactSchema = z.object({
   firstName:  z.string().optional(),
@@ -77,8 +78,9 @@ export async function POST(request: Request) {
       })
     }
 
-    // Webhook
+    // Webhook + automation rules
     await sendWebhook('new_lead', { contactId: contact.id, source: parsed.source })
+    await enqueueJob('evaluate_rules', { trigger: 'new_lead', contactId: contact.id })
 
     return NextResponse.json({ data: contact }, { status: 201 })
   } catch (error) {

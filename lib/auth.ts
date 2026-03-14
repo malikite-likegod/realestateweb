@@ -42,7 +42,6 @@ export async function requireSession() {
 }
 
 export async function validateApiKey(key: string) {
-  const bcryptHash = await bcrypt.hash(key, 1) // quick rough match
   // We store a hash; compare prefix first for performance
   const prefix = key.slice(0, 8)
   const apiKey = await prisma.apiKey.findFirst({

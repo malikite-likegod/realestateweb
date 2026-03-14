@@ -2,19 +2,29 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
-import { ContactTable } from '@/components/crm'
+import { ContactTable, ContactFilters } from '@/components/crm'
 import { Button } from '@/components/ui'
 import type { ContactWithTags } from '@/types'
 import Link from 'next/link'
 import { UserPlus, Upload } from 'lucide-react'
+import { Suspense } from 'react'
 
-export default async function ContactsPage() {
+interface Props {
+  searchParams: Promise<{ status?: string }>
+}
+
+export default async function ContactsPage({ searchParams }: Props) {
   const session = await getSession()
   if (!session) return null
 
+  const { status } = await searchParams
+
+  const where = status ? { status } : undefined
+
   const contacts = await prisma.contact.findMany({
+    where,
     orderBy: { createdAt: 'desc' },
-    take: 50,
+    take: 100,
     include: { tags: { include: { tag: true } } },
   }) as ContactWithTags[]
 
@@ -22,7 +32,7 @@ export default async function ContactsPage() {
     <DashboardLayout user={session}>
       <PageHeader
         title="Contacts"
-        subtitle={`${contacts.length} contacts`}
+        subtitle={`${contacts.length}${status ? ` ${status.replace('_', ' ')}` : ''} contacts`}
         breadcrumbs={[{ label: 'Dashboard', href: '/admin/dashboard' }, { label: 'Contacts' }]}
         actions={
           <div className="flex gap-2">
@@ -35,6 +45,9 @@ export default async function ContactsPage() {
           </div>
         }
       />
+      <Suspense>
+        <ContactFilters />
+      </Suspense>
       <ContactTable contacts={contacts} />
     </DashboardLayout>
   )

@@ -22,12 +22,17 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  apiKeys      ApiKey[]
-  aiJobs       AiJob[]
-  tasks        Task[]   @relation("AssignedTasks")
-  createdTasks Task[]   @relation("CreatedTasks")
-  activities   Activity[]
-  notes        Note[]
+  apiKeys           ApiKey[]
+  aiJobs            AiJob[]
+  tasks             Task[]             @relation("AssignedTasks")
+  createdTasks      Task[]             @relation("CreatedTasks")
+  activities        Activity[]
+  notes             Note[]
+  callLogs          CallLog[]
+  smsMessages       SmsMessage[]
+  emailMessages     EmailMessage[]
+  assignedDeals     Deal[]             @relation("AssignedDeals")
+  stageHistoryMoves DealStageHistory[] @relation("StageHistoryMover")
 
   @@map("users")
 }
@@ -80,6 +85,10 @@ model Contact {
   relatedTo         ContactRelationship[] @relation("ContactB")
   behaviorEvents    BehaviorEvent[]
   leadScoreHistory  LeadScore[]
+  callLogs          CallLog[]
+  smsMessages       SmsMessage[]
+  emailMessages     EmailMessage[]
+  campaignEnrollments CampaignEnrollment[]
 
   @@map("contacts")
 }
@@ -124,32 +133,53 @@ model Stage {
   color      String   @default("#6366f1")
   isDefault  Boolean  @default(false)
   deals      Deal[]
+  history    DealStageHistory[]
 
   @@map("stages")
 }
 
 model Deal {
-  id           String    @id @default(cuid())
-  title        String
-  value        Float?
-  currency     String    @default("CAD")
-  stageId      String
-  stage        Stage     @relation(fields: [stageId], references: [id])
-  closedAt     DateTime?
+  id            String    @id @default(cuid())
+  title         String
+  value         Float?
+  currency      String    @default("CAD")
+  stageId       String
+  stage         Stage     @relation(fields: [stageId], references: [id])
+  assigneeId    String?                         // agent responsible for this deal
+  assignee      User?     @relation("AssignedDeals", fields: [assigneeId], references: [id])
+  closedAt      DateTime?
   expectedClose DateTime?
-  probability  Int       @default(50)
-  propertyId   String?
-  property     Property? @relation(fields: [propertyId], references: [id])
-  notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  probability   Int       @default(50)
+  propertyId    String?
+  property      Property? @relation(fields: [propertyId], references: [id])
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  participants DealParticipant[]
-  activities   Activity[]
-  tasks        Task[]
-  showings     Showing[]
+  participants  DealParticipant[]
+  activities    Activity[]
+  tasks         Task[]
+  showings      Showing[]
+  stageHistory  DealStageHistory[]
 
   @@map("deals")
+}
+
+// DealStageHistory: immutable log of every stage a deal has passed through.
+// enteredAt is set when the deal moves into the stage; exitedAt when it leaves.
+// Used to calculate time-in-stage and conversion metrics.
+model DealStageHistory {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  stageId   String
+  stage     Stage    @relation(fields: [stageId], references: [id])
+  enteredAt DateTime @default(now())
+  exitedAt  DateTime?
+  movedById String?
+  movedBy   User?    @relation("StageHistoryMover", fields: [movedById], references: [id])
+
+  @@map("deal_stage_history")
 }
 
 model DealParticipant {
@@ -398,9 +428,11 @@ model LeadMagnet {
 model AutomationSequence {
   id          String   @id @default(cuid())
   name        String
+  description String?
   trigger     String   // new_lead | deal_stage_change | showing_scheduled | manual
   isActive    Boolean  @default(true)
   steps       AutomationStep[]
+  enrollments CampaignEnrollment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -413,11 +445,186 @@ model AutomationStep {
   sequence     AutomationSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
   order        Int
   type         String             // send_email | send_sms | create_task | wait | update_lead_score
-  config       String             // JSON
+  config       String             // JSON: { subject, body, templateId, taskTitle, priority, scoreDelta }
   delayMinutes Int                @default(0)
   createdAt    DateTime           @default(now())
 
+  executions   CampaignStepExecution[]
+
   @@map("automation_steps")
+}
+
+// CampaignEnrollment: tracks a contact's position inside an AutomationSequence.
+// nextRunAt drives when the background processor should advance to the next step.
+model CampaignEnrollment {
+  id          String             @id @default(cuid())
+  sequenceId  String
+  sequence    AutomationSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  contactId   String
+  contact     Contact            @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  status      String             @default("active") // active | paused | completed | cancelled
+  currentStep Int                @default(0)        // index of next step to execute
+  nextRunAt   DateTime?                             // when to process next step
+  enrolledAt  DateTime           @default(now())
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  executions  CampaignStepExecution[]
+
+  @@unique([sequenceId, contactId])               // one active enrollment per campaign per contact
+  @@map("campaign_enrollments")
+}
+
+// CampaignStepExecution: immutable audit log for every step that ran.
+model CampaignStepExecution {
+  id           String             @id @default(cuid())
+  enrollmentId String
+  enrollment   CampaignEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  stepId       String
+  step         AutomationStep     @relation(fields: [stepId], references: [id])
+  status       String             @default("pending") // pending | completed | failed | skipped
+  result       String?            // JSON summary of what happened
+  ranAt        DateTime?
+  createdAt    DateTime           @default(now())
+
+  @@map("campaign_step_executions")
+}
+
+// AutomationRule: event-triggered rules that fire one-time actions.
+// Unlike sequences (ongoing drips), rules react immediately to a single trigger.
+// conditions and actions are stored as JSON arrays.
+//
+// Example conditions: [{ "field": "leadScore", "op": "gte", "value": 70 }]
+// Example actions:    [{ "type": "assign_task", "title": "Call hot lead", "priority": "high" }]
+model AutomationRule {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  trigger     String    // new_lead | deal_stage_changed | lead_inactive | listing_viewed | manual
+  conditions  String?   // JSON array of condition objects
+  actions     String    // JSON array of action objects
+  isActive    Boolean   @default(true)
+  runCount    Int       @default(0)
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("automation_rules")
+}
+
+// JobQueue: database-backed background job queue.
+// The processor at /api/automation/process picks up pending jobs whose
+// runAt <= now() and executes them, respecting maxAttempts on failure.
+model JobQueue {
+  id          String    @id @default(cuid())
+  type        String    // send_email_job | send_sms_job | execute_campaign_step | evaluate_rules
+  payload     String    // JSON with all data the handler needs
+  status      String    @default("pending") // pending | running | completed | failed
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  runAt       DateTime  @default(now())    // earliest time to execute
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAt])
+  @@map("job_queue")
+}
+
+// ─── Communications ───────────────────────────────────────────────────────────
+// CallLog: stores manually-logged and provider-recorded calls per contact.
+// Twilio integration fields (twilioCallSid, recordingUrl, transcription) are
+// populated automatically when the Twilio provider is configured.
+
+model CallLog {
+  id             String   @id @default(cuid())
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  direction      String   @default("outbound") // inbound | outbound
+  status         String   @default("completed") // completed | missed | voicemail | failed
+  durationSec    Int?
+  notes          String?
+  recordingUrl   String?  // optional link to stored recording
+  transcription  String?  // AI or provider transcription text
+  fromNumber     String?
+  toNumber       String?
+  twilioCallSid  String?  // Twilio Call SID; null until provider is connected
+  loggedById     String?
+  loggedBy       User?    @relation(fields: [loggedById], references: [id])
+  occurredAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@map("call_logs")
+}
+
+// SmsMessage: individual SMS/MMS messages in a conversation thread per contact.
+// groupId links messages that belong to the same group-text broadcast.
+model SmsMessage {
+  id          String   @id @default(cuid())
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  direction   String   @default("outbound") // inbound | outbound
+  status      String   @default("sent")     // queued | sent | delivered | failed | received
+  body        String
+  fromNumber  String?
+  toNumber    String?
+  mediaUrls   String?  // JSON array of MMS media attachment URLs
+  groupId     String?  // shared UUID for group-text threads
+  twilioSid   String?  // Twilio Message SID
+  sentById    String?
+  sentBy      User?    @relation(fields: [sentById], references: [id])
+  sentAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("sms_messages")
+}
+
+// EmailMessage: sent and received emails attached to a contact.
+// trackingId enables server-side open/click tracking via a 1×1 pixel endpoint.
+model EmailMessage {
+  id          String         @id @default(cuid())
+  contactId   String?
+  contact     Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  direction   String         @default("outbound") // inbound | outbound
+  status      String         @default("sent") // draft | sent | delivered | bounced | failed
+  subject     String
+  body        String         // HTML content
+  fromEmail   String?
+  toEmail     String?
+  ccEmails    String?        // JSON array of CC addresses
+  templateId  String?
+  template    EmailTemplate? @relation(fields: [templateId], references: [id])
+  openedAt    DateTime?      // timestamp of first open
+  clickedAt   DateTime?      // timestamp of first tracked click
+  openCount   Int            @default(0)
+  clickCount  Int            @default(0)
+  trackingId  String?        @unique // random token for pixel tracking
+  sentById    String?
+  sentBy      User?          @relation(fields: [sentById], references: [id])
+  sentAt      DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+
+  @@map("email_messages")
+}
+
+// EmailTemplate: reusable HTML templates with {{variable}} placeholders.
+// Used by the email composer and drip campaign steps.
+model EmailTemplate {
+  id        String         @id @default(cuid())
+  name      String
+  subject   String
+  body      String         // HTML with {{firstName}}, {{agentName}}, etc.
+  category  String?        // follow_up | listing | newsletter | custom
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  emails    EmailMessage[]
+
+  @@map("email_templates")
 }
 
 // ─── Analytics / Tracking ─────────────────────────────────────────────────────

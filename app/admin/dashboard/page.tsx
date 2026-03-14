@@ -1,8 +1,15 @@
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getPipelineReport } from '@/lib/pipeline/pipeline-service'
 import { DashboardLayout } from '@/components/dashboard'
 import { StatsCard } from '@/components/analytics'
-import { RecentLeadsWidget, TasksWidget, RecentActivitiesWidget } from '@/components/dashboard'
+import {
+  RecentLeadsWidget,
+  TasksWidget,
+  RecentActivitiesWidget,
+  CommunicationsWidget,
+  PipelineSummaryWidget,
+} from '@/components/dashboard'
 import { Users, Briefcase, Building2, CheckSquare } from 'lucide-react'
 import type { ContactWithTags } from '@/types'
 import type { ActivityFeedItem } from '@/types'
@@ -11,7 +18,19 @@ export default async function DashboardPage() {
   const session = await getSession()
   if (!session) return null
 
-  const [contactCount, dealCount, listingCount, taskCount, recentContacts, recentTasks, recentActivities] = await Promise.all([
+  const [
+    contactCount,
+    dealCount,
+    listingCount,
+    taskCount,
+    recentContacts,
+    recentTasks,
+    recentActivities,
+    pipelineReport,
+    inboundSms,
+    missedCalls,
+    inboundEmails,
+  ] = await Promise.all([
     prisma.contact.count(),
     prisma.deal.count(),
     prisma.property.count({ where: { status: 'active' } }),
@@ -25,39 +44,103 @@ export default async function DashboardPage() {
       where: { status: { not: 'done' } },
       orderBy: [{ dueAt: 'asc' }, { createdAt: 'desc' }],
       take: 5,
-      include: { assignee: { select: { name: true } }, contact: { select: { firstName: true, lastName: true } } },
+      include: {
+        assignee: { select: { name: true } },
+        contact:  { select: { firstName: true, lastName: true } },
+      },
     }),
     prisma.activity.findMany({
       orderBy: { occurredAt: 'desc' },
       take: 10,
-      include: { contact: { select: { firstName: true, lastName: true } }, user: { select: { name: true } } },
+      include: {
+        contact: { select: { firstName: true, lastName: true } },
+        user:    { select: { name: true } },
+      },
+    }),
+    getPipelineReport(),
+    prisma.smsMessage.findMany({
+      where: { direction: 'inbound' },
+      orderBy: { sentAt: 'desc' },
+      take: 5,
+      include: { contact: { select: { id: true, firstName: true, lastName: true } } },
+    }),
+    prisma.callLog.findMany({
+      where: { status: 'missed' },
+      orderBy: { occurredAt: 'desc' },
+      take: 5,
+      include: { contact: { select: { id: true, firstName: true, lastName: true } } },
+    }),
+    prisma.emailMessage.findMany({
+      where: { direction: 'inbound' },
+      orderBy: { sentAt: 'desc' },
+      take: 5,
+      include: { contact: { select: { id: true, firstName: true, lastName: true } } },
     }),
   ])
 
   const leads = recentContacts as ContactWithTags[]
 
   const activities: ActivityFeedItem[] = recentActivities.map(a => ({
-    id: a.id,
-    type: a.type as ActivityFeedItem['type'],
-    subject: a.subject,
-    body: a.body,
-    contact: a.contact,
-    user: a.user,
-    occurredAt: a.occurredAt,
+    id:          a.id,
+    type:        a.type as ActivityFeedItem['type'],
+    subject:     a.subject,
+    body:        a.body,
+    contact:     a.contact,
+    user:        a.user,
+    occurredAt:  a.occurredAt,
   }))
+
+  // Build inbox items sorted newest-first, capped at 8
+  type InboxItem = {
+    id:          string
+    channel:     'sms' | 'call' | 'email'
+    contactName: string
+    contactId:   string | null
+    preview:     string
+    occurredAt:  Date | string
+  }
+
+  const inboxItems: InboxItem[] = [
+    ...inboundSms.map(m => ({
+      id:          m.id,
+      channel:     'sms' as const,
+      contactName: m.contact ? `${m.contact.firstName} ${m.contact.lastName}`.trim() : (m.fromNumber ?? 'Unknown'),
+      contactId:   m.contactId,
+      preview:     m.body.slice(0, 80),
+      occurredAt:  m.sentAt,
+    })),
+    ...missedCalls.map(c => ({
+      id:          c.id,
+      channel:     'call' as const,
+      contactName: c.contact ? `${c.contact.firstName} ${c.contact.lastName}`.trim() : 'Unknown',
+      contactId:   c.contactId,
+      preview:     'Missed call',
+      occurredAt:  c.occurredAt,
+    })),
+    ...inboundEmails.map(e => ({
+      id:          e.id,
+      channel:     'email' as const,
+      contactName: e.contact ? `${e.contact.firstName} ${e.contact.lastName}`.trim() : (e.fromEmail ?? 'Unknown'),
+      contactId:   e.contactId,
+      preview:     e.subject,
+      occurredAt:  e.sentAt,
+    })),
+  ]
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+    .slice(0, 8)
 
   return (
     <DashboardLayout user={session}>
       <div className="flex flex-col gap-6">
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard title="Total Contacts" value={contactCount} icon={<Users size={20} />} change={12} />
-          <StatsCard title="Active Deals" value={dealCount} icon={<Briefcase size={20} />} change={5} />
-          <StatsCard title="Active Listings" value={listingCount} icon={<Building2 size={20} />} change={-2} />
-          <StatsCard title="Open Tasks" value={taskCount} icon={<CheckSquare size={20} />} />
+          <StatsCard title="Total Contacts"  value={contactCount}  icon={<Users      size={20} />} change={12} />
+          <StatsCard title="Active Deals"    value={dealCount}     icon={<Briefcase  size={20} />} change={5}  />
+          <StatsCard title="Active Listings" value={listingCount}  icon={<Building2  size={20} />} change={-2} />
+          <StatsCard title="Open Tasks"      value={taskCount}     icon={<CheckSquare size={20} />} />
         </div>
 
-        {/* Widgets */}
+        {/* Top row widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <RecentLeadsWidget leads={leads} />
@@ -68,6 +151,12 @@ export default async function DashboardPage() {
           <div className="lg:col-span-1">
             <RecentActivitiesWidget activities={activities} />
           </div>
+        </div>
+
+        {/* Bottom row widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CommunicationsWidget items={inboxItems} />
+          <PipelineSummaryWidget report={pipelineReport} />
         </div>
       </div>
     </DashboardLayout>
