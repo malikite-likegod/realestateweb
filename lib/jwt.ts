@@ -1,0 +1,24 @@
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
+
+const secret = new TextEncoder().encode(
+  process.env.JWT_SECRET ?? 'fallback_dev_secret_change_in_production'
+)
+
+const EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d'
+
+export async function signJwt(payload: JWTPayload): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(EXPIRES_IN)
+    .sign(secret)
+}
+
+export async function verifyJwt(token: string): Promise<JWTPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret)
+    return payload
+  } catch {
+    return null
+  }
+}

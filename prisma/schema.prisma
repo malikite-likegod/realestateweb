@@ -1,0 +1,516 @@
+// Prisma schema — dual SQLite (dev) / MySQL (prod)
+// Switch via DATABASE_URL + provider env var
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // "sqlite" | "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("admin") // admin | agent | viewer
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  apiKeys      ApiKey[]
+  aiJobs       AiJob[]
+  tasks        Task[]   @relation("AssignedTasks")
+  createdTasks Task[]   @relation("CreatedTasks")
+  activities   Activity[]
+  notes        Note[]
+
+  @@map("users")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique
+  prefix      String    // first 8 chars for display
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("api_keys")
+}
+
+// ─── Contacts / CRM ───────────────────────────────────────────────────────────
+
+model Contact {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String?  @unique
+  phone        String?
+  company      String?
+  jobTitle     String?
+  avatarUrl    String?
+  source       String?  // web, referral, idx, manual
+  status       String   @default("lead") // lead | prospect | client | past_client
+  leadScore    Int      @default(0)
+  birthday     DateTime?
+  notes        String?
+  address      String?
+  city         String?
+  province     String?
+  postalCode   String?
+  country      String   @default("CA")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tags              ContactTag[]
+  deals             DealParticipant[]
+  activities        Activity[]
+  tasks             Task[]
+  showings          Showing[]
+  notesList         Note[]
+  relationships     ContactRelationship[] @relation("ContactA")
+  relatedTo         ContactRelationship[] @relation("ContactB")
+  behaviorEvents    BehaviorEvent[]
+  leadScoreHistory  LeadScore[]
+
+  @@map("contacts")
+}
+
+model Tag {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  color     String       @default("#6366f1")
+  contacts  ContactTag[]
+
+  @@map("tags")
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([contactId, tagId])
+  @@map("contact_tags")
+}
+
+model ContactRelationship {
+  id         String  @id @default(cuid())
+  contactAId String
+  contactBId String
+  type       String  // spouse, partner, colleague, referral
+  contactA   Contact @relation("ContactA", fields: [contactAId], references: [id])
+  contactB   Contact @relation("ContactB", fields: [contactBId], references: [id])
+
+  @@map("contact_relationships")
+}
+
+// ─── Deals / Pipeline ─────────────────────────────────────────────────────────
+
+model Stage {
+  id         String   @id @default(cuid())
+  name       String
+  order      Int
+  color      String   @default("#6366f1")
+  isDefault  Boolean  @default(false)
+  deals      Deal[]
+
+  @@map("stages")
+}
+
+model Deal {
+  id           String    @id @default(cuid())
+  title        String
+  value        Float?
+  currency     String    @default("CAD")
+  stageId      String
+  stage        Stage     @relation(fields: [stageId], references: [id])
+  closedAt     DateTime?
+  expectedClose DateTime?
+  probability  Int       @default(50)
+  propertyId   String?
+  property     Property? @relation(fields: [propertyId], references: [id])
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  participants DealParticipant[]
+  activities   Activity[]
+  tasks        Task[]
+  showings     Showing[]
+
+  @@map("deals")
+}
+
+model DealParticipant {
+  dealId    String
+  contactId String
+  role      String   @default("buyer") // buyer | seller | agent | lawyer
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  addedAt   DateTime @default(now())
+
+  @@id([dealId, contactId])
+  @@map("deal_participants")
+}
+
+// ─── Properties / Listings ────────────────────────────────────────────────────
+
+model Property {
+  id              String   @id @default(cuid())
+  mlsNumber       String?  @unique
+  title           String
+  description     String?
+  status          String   @default("active") // active | sold | expired | draft
+  listingType     String   @default("sale")   // sale | rent | lease
+  propertyType    String   @default("detached") // detached | semi | condo | townhouse | commercial
+  price           Float
+  priceUnit       String   @default("CAD")
+  bedrooms        Int?
+  bathrooms       Float?
+  parkingSpaces   Int?
+  sqft            Int?
+  lotSize         Float?
+  lotSizeUnit     String   @default("sqft")
+  yearBuilt       Int?
+  address         String
+  city            String
+  province        String   @default("ON")
+  postalCode      String?
+  country         String   @default("CA")
+  latitude        Float?
+  longitude       Float?
+  images          String?  // JSON array of URLs
+  features        String?  // JSON array of strings
+  virtualTourUrl  String?
+  openHouseDate   DateTime?
+  listedAt        DateTime?
+  soldAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  deals    Deal[]
+  showings Showing[]
+  listings Listing[]
+
+  @@map("properties")
+}
+
+model Listing {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  publishedAt DateTime?
+  featured    Boolean  @default(false)
+  slug        String   @unique
+  metaTitle   String?
+  metaDesc    String?
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("listings")
+}
+
+// ─── IDX ──────────────────────────────────────────────────────────────────────
+
+model IdxProperty {
+  id              String    @id @default(cuid())
+  idxId           String    @unique // IDX provider's ID
+  mlsNumber       String?
+  status          String    @default("active")
+  propertyType    String?
+  listingType     String    @default("sale")
+  price           Float?
+  bedrooms        Int?
+  bathrooms       Float?
+  sqft            Int?
+  address         String?
+  city            String?
+  province        String?
+  postalCode      String?
+  latitude        Float?
+  longitude       Float?
+  description     String?
+  images          String?   // JSON array
+  features        String?   // JSON array
+  listedAt        DateTime?
+  lastSyncedAt    DateTime  @default(now())
+  rawData         String?   // full JSON from IDX feed
+
+  @@map("idx_properties")
+}
+
+model IdxUpdate {
+  id         String   @id @default(cuid())
+  syncedAt   DateTime @default(now())
+  added      Int      @default(0)
+  updated    Int      @default(0)
+  removed    Int      @default(0)
+  errors     String?
+  duration   Int?     // ms
+
+  @@map("idx_updates")
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("todo") // todo | in_progress | done | cancelled
+  priority    String    @default("normal") // low | normal | high | urgent
+  dueAt       DateTime?
+  completedAt DateTime?
+  assigneeId  String?
+  assignee    User?     @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  createdById String?
+  createdBy   User?     @relation("CreatedTasks", fields: [createdById], references: [id])
+  contactId   String?
+  contact     Contact?  @relation(fields: [contactId], references: [id])
+  dealId      String?
+  deal        Deal?     @relation(fields: [dealId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("tasks")
+}
+
+// ─── Activities ───────────────────────────────────────────────────────────────
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String   // call | email | meeting | note | showing | task | deal_change
+  subject     String?
+  body        String?
+  outcome     String?
+  durationMin Int?
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  dealId      String?
+  deal        Deal?    @relation(fields: [dealId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("activities")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  body      String
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
+}
+
+// ─── Showings ─────────────────────────────────────────────────────────────────
+
+model Showing {
+  id         String    @id @default(cuid())
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id])
+  dealId     String?
+  deal       Deal?     @relation(fields: [dealId], references: [id])
+  scheduledAt DateTime
+  status     String    @default("scheduled") // scheduled | completed | cancelled
+  notes      String?
+  createdAt  DateTime  @default(now())
+
+  @@map("showings")
+}
+
+// ─── Blog ─────────────────────────────────────────────────────────────────────
+
+model BlogPost {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String?
+  body        String
+  coverImage  String?
+  status      String    @default("draft") // draft | published | archived
+  publishedAt DateTime?
+  authorName  String?
+  metaTitle   String?
+  metaDesc    String?
+  tags        String?   // JSON array
+  views       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("blog_posts")
+}
+
+// ─── Landing Pages ────────────────────────────────────────────────────────────
+
+model LandingPage {
+  id         String    @id @default(cuid())
+  title      String
+  slug       String    @unique
+  content    String    // JSON blocks
+  status     String    @default("draft")
+  publishedAt DateTime?
+  views      Int       @default(0)
+  leads      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  leadMagnets LeadMagnet[]
+
+  @@map("landing_pages")
+}
+
+model LeadMagnet {
+  id            String      @id @default(cuid())
+  title         String
+  type          String      // ebook | report | guide | checklist
+  fileUrl       String?
+  landingPageId String?
+  landingPage   LandingPage? @relation(fields: [landingPageId], references: [id])
+  downloads     Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  @@map("lead_magnets")
+}
+
+// ─── Automation ───────────────────────────────────────────────────────────────
+
+model AutomationSequence {
+  id          String   @id @default(cuid())
+  name        String
+  trigger     String   // new_lead | deal_stage_change | showing_scheduled | manual
+  isActive    Boolean  @default(true)
+  steps       AutomationStep[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("automation_sequences")
+}
+
+model AutomationStep {
+  id           String             @id @default(cuid())
+  sequenceId   String
+  sequence     AutomationSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  order        Int
+  type         String             // send_email | send_sms | create_task | wait | update_lead_score
+  config       String             // JSON
+  delayMinutes Int                @default(0)
+  createdAt    DateTime           @default(now())
+
+  @@map("automation_steps")
+}
+
+// ─── Analytics / Tracking ─────────────────────────────────────────────────────
+
+model VisitorLog {
+  id          String   @id @default(cuid())
+  sessionId   String?
+  ip          String?
+  userAgent   String?
+  referer     String?
+  page        String
+  contactId   String?
+  occurredAt  DateTime @default(now())
+
+  @@map("visitor_logs")
+}
+
+model BehaviorEvent {
+  id          String   @id @default(cuid())
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  sessionId   String?
+  eventType   String   // page_view | listing_view | blog_read | form_submit | search
+  entityId    String?  // listing id, blog post id, etc.
+  metadata    String?  // JSON
+  occurredAt  DateTime @default(now())
+
+  @@map("behavior_events")
+}
+
+model LeadScore {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  score     Int
+  delta     Int
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@map("lead_scores")
+}
+
+model PropertySearchLog {
+  id         String   @id @default(cuid())
+  sessionId  String?
+  contactId  String?
+  query      String   // JSON of filters used
+  results    Int      @default(0)
+  occurredAt DateTime @default(now())
+
+  @@map("property_search_logs")
+}
+
+// ─── AI ───────────────────────────────────────────────────────────────────────
+
+model AiJob {
+  id         String    @id @default(cuid())
+  type       String    // lead_scoring | blog_generation | listing_description | market_analysis | buyer_intent
+  status     String    @default("pending") // pending | running | completed | failed
+  input      String    // JSON
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  startedAt  DateTime?
+  completedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  result AiResult?
+
+  @@map("ai_jobs")
+}
+
+model AiResult {
+  id        String   @id @default(cuid())
+  jobId     String   @unique
+  job       AiJob    @relation(fields: [jobId], references: [id])
+  output    String   // JSON or plain text
+  tokensUsed Int?
+  model     String?
+  createdAt DateTime @default(now())
+
+  @@map("ai_results")
+}
+
+model AiCommandLog {
+  id          String   @id @default(cuid())
+  command     String   // create_task | log_activity | update_lead_score | etc.
+  payload     String   // JSON input
+  response    String?  // JSON output
+  status      String   @default("success") // success | error
+  apiKeyId    String?
+  ipAddress   String?
+  durationMs  Int?
+  createdAt   DateTime @default(now())
+
+  @@map("ai_command_logs")
+}
