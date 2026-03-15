@@ -15,6 +15,8 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { readFile } from 'fs/promises'
+import { join }     from 'path'
 
 export type JobType =
   | 'send_email_job'
@@ -114,8 +116,6 @@ async function runJob(type: JobType, payload: Record<string, unknown>): Promise<
       const attachmentUrl  = payload.attachmentUrl  as string | undefined
       const attachmentName = payload.attachmentName as string | undefined
       if (attachmentUrl && attachmentName) {
-        const { readFile } = await import('fs/promises')
-        const { join }     = await import('path')
         try {
           // attachmentUrl is e.g. "/uploads/uuid.pdf" — resolve from public/ folder.
           // Strip leading slash so path.join doesn't treat it as an absolute path on Unix.
