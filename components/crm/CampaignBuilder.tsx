@@ -3,26 +3,47 @@
 /**
  * CampaignBuilder
  *
- * Modal-style form for creating a new drip campaign with a variable number
- * of steps. Each step defines channel, delay, and content.
+ * Modal-style form for creating or editing a drip campaign with a variable
+ * number of steps. Each step defines channel, delay (minutes or days), and content.
  */
 
 import { useState } from 'react'
-import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save } from 'lucide-react'
 import { Button } from '@/components/ui'
 
-type StepType = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score'
+type StepType   = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score'
 type TriggerType = 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual'
+type DelayUnit  = 'minutes' | 'days'
 
 interface StepForm {
   order:        number
   type:         StepType
   delayMinutes: number
+  delayUnit:    DelayUnit
   config:       Record<string, string | number>
 }
 
+interface InitialCampaignData {
+  name:        string
+  description: string
+  trigger:     TriggerType
+  steps: Array<{
+    order:        number
+    type:         StepType
+    delayMinutes: number
+    config:       Record<string, string | number>
+  }>
+}
+
 interface CampaignBuilderProps {
-  onCreated?: () => void
+  /** Called after a successful create */
+  onCreated?:   () => void
+  /** Called after a successful update (edit mode) */
+  onUpdated?:   () => void
+  /** When provided, the form operates in edit mode */
+  campaignId?:  string
+  /** Pre-filled data for edit mode */
+  initialData?: InitialCampaignData
 }
 
 const STEP_LABELS: Record<StepType, string> = {
@@ -50,20 +71,39 @@ function defaultConfig(type: StepType): Record<string, string | number> {
   }
 }
 
-export function CampaignBuilder({ onCreated }: CampaignBuilderProps) {
-  const [name,        setName]        = useState('')
-  const [description, setDescription] = useState('')
-  const [trigger,     setTrigger]     = useState<TriggerType>('new_lead')
-  const [steps,       setSteps]       = useState<StepForm[]>([
-    { order: 0, type: 'send_email', delayMinutes: 0, config: defaultConfig('send_email') },
-  ])
+/** Infer a sensible display unit from a delayMinutes value */
+function inferUnit(delayMinutes: number): DelayUnit {
+  return delayMinutes > 0 && delayMinutes % 1440 === 0 ? 'days' : 'minutes'
+}
+
+function initialStepForm(s: InitialCampaignData['steps'][number]): StepForm {
+  return {
+    order:        s.order,
+    type:         s.type,
+    delayMinutes: s.delayMinutes,
+    delayUnit:    inferUnit(s.delayMinutes),
+    config:       s.config,
+  }
+}
+
+export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData }: CampaignBuilderProps) {
+  const isEditMode = Boolean(campaignId)
+
+  const [name,        setName]        = useState(initialData?.name        ?? '')
+  const [description, setDescription] = useState(initialData?.description ?? '')
+  const [trigger,     setTrigger]     = useState<TriggerType>(initialData?.trigger ?? 'new_lead')
+  const [steps,       setSteps]       = useState<StepForm[]>(
+    initialData?.steps?.length
+      ? initialData.steps.map(initialStepForm)
+      : [{ order: 0, type: 'send_email', delayMinutes: 0, delayUnit: 'minutes', config: defaultConfig('send_email') }]
+  )
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
 
   function addStep() {
     setSteps(prev => [
       ...prev,
-      { order: prev.length, type: 'send_email', delayMinutes: 1440, config: defaultConfig('send_email') },
+      { order: prev.length, type: 'send_email', delayMinutes: 1440, delayUnit: 'days', config: defaultConfig('send_email') },
     ])
   }
 
@@ -95,24 +135,50 @@ export function CampaignBuilder({ onCreated }: CampaignBuilderProps) {
     ))
   }
 
+  /** Returns the display value for the delay input given current unit */
+  function displayDelay(step: StepForm): number {
+    return step.delayUnit === 'days' ? Math.round(step.delayMinutes / 1440) : step.delayMinutes
+  }
+
+  function handleDelayChange(index: number, rawValue: string) {
+    const val = parseInt(rawValue) || 0
+    const step = steps[index]
+    updateStep(index, { delayMinutes: step.delayUnit === 'days' ? val * 1440 : val })
+  }
+
+  function handleUnitChange(index: number, unit: DelayUnit) {
+    // Keep the delayMinutes value as-is; only the display unit changes
+    updateStep(index, { delayUnit: unit })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) { setError('Name is required'); return }
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/campaigns', {
-        method:  'POST',
+      // Strip delayUnit (UI-only) before sending to API
+      const apiSteps = steps.map(({ delayUnit: _u, ...s }) => s)
+
+      const url    = isEditMode ? `/api/campaigns/${campaignId}` : '/api/campaigns'
+      const method = isEditMode ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, description, trigger, steps }),
+        body:    JSON.stringify({ name, description, trigger, steps: apiSteps }),
       })
       if (!res.ok) {
         const json = await res.json()
         throw new Error(JSON.stringify(json.error))
       }
-      onCreated?.()
+      if (isEditMode) {
+        onUpdated?.()
+      } else {
+        onCreated?.()
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create campaign')
+      setError(err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} campaign`)
     } finally {
       setSaving(false)
     }
@@ -187,14 +253,23 @@ export function CampaignBuilder({ onCreated }: CampaignBuilderProps) {
                 </div>
               </div>
 
-              {/* Delay */}
+              {/* Delay with unit selector */}
               <div className="flex items-center gap-2 mb-2">
                 <label className="text-xs text-charcoal-500 shrink-0">Wait</label>
-                <input type="number" min={0} value={step.delayMinutes}
-                  onChange={e => updateStep(i, { delayMinutes: parseInt(e.target.value) || 0 })}
+                <input
+                  type="number" min={0}
+                  value={displayDelay(step)}
+                  onChange={e => handleDelayChange(i, e.target.value)}
                   className="w-20 rounded border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
                 />
-                <span className="text-xs text-charcoal-400">minutes before this step</span>
+                <select
+                  value={step.delayUnit}
+                  onChange={e => handleUnitChange(i, e.target.value as DelayUnit)}
+                  className="rounded border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900">
+                  <option value="minutes">minutes</option>
+                  <option value="days">days</option>
+                </select>
+                <span className="text-xs text-charcoal-400">before this step</span>
               </div>
 
               {/* Step-type-specific config */}
@@ -207,8 +282,9 @@ export function CampaignBuilder({ onCreated }: CampaignBuilderProps) {
 
       {error && <p className="text-xs text-red-600">{error}</p>}
 
-      <Button type="submit" variant="primary" loading={saving} leftIcon={<Zap size={14} />}>
-        Create Campaign
+      <Button type="submit" variant="primary" loading={saving}
+        leftIcon={isEditMode ? <Save size={14} /> : <Zap size={14} />}>
+        {isEditMode ? 'Save Changes' : 'Create Campaign'}
       </Button>
     </form>
   )

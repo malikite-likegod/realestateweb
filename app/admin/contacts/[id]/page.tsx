@@ -8,7 +8,7 @@ import { Card } from '@/components/layout'
 import {
   ActivityTimeline, NotesPanel, TaskList,
   CallLogger, SmsThread, EmailComposer, UnifiedTimeline,
-  ContactEditModal, ContactTagEditor,
+  ContactEditModal, ContactTagEditor, ContactCampaigns,
 } from '@/components/crm'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
@@ -26,7 +26,7 @@ export default async function ContactDetailPage({ params }: Props) {
 
   const { id } = await params
 
-  const [contact, timeline, allTags] = await Promise.all([
+  const [contact, timeline, allTags, campaignEnrollments, activeCampaigns] = await Promise.all([
     prisma.contact.findUnique({
       where: { id },
       include: {
@@ -71,6 +71,20 @@ export default async function ContactDetailPage({ params }: Props) {
     }),
     getContactTimeline(id, { limit: 60 }),
     prisma.tag.findMany({ orderBy: { name: 'asc' } }),
+    prisma.campaignEnrollment.findMany({
+      where:   { contactId: id },
+      orderBy: { enrolledAt: 'desc' },
+      include: {
+        sequence: {
+          select: { id: true, name: true, trigger: true, steps: { select: { id: true } } },
+        },
+      },
+    }),
+    prisma.automationSequence.findMany({
+      where:   { isActive: true },
+      select:  { id: true, name: true, trigger: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   if (!contact) notFound()
@@ -368,6 +382,26 @@ export default async function ContactDetailPage({ params }: Props) {
               id:      'notes',
               label:   `Notes (${contact.notesList.length})`,
               content: <NotesPanel notes={contact.notesList} />,
+            },
+            {
+              id:      'campaigns',
+              label:   `Campaigns (${campaignEnrollments.length})`,
+              content: (
+                <ContactCampaigns
+                  contactId={id}
+                  initialEnrollments={campaignEnrollments.map(e => ({
+                    ...e,
+                    status:   e.status as 'active' | 'paused' | 'completed' | 'cancelled',
+                    sequence: {
+                      id:         e.sequence.id,
+                      name:       e.sequence.name,
+                      trigger:    e.sequence.trigger,
+                      totalSteps: e.sequence.steps.length,
+                    },
+                  }))}
+                  availableCampaigns={activeCampaigns}
+                />
+              ),
             },
           ]} />
         </div>

@@ -1,5 +1,5 @@
 // GET    /api/campaigns/[id] — fetch campaign with steps + enrollment stats
-// PATCH  /api/campaigns/[id] — update name, description, isActive
+// PATCH  /api/campaigns/[id] — update name, description, isActive, and/or steps
 // DELETE /api/campaigns/[id] — delete campaign (cancels active enrollments)
 
 import { NextResponse } from 'next/server'
@@ -7,10 +7,20 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const stepSchema = z.object({
+  order:        z.number().int().min(0),
+  type:         z.enum(['send_email', 'send_sms', 'create_task', 'wait', 'update_lead_score']),
+  delayMinutes: z.number().int().min(0),
+  config:       z.record(z.union([z.string(), z.number()])),
+})
+
 const patchSchema = z.object({
   name:        z.string().min(1).optional(),
   description: z.string().optional(),
+  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual']).optional(),
   isActive:    z.boolean().optional(),
+  /** When provided, replaces all existing steps */
+  steps:       z.array(stepSchema).min(1).optional(),
 })
 
 interface Props { params: Promise<{ id: string }> }
@@ -43,11 +53,31 @@ export async function PATCH(request: Request, { params }: Props) {
     const { id } = await params
     const body   = await request.json()
     const parsed = patchSchema.parse(body)
-    const campaign = await prisma.automationSequence.update({
-      where: { id },
-      data:  parsed,
-      include: { steps: { orderBy: { order: 'asc' } } },
+
+    const { steps, ...campaignFields } = parsed
+
+    // Replace steps in a transaction when provided
+    const campaign = await prisma.$transaction(async tx => {
+      if (steps) {
+        await tx.automationStep.deleteMany({ where: { sequenceId: id } })
+        await tx.automationStep.createMany({
+          data: steps.map(step => ({
+            sequenceId:   id,
+            order:        step.order,
+            type:         step.type,
+            delayMinutes: step.delayMinutes,
+            config:       JSON.stringify(step.config),
+          })),
+        })
+      }
+
+      return tx.automationSequence.update({
+        where:   { id },
+        data:    campaignFields,
+        include: { steps: { orderBy: { order: 'asc' } } },
+      })
     })
+
     return NextResponse.json({ data: campaign })
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })

@@ -16,13 +16,18 @@ import { getSession } from '@/lib/auth'
 import { processPendingJobs } from '@/lib/automation/job-queue'
 
 export async function POST(request: Request) {
-  // Allow cron secret header OR authenticated admin session
-  const cronSecret = request.headers.get('x-cron-secret')
-  const validSecret = process.env.AUTOMATION_PROCESS_SECRET
+  // Accept three auth methods:
+  //   1. x-cron-secret header (generic external cron services)
+  //   2. Authorization: Bearer <secret> (Vercel Cron — uses CRON_SECRET env var)
+  //   3. Authenticated admin session (manual trigger from the UI)
+  const validSecret       = process.env.AUTOMATION_PROCESS_SECRET
+  const xCronSecret       = request.headers.get('x-cron-secret')
+  const authHeader        = request.headers.get('authorization') ?? ''
+  const bearerSecret      = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
 
-  if (cronSecret && validSecret && cronSecret === validSecret) {
-    // Cron access — proceed
-  } else {
+  const hasValidSecret = validSecret && (xCronSecret === validSecret || bearerSecret === validSecret)
+
+  if (!hasValidSecret) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

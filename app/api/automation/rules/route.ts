@@ -45,7 +45,6 @@ export async function POST(request: Request) {
 
   try {
     const body   = await request.json()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parsed = createSchema.parse(body) as any
     const rule   = await createRule(parsed)
     return NextResponse.json({ data: rule }, { status: 201 })

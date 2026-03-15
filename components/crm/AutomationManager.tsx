@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { Plus, Zap, CheckCircle, XCircle, Clock, Play, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Zap, CheckCircle, XCircle, Clock, Play, ToggleLeft, ToggleRight, Pencil, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { Badge, Button, Tabs } from '@/components/ui'
 import { CampaignBuilder } from './CampaignBuilder'
@@ -71,18 +71,19 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
   const [campaigns,  setCampaigns]  = useState<Campaign[]>(initialCampaigns)
   const [rules,      setRules]      = useState<Rule[]>(initialRules)
   const [jobStats,   setJobStats]   = useState<JobStats>(initialJobStats)
-  const [showNewCampaign, setShowNewCampaign] = useState(false)
-  const [showNewRule,     setShowNewRule]     = useState(false)
-  const [processing,      setProcessing]      = useState(false)
+  const [showNewCampaign,  setShowNewCampaign]  = useState(false)
+  const [showNewRule,      setShowNewRule]      = useState(false)
+  const [processing,       setProcessing]       = useState(false)
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null)
 
   // Refresh campaigns from server
   async function refreshCampaigns() {
     const res  = await fetch('/api/campaigns')
     const json = await res.json()
     if (json.data) {
-      setCampaigns(json.data.map((c: Campaign & { steps: Array<CampaignStep & { config: string }> }) => ({
+      setCampaigns(json.data.map((c: Campaign & { enrollments: { id: string }[], steps: Array<CampaignStep & { config: string }> }) => ({
         ...c,
-        activeEnrollments: 0,
+        activeEnrollments: c.enrollments.length,
         steps: c.steps.map(s => ({ ...s, config: typeof s.config === 'string' ? JSON.parse(s.config) : s.config })),
       })))
     }
@@ -172,6 +173,11 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={c.isActive ? 'success' : 'default'}>{c.isActive ? 'Active' : 'Paused'}</Badge>
+                  <button
+                    onClick={() => setEditingCampaignId(editingCampaignId === c.id ? null : c.id)}
+                    className="text-charcoal-400 hover:text-charcoal-700" title="Edit campaign">
+                    {editingCampaignId === c.id ? <X size={16} /> : <Pencil size={16} />}
+                  </button>
                   <button onClick={() => toggleCampaign(c.id, c.isActive)}
                     className="text-charcoal-400 hover:text-charcoal-700" title="Toggle">
                     {c.isActive ? <ToggleRight size={20} className="text-green-600" /> : <ToggleLeft size={20} />}
@@ -197,6 +203,30 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
               <p className="text-xs text-charcoal-400">
                 {c.activeEnrollments} active enrollment{c.activeEnrollments !== 1 ? 's' : ''}
               </p>
+
+              {/* Inline editor */}
+              {editingCampaignId === c.id && (
+                <div className="border-t border-charcoal-100 pt-4 mt-3">
+                  <CampaignBuilder
+                    campaignId={c.id}
+                    initialData={{
+                      name:        c.name,
+                      description: c.description ?? '',
+                      trigger:     c.trigger as 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual',
+                      steps:       c.steps.map(s => ({
+                        order:        s.order,
+                        type:         s.type as 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score',
+                        delayMinutes: s.delayMinutes,
+                        config:       s.config as Record<string, string | number>,
+                      })),
+                    }}
+                    onUpdated={() => {
+                      setEditingCampaignId(null)
+                      refreshCampaigns()
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -37,7 +37,6 @@ export async function PATCH(request: Request, { params }: Props) {
     const { id } = await params
     const body   = await request.json()
     const parsed = patchSchema.parse(body)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rule   = await updateRule(id, parsed as any)
     return NextResponse.json({ data: rule })
   } catch (error) {

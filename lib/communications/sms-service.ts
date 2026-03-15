@@ -11,7 +11,6 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { randomUUID } from 'crypto'
 
 // ─── Provider stub ──────────────────────────────────────────────────────────
 
@@ -157,7 +156,7 @@ export async function sendGroupSms(opts: {
   body:       string
   sentById?:  string
 }) {
-  const groupId = randomUUID()
+  const groupId = globalThis.crypto.randomUUID()
   const contacts = await prisma.contact.findMany({
     where: { id: { in: opts.contactIds }, phone: { not: null } },
     select: { id: true, phone: true },
