@@ -75,6 +75,8 @@ model Contact {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  phones            ContactPhone[]
+  addresses         ContactAddress[]
   tags              ContactTag[]
   deals             DealParticipant[]
   activities        Activity[]
@@ -91,6 +93,34 @@ model Contact {
   campaignEnrollments CampaignEnrollment[]
 
   @@map("contacts")
+}
+
+model ContactPhone {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  label     String   @default("mobile") // mobile | home | work | other
+  number    String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_phones")
+}
+
+model ContactAddress {
+  id         String   @id @default(cuid())
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  label      String   @default("home") // home | work | other
+  street     String?
+  city       String?
+  province   String?
+  postalCode String?
+  country    String   @default("CA")
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@map("contact_addresses")
 }
 
 model Tag {

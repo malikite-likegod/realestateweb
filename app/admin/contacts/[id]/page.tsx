@@ -8,10 +8,14 @@ import { Card } from '@/components/layout'
 import {
   ActivityTimeline, NotesPanel, TaskList,
   CallLogger, SmsThread, EmailComposer, UnifiedTimeline,
+  ContactEditModal,
 } from '@/components/crm'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
-import { Phone, Mail, MapPin, TrendingUp, Cake } from 'lucide-react'
+import {
+  Phone, Mail, MapPin, TrendingUp, Cake, Briefcase,
+  Building2, Tag as TagIcon, Star,
+} from 'lucide-react'
 import type { ActivityFeedItem } from '@/types'
 
 interface Props { params: Promise<{ id: string }> }
@@ -22,12 +26,13 @@ export default async function ContactDetailPage({ params }: Props) {
 
   const { id } = await params
 
-  // Fetch contact with all relations in parallel
   const [contact, timeline] = await Promise.all([
     prisma.contact.findUnique({
       where: { id },
       include: {
-        tags:     { include: { tag: true } },
+        phones:    { orderBy: { createdAt: 'asc' } },
+        addresses: { orderBy: { createdAt: 'asc' } },
+        tags:      { include: { tag: true } },
         activities: {
           orderBy: { occurredAt: 'desc' },
           take:    30,
@@ -59,6 +64,9 @@ export default async function ContactDetailPage({ params }: Props) {
             sentBy:   { select: { name: true } },
           },
         },
+        deals: {
+          include: { deal: { include: { stage: true } } },
+        },
       },
     }),
     getContactTimeline(id, { limit: 60 }),
@@ -67,18 +75,41 @@ export default async function ContactDetailPage({ params }: Props) {
   if (!contact) notFound()
 
   const activities: ActivityFeedItem[] = contact.activities.map(a => ({
-    id: a.id,
-    type: a.type as ActivityFeedItem['type'],
-    subject: a.subject,
-    body: a.body,
-    contact: null,
-    user: a.user,
+    id:         a.id,
+    type:       a.type as ActivityFeedItem['type'],
+    subject:    a.subject,
+    body:       a.body,
+    contact:    null,
+    user:       a.user,
     occurredAt: a.occurredAt,
   }))
 
   const statusVariants: Record<string, 'default' | 'info' | 'success' | 'gold'> = {
     lead: 'info', prospect: 'gold', client: 'success', past_client: 'default',
   }
+
+  // Determine phones and addresses to display:
+  // prefer new multi-value arrays; fall back to legacy fields if arrays empty
+  const displayPhones = contact.phones.length > 0
+    ? contact.phones
+    : contact.phone
+      ? [{ id: 'legacy', label: 'mobile', number: contact.phone, isPrimary: true }]
+      : []
+
+  const displayAddresses = contact.addresses.length > 0
+    ? contact.addresses
+    : (contact.address || contact.city)
+      ? [{
+          id:         'legacy',
+          label:      'home',
+          street:     contact.address   ?? null,
+          city:       contact.city      ?? null,
+          province:   contact.province  ?? null,
+          postalCode: contact.postalCode ?? null,
+          country:    contact.country   ?? 'CA',
+          isPrimary:  true,
+        }]
+      : []
 
   return (
     <DashboardLayout user={session}>
@@ -89,67 +120,197 @@ export default async function ContactDetailPage({ params }: Props) {
           { label: 'Contacts',  href: '/admin/contacts' },
           { label: `${contact.firstName} ${contact.lastName}` },
         ]}
+        actions={<ContactEditModal contact={contact} />}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Left sidebar: contact card ─────────────────────────────── */}
-        <Card>
-          <div className="flex flex-col items-center text-center gap-3 mb-6">
-            <Avatar name={`${contact.firstName} ${contact.lastName}`} size="xl" />
-            <div>
-              <p className="font-semibold text-charcoal-900 text-lg">{contact.firstName} {contact.lastName}</p>
-              {contact.company && <p className="text-sm text-charcoal-400">{contact.company}</p>}
+
+        {/* ── Left sidebar ─────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
+
+          {/* Identity card */}
+          <Card>
+            <div className="flex flex-col items-center text-center gap-3 mb-5">
+              <Avatar name={`${contact.firstName} ${contact.lastName}`} size="xl" />
+              <div>
+                <p className="font-semibold text-charcoal-900 text-lg leading-tight">
+                  {contact.firstName} {contact.lastName}
+                </p>
+                {contact.jobTitle && (
+                  <p className="text-sm text-charcoal-500 mt-0.5">{contact.jobTitle}</p>
+                )}
+                {contact.company && (
+                  <p className="text-xs text-charcoal-400 mt-0.5">{contact.company}</p>
+                )}
+              </div>
+              <Badge variant={statusVariants[contact.status] ?? 'default'} className="capitalize">
+                {contact.status.replace('_', ' ')}
+              </Badge>
             </div>
-            <Badge variant={statusVariants[contact.status] ?? 'default'} className="capitalize">
-              {contact.status.replace('_', ' ')}
-            </Badge>
-          </div>
 
-          <div className="flex flex-col gap-3 border-t border-charcoal-100 pt-4">
-            {contact.email && (
-              <a href={`mailto:${contact.email}`} className="flex items-center gap-2 text-sm text-charcoal-600 hover:text-gold-600">
-                <Mail size={14} />{contact.email}
-              </a>
-            )}
-            {contact.phone && (
-              <a href={`tel:${contact.phone}`} className="flex items-center gap-2 text-sm text-charcoal-600 hover:text-gold-600">
-                <Phone size={14} />{contact.phone}
-              </a>
-            )}
-            {contact.city && (
-              <span className="flex items-center gap-2 text-sm text-charcoal-500">
-                <MapPin size={14} />{contact.city}, {contact.province}
+            {/* Lead score */}
+            <div className="flex items-center justify-between rounded-lg bg-charcoal-50 px-3 py-2 mb-4">
+              <span className="flex items-center gap-1.5 text-xs text-charcoal-500">
+                <TrendingUp size={13} /> Lead Score
               </span>
-            )}
-            {contact.birthday && (
-              <span className="flex items-center gap-2 text-sm text-charcoal-500">
-                <Cake size={14} />{formatDate(contact.birthday, { month: 'long', day: 'numeric', year: 'numeric' })}
-              </span>
-            )}
-            <span className="flex items-center gap-2 text-sm text-charcoal-500">
-              <TrendingUp size={14} />Lead Score: <strong className="text-charcoal-900">{contact.leadScore}</strong>
-            </span>
-          </div>
-
-          {/* Tags */}
-          {contact.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5 border-t border-charcoal-100 pt-3">
-              {contact.tags.map(({ tag }) => (
-                <span key={tag.id} style={{ backgroundColor: tag.color + '22', color: tag.color }}
-                  className="rounded-full px-2 py-0.5 text-xs font-medium">
-                  {tag.name}
+              <div className="flex items-center gap-2">
+                <div className="w-24 h-1.5 rounded-full bg-charcoal-200 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${contact.leadScore >= 75 ? 'bg-green-500' : contact.leadScore >= 40 ? 'bg-gold-500' : 'bg-charcoal-400'}`}
+                    style={{ width: `${Math.min(contact.leadScore, 100)}%` }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-charcoal-900 w-7 text-right">
+                  {contact.leadScore}
                 </span>
-              ))}
+              </div>
             </div>
+
+            {/* Contact details */}
+            <div className="flex flex-col gap-2.5 text-sm">
+              {/* Phones */}
+              {displayPhones.map((p, i) => (
+                <a
+                  key={p.id ?? i}
+                  href={`tel:${p.number}`}
+                  className="flex items-center gap-2 text-charcoal-600 hover:text-gold-600 transition-colors group"
+                >
+                  <Phone size={13} className="shrink-0 text-charcoal-400 group-hover:text-gold-500" />
+                  <span className="flex-1 truncate">{p.number}</span>
+                  {displayPhones.length > 1 && (
+                    <span className="text-xs text-charcoal-400 capitalize shrink-0">
+                      {p.isPrimary ? <Star size={10} className="text-gold-400" fill="currentColor" /> : p.label}
+                    </span>
+                  )}
+                </a>
+              ))}
+
+              {/* Email */}
+              {contact.email && (
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="flex items-center gap-2 text-charcoal-600 hover:text-gold-600 transition-colors"
+                >
+                  <Mail size={13} className="shrink-0 text-charcoal-400" />
+                  <span className="truncate">{contact.email}</span>
+                </a>
+              )}
+
+              {/* Company / job */}
+              {contact.company && (
+                <span className="flex items-center gap-2 text-charcoal-500">
+                  <Building2 size={13} className="shrink-0 text-charcoal-400" />
+                  {contact.company}
+                  {contact.jobTitle && <span className="text-charcoal-400">· {contact.jobTitle}</span>}
+                </span>
+              )}
+
+              {/* Birthday */}
+              {contact.birthday && (
+                <span className="flex items-center gap-2 text-charcoal-500">
+                  <Cake size={13} className="shrink-0 text-charcoal-400" />
+                  {formatDate(contact.birthday, { month: 'long', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+          </Card>
+
+          {/* Addresses card */}
+          {displayAddresses.length > 0 && (
+            <Card>
+              <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-3">
+                Addresses
+              </p>
+              <div className="flex flex-col gap-3">
+                {displayAddresses.map((addr, i) => (
+                  <div key={addr.id ?? i} className="flex gap-2">
+                    <MapPin size={13} className="shrink-0 text-charcoal-400 mt-0.5" />
+                    <div className="text-sm text-charcoal-600 leading-relaxed">
+                      <span className="text-xs font-medium text-charcoal-400 capitalize block mb-0.5">
+                        {addr.label}{addr.isPrimary && displayAddresses.length > 1 ? ' · primary' : ''}
+                      </span>
+                      {addr.street  && <span className="block">{addr.street}</span>}
+                      {(addr.city || addr.province) && (
+                        <span className="block">
+                          {[addr.city, addr.province].filter(Boolean).join(', ')}
+                          {addr.postalCode && ` ${addr.postalCode}`}
+                        </span>
+                      )}
+                      {addr.country && addr.country !== 'CA' && (
+                        <span className="block text-charcoal-400">{addr.country}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           )}
 
-          <div className="mt-4 text-xs text-charcoal-400 border-t border-charcoal-100 pt-3">
-            <p>Source: {contact.source ?? '—'}</p>
-            <p>Added: {formatDate(contact.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-          </div>
-        </Card>
+          {/* Tags & meta */}
+          <Card>
+            {contact.tags.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <TagIcon size={11} /> Tags
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {contact.tags.map(({ tag }) => (
+                    <span
+                      key={tag.id}
+                      style={{ backgroundColor: tag.color + '22', color: tag.color }}
+                      className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* ── Main content: tabbed communication hub ─────────────────── */}
+            {/* Notes */}
+            {contact.notes && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-1.5">Notes</p>
+                <p className="text-sm text-charcoal-600 whitespace-pre-wrap leading-relaxed">{contact.notes}</p>
+              </div>
+            )}
+
+            {/* Active deals */}
+            {contact.deals.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Briefcase size={11} /> Deals ({contact.deals.length})
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {contact.deals.map(({ deal }) => (
+                    <a
+                      key={deal.id}
+                      href={`/admin/deals/${deal.id}`}
+                      className="flex items-center justify-between text-xs rounded-lg bg-charcoal-50 px-2.5 py-1.5 hover:bg-charcoal-100 transition-colors"
+                    >
+                      <span className="text-charcoal-700 font-medium truncate">{deal.title}</span>
+                      <span
+                        className="ml-2 rounded-full px-2 py-0.5 font-medium shrink-0"
+                        style={{ backgroundColor: deal.stage.color + '22', color: deal.stage.color }}
+                      >
+                        {deal.stage.name}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-charcoal-400 border-t border-charcoal-100 pt-3 flex flex-col gap-1">
+              <span>Source: <span className="text-charcoal-600 capitalize">{contact.source ?? '—'}</span></span>
+              <span>Added: {formatDate(contact.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span>Updated: {formatDate(contact.updatedAt, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+          </Card>
+
+        </div>
+
+        {/* ── Main content: tabbed communication hub ───────────────────── */}
         <div className="lg:col-span-2">
           <Tabs tabs={[
             {
@@ -167,7 +328,11 @@ export default async function ContactDetailPage({ params }: Props) {
                     direction: m.direction as 'inbound' | 'outbound',
                   }))}
                   contactId={id}
-                  contactPhone={contact.phone}
+                  contactPhone={
+                    displayPhones.find(p => p.isPrimary)?.number ??
+                    displayPhones[0]?.number ??
+                    contact.phone
+                  }
                 />
               ),
             },
@@ -192,8 +357,8 @@ export default async function ContactDetailPage({ params }: Props) {
                 <CallLogger
                   calls={contact.callLogs.map(c => ({
                     ...c,
-                    direction:  c.direction as 'inbound' | 'outbound',
-                    status:     c.status    as 'completed' | 'missed' | 'voicemail' | 'failed',
+                    direction: c.direction as 'inbound' | 'outbound',
+                    status:    c.status    as 'completed' | 'missed' | 'voicemail' | 'failed',
                   }))}
                   contactId={id}
                 />
