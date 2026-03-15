@@ -18,11 +18,12 @@ import { prisma } from '@/lib/prisma'
 // statically bundle it (and its Node.js built-in dependencies) during the build.
 
 async function sendViaSmtp(opts: {
-  to:      string
-  from:    string
-  subject: string
-  html:    string
-  cc?:     string[]
+  to:           string
+  from:         string
+  subject:      string
+  html:         string
+  cc?:          string[]
+  attachments?: Array<{ filename: string; content: Buffer }>
 }): Promise<void> {
   if (!process.env.SMTP_HOST) {
     console.warn('[email-service] SMTP_HOST not set — skipping delivery (simulated mode).')
@@ -39,11 +40,12 @@ async function sendViaSmtp(opts: {
     },
   })
   await transporter.sendMail({
-    from:    opts.from,
-    to:      opts.to,
-    cc:      opts.cc?.join(', '),
-    subject: opts.subject,
-    html:    opts.html,
+    from:        opts.from,
+    to:          opts.to,
+    cc:          opts.cc?.join(', '),
+    subject:     opts.subject,
+    html:        opts.html,
+    attachments: opts.attachments,
   })
 }
 
@@ -57,14 +59,15 @@ export function renderTemplate(template: string, vars: Record<string, string>): 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export type SendEmailInput = {
-  contactId:  string
-  subject:    string
-  body:       string        // HTML
-  toEmail:    string
-  fromEmail?: string
-  ccEmails?:  string[]
-  templateId?: string
-  sentById?:  string
+  contactId:    string
+  subject:      string
+  body:         string        // HTML
+  toEmail:      string
+  fromEmail?:   string
+  ccEmails?:    string[]
+  templateId?:  string
+  sentById?:    string
+  attachments?: Array<{ filename: string; content: Buffer }>
 }
 
 export async function sendEmail(input: SendEmailInput) {
@@ -82,11 +85,12 @@ export async function sendEmail(input: SendEmailInput) {
   let status = 'sent'
   try {
     await sendViaSmtp({
-      to:      input.toEmail,
-      from:    fromEmail,
-      subject: input.subject,
-      html:    bodyWithTracking,
-      cc:      input.ccEmails,
+      to:          input.toEmail,
+      from:        fromEmail,
+      subject:     input.subject,
+      html:        bodyWithTracking,
+      cc:          input.ccEmails,
+      attachments: input.attachments,
     })
   } catch (err) {
     if (process.env.SMTP_HOST) {

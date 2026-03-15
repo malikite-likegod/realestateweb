@@ -7,8 +7,8 @@
  * number of steps. Each step defines channel, delay (minutes or days), and content.
  */
 
-import { useState } from 'react'
-import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 
 type StepType   = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score'
@@ -295,7 +295,34 @@ function StepConfig({ type, config, onChange }: {
   config:   Record<string, string | number>
   onChange: (key: string, value: string | number) => void
 }) {
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
+
+  async function handleAttachmentPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/uploads', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error('Upload failed')
+      const { data } = await res.json()
+      onChange('attachmentUrl',  data.url)
+      onChange('attachmentName', data.originalName)
+    } catch {
+      // leave existing attachment unchanged on failure
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  function clearAttachment() {
+    onChange('attachmentUrl',  '')
+    onChange('attachmentName', '')
+  }
 
   switch (type) {
     case 'send_email':
@@ -306,6 +333,28 @@ function StepConfig({ type, config, onChange }: {
           <textarea placeholder="Email body (HTML allowed)" rows={3} value={config.body as string}
             onChange={e => onChange('body', e.target.value)}
             className={`${inputCls} resize-none font-mono`} />
+
+          {/* Attachment */}
+          <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachmentPick} />
+          {config.attachmentName ? (
+            <div className="flex items-center gap-2 text-xs text-charcoal-700">
+              <Paperclip size={11} className="text-charcoal-400 shrink-0" />
+              <span className="truncate flex-1">{config.attachmentName as string}</span>
+              <button type="button" onClick={clearAttachment} className="text-charcoal-400 hover:text-red-500 transition-colors">
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors disabled:opacity-50"
+            >
+              <Paperclip size={13} />
+              {uploading ? 'Uploading…' : 'Attach a file'}
+            </button>
+          )}
         </div>
       )
     case 'send_sms':

@@ -108,12 +108,31 @@ async function runJob(type: JobType, payload: Record<string, unknown>): Promise<
   switch (type) {
     case 'send_email_job': {
       const { sendEmail } = await import('@/lib/communications/email-service')
+
+      // Load attachment from disk if the step config stored a URL
+      let attachments: Array<{ filename: string; content: Buffer }> | undefined
+      const attachmentUrl  = payload.attachmentUrl  as string | undefined
+      const attachmentName = payload.attachmentName as string | undefined
+      if (attachmentUrl && attachmentName) {
+        const { readFile } = await import('fs/promises')
+        const { join }     = await import('path')
+        try {
+          // attachmentUrl is e.g. "/uploads/uuid.pdf" — resolve from public/ folder
+          const filePath = join(process.cwd(), 'public', attachmentUrl)
+          const content  = await readFile(filePath)
+          attachments    = [{ filename: attachmentName, content }]
+        } catch (err) {
+          console.warn('[send_email_job] Could not load attachment:', attachmentUrl, err)
+        }
+      }
+
       await sendEmail({
-        contactId:  payload.contactId  as string,
-        subject:    payload.subject    as string,
-        body:       payload.body       as string,
-        toEmail:    payload.toEmail    as string,
-        templateId: payload.templateId as string | undefined,
+        contactId:   payload.contactId  as string,
+        subject:     payload.subject    as string,
+        body:        payload.body       as string,
+        toEmail:     payload.toEmail    as string,
+        templateId:  payload.templateId as string | undefined,
+        attachments,
       })
       break
     }

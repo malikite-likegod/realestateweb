@@ -130,11 +130,13 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
     switch (step.type) {
       case 'send_email':
         await enqueueJob('send_email_job', {
-          contactId:  enrollment.contactId,
-          subject:    config.subject as string,
-          body:       config.body    as string,
-          templateId: config.templateId as string | undefined,
-          toEmail:    enrollment.contact.email ?? undefined,
+          contactId:      enrollment.contactId,
+          subject:        config.subject        as string,
+          body:           config.body           as string,
+          templateId:     config.templateId     as string | undefined,
+          toEmail:        enrollment.contact.email ?? undefined,
+          attachmentUrl:  config.attachmentUrl  as string | undefined,
+          attachmentName: config.attachmentName as string | undefined,
         })
         break
 
