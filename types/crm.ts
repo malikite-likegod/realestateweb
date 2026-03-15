@@ -10,6 +10,7 @@ export type ContactWithTags = {
   lastName: string
   email: string | null
   phone: string | null
+  phones: Array<{ id: string; label: string; number: string; isPrimary: boolean }>
   company: string | null
   status: ContactStatus
   leadScore: number

@@ -39,11 +39,16 @@ export function ContactCard({ contact }: ContactCardProps) {
               <Mail size={12} /> {contact.email}
             </a>
           )}
-          {contact.phone && (
-            <a href={`tel:${contact.phone}`} className="flex items-center gap-2 text-xs text-charcoal-500 hover:text-charcoal-700" onClick={e => e.stopPropagation()}>
-              <Phone size={12} /> {contact.phone}
-            </a>
-          )}
+          {(() => {
+            const mobile  = contact.phones.find(p => p.label === 'mobile')
+            const primary = contact.phones.find(p => p.isPrimary)
+            const number  = (mobile ?? primary ?? contact.phones[0])?.number ?? contact.phone
+            return number ? (
+              <a href={`tel:${number}`} className="flex items-center gap-2 text-xs text-charcoal-500 hover:text-charcoal-700" onClick={e => e.stopPropagation()}>
+                <Phone size={12} /> {number}
+              </a>
+            ) : null
+          })()}
         </div>
 
         {contact.tags.length > 0 && (

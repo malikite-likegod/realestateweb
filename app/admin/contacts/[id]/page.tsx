@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
 import {
-  ActivityTimeline, NotesPanel, TaskList,
+  NotesPanel, TaskList,
   CallLogger, SmsThread, EmailComposer, UnifiedTimeline,
   ContactEditModal, ContactTagEditor, ContactCampaigns,
 } from '@/components/crm'
@@ -16,7 +16,6 @@ import {
   Phone, Mail, MapPin, TrendingUp, Cake, Briefcase,
   Building2, Star,
 } from 'lucide-react'
-import type { ActivityFeedItem } from '@/types'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -33,11 +32,6 @@ export default async function ContactDetailPage({ params }: Props) {
         phones:    { orderBy: { createdAt: 'asc' } },
         addresses: { orderBy: { createdAt: 'asc' } },
         tags:      { include: { tag: true } },
-        activities: {
-          orderBy: { occurredAt: 'desc' },
-          take:    30,
-          include: { user: { select: { name: true } } },
-        },
         tasks: {
           orderBy: { createdAt: 'desc' },
           include: { assignee: { select: { name: true } } },
@@ -88,16 +82,6 @@ export default async function ContactDetailPage({ params }: Props) {
   ])
 
   if (!contact) notFound()
-
-  const activities: ActivityFeedItem[] = contact.activities.map(a => ({
-    id:         a.id,
-    type:       a.type as ActivityFeedItem['type'],
-    subject:    a.subject,
-    body:       a.body,
-    contact:    null,
-    user:       a.user,
-    occurredAt: a.occurredAt,
-  }))
 
   const statusVariants: Record<string, 'default' | 'info' | 'success' | 'gold'> = {
     lead: 'info', prospect: 'gold', client: 'success', past_client: 'default',
@@ -224,7 +208,7 @@ export default async function ContactDetailPage({ params }: Props) {
               {contact.birthday && (
                 <span className="flex items-center gap-2 text-charcoal-500">
                   <Cake size={13} className="shrink-0 text-charcoal-400" />
-                  {formatDate(contact.birthday, { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {formatDate(contact.birthday, { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                 </span>
               )}
             </div>
@@ -367,11 +351,6 @@ export default async function ContactDetailPage({ params }: Props) {
                   contactId={id}
                 />
               ),
-            },
-            {
-              id:      'activity',
-              label:   'Activity Log',
-              content: <ActivityTimeline activities={activities} />,
             },
             {
               id:      'tasks',

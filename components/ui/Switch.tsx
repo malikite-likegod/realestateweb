@@ -15,6 +15,7 @@ export function Switch({ checked, onChange, label, disabled, className }: Switch
   return (
     <label className={cn('flex items-center gap-3 cursor-pointer select-none', disabled && 'opacity-50 cursor-not-allowed', className)}>
       <button
+        type="button"
         role="switch"
         aria-checked={checked}
         disabled={disabled}

@@ -4,11 +4,19 @@ import { useState, useEffect } from 'react'
 import { Modal, Button, Input, Select, Textarea, Switch } from '@/components/ui'
 import { Trash2 } from 'lucide-react'
 
-// Format a Date as YYYY-MM-DD in the user's local timezone (for <input type="date">)
+// Format a Date as YYYY-MM-DD in local time (for timed events)
 function toLocalDateString(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const y   = d.getFullYear()
+  const m   = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// Format a Date as YYYY-MM-DD in UTC (for all-day events stored as midnight UTC)
+function toUTCDateString(d: Date): string {
+  const y   = d.getUTCFullYear()
+  const m   = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 
@@ -93,7 +101,7 @@ export function TaskModal({ open, onClose, onSaved, initialDate, task }: TaskMod
       const d     = start ? new Date(start) : null
       setTitle(task.title)
       setTaskTypeId(task.taskTypeId ?? '')
-      setDate(d ? toLocalDateString(d) : '')
+      setDate(d ? (task.allDay ? toUTCDateString(d) : toLocalDateString(d)) : '')
       setStartTime(d && !task.allDay ? d.toTimeString().slice(0, 5) : '')
       setEndTime(task.endDatetime && !task.allDay ? new Date(task.endDatetime).toTimeString().slice(0, 5) : '')
       setAllDay(task.allDay)

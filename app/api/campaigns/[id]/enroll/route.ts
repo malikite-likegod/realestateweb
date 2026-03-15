@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { enrollContact, bulkEnroll } from '@/lib/automation/campaign-service'
 
 const schema = z.object({
@@ -22,14 +23,34 @@ export async function POST(request: Request, { params }: Props) {
     const parsed  = schema.parse(body)
 
     if (parsed.contactIds && parsed.contactIds.length > 0) {
-      const results = await bulkEnroll(id, parsed.contactIds)
+      const results   = await bulkEnroll(id, parsed.contactIds)
       const succeeded = results.filter(r => r.status === 'fulfilled').length
+      const campaign  = await prisma.automationSequence.findUnique({ where: { id }, select: { name: true } })
+      await prisma.activity.create({
+        data: {
+          type:    'enrollment',
+          subject: `Bulk enrolled ${succeeded} contact${succeeded !== 1 ? 's' : ''} into "${campaign?.name ?? id}"`,
+          userId:  session.id,
+        },
+      })
       return NextResponse.json({ data: { enrolled: succeeded, total: parsed.contactIds.length } }, { status: 201 })
     }
 
     if (parsed.contactId) {
       const enrollment = await enrollContact(id, parsed.contactId)
       if (!enrollment) return NextResponse.json({ error: 'Campaign not found or inactive' }, { status: 400 })
+      const [campaign, contact] = await Promise.all([
+        prisma.automationSequence.findUnique({ where: { id }, select: { name: true } }),
+        prisma.contact.findUnique({ where: { id: parsed.contactId }, select: { firstName: true, lastName: true } }),
+      ])
+      await prisma.activity.create({
+        data: {
+          type:      'enrollment',
+          subject:   `Enrolled ${contact ? `${contact.firstName} ${contact.lastName}` : 'contact'} into "${campaign?.name ?? id}"`,
+          userId:    session.id,
+          contactId: parsed.contactId,
+        },
+      })
       return NextResponse.json({ data: enrollment }, { status: 201 })
     }
 

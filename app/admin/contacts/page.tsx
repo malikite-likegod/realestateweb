@@ -25,7 +25,10 @@ export default async function ContactsPage({ searchParams }: Props) {
     where,
     orderBy: { createdAt: 'desc' },
     take: 100,
-    include: { tags: { include: { tag: true } } },
+    include: {
+      tags:   { include: { tag: true } },
+      phones: { orderBy: { createdAt: 'asc' } },
+    },
   }) as ContactWithTags[]
 
   return (

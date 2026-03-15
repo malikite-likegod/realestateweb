@@ -6,13 +6,12 @@ import { StatsCard } from '@/components/analytics'
 import {
   RecentLeadsWidget,
   TasksWidget,
-  RecentActivitiesWidget,
+  TodayCalendarWidget,
   CommunicationsWidget,
   PipelineSummaryWidget,
 } from '@/components/dashboard'
 import { Users, Briefcase, Building2, CheckSquare } from 'lucide-react'
 import type { ContactWithTags } from '@/types'
-import type { ActivityFeedItem } from '@/types'
 
 export default async function DashboardPage() {
   const session = await getSession()
@@ -25,7 +24,6 @@ export default async function DashboardPage() {
     taskCount,
     recentContacts,
     recentTasks,
-    recentActivities,
     pipelineReport,
     inboundSms,
     missedCalls,
@@ -38,7 +36,10 @@ export default async function DashboardPage() {
     prisma.contact.findMany({
       orderBy: { createdAt: 'desc' },
       take: 8,
-      include: { tags: { include: { tag: true } } },
+      include: {
+        tags:   { include: { tag: true } },
+        phones: { orderBy: { createdAt: 'asc' } },
+      },
     }),
     prisma.task.findMany({
       where: { status: { not: 'done' } },
@@ -47,14 +48,6 @@ export default async function DashboardPage() {
       include: {
         assignee: { select: { name: true } },
         contact:  { select: { firstName: true, lastName: true } },
-      },
-    }),
-    prisma.activity.findMany({
-      orderBy: { occurredAt: 'desc' },
-      take: 10,
-      include: {
-        contact: { select: { firstName: true, lastName: true } },
-        user:    { select: { name: true } },
       },
     }),
     getPipelineReport(),
@@ -79,16 +72,6 @@ export default async function DashboardPage() {
   ])
 
   const leads = recentContacts as ContactWithTags[]
-
-  const activities: ActivityFeedItem[] = recentActivities.map(a => ({
-    id:          a.id,
-    type:        a.type as ActivityFeedItem['type'],
-    subject:     a.subject,
-    body:        a.body,
-    contact:     a.contact,
-    user:        a.user,
-    occurredAt:  a.occurredAt,
-  }))
 
   // Build inbox items sorted newest-first, capped at 8
   type InboxItem = {
@@ -149,7 +132,7 @@ export default async function DashboardPage() {
             <TasksWidget tasks={recentTasks} />
           </div>
           <div className="lg:col-span-1">
-            <RecentActivitiesWidget activities={activities} />
+            <TodayCalendarWidget />
           </div>
         </div>
 

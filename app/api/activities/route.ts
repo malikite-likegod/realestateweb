@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/auth'
 
 const activitySchema = z.object({
   type:        z.string(),
@@ -14,6 +15,9 @@ const activitySchema = z.object({
 })
 
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const contactId = searchParams.get('contactId')
   const dealId    = searchParams.get('dealId')
@@ -37,11 +41,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const body = await request.json()
     const data = activitySchema.parse(body)
     const activity = await prisma.activity.create({
-      data: { ...data, occurredAt: data.occurredAt ? new Date(data.occurredAt) : new Date() },
+      data: {
+        ...data,
+        userId:     session.id,
+        occurredAt: data.occurredAt ? new Date(data.occurredAt) : new Date(),
+      },
     })
     return NextResponse.json({ data: activity }, { status: 201 })
   } catch (error) {

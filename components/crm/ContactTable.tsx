@@ -37,7 +37,14 @@ export function ContactTable({ contacts }: ContactTableProps) {
                 </Link>
               </td>
               <td className="px-4 py-3 text-charcoal-600">{c.email ?? '—'}</td>
-              <td className="px-4 py-3 text-charcoal-600">{c.phone ?? '—'}</td>
+              <td className="px-4 py-3 text-charcoal-600">{
+                (() => {
+                  const mobile  = c.phones.find(p => p.label === 'mobile')
+                  const primary = c.phones.find(p => p.isPrimary)
+                  const any     = c.phones[0]
+                  return (mobile ?? primary ?? any)?.number ?? c.phone ?? ''
+                })()
+              }</td>
               <td className="px-4 py-3">
                 <Badge variant={statusVariants[c.status] ?? 'default'} className="capitalize">
                   {c.status.replace('_', ' ')}

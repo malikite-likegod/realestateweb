@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/auth'
 import { sendWebhook } from '@/services/ai/webhooks'
 import { enqueueJob } from '@/lib/automation/job-queue'
 
@@ -18,6 +19,9 @@ const createContactSchema = z.object({
 })
 
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const page     = parseInt(searchParams.get('page') ?? '1')
   const pageSize = parseInt(searchParams.get('pageSize') ?? '25')

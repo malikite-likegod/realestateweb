@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/auth'
 
 const taskSchema = z.object({
   title:         z.string().min(1),
@@ -18,6 +19,9 @@ const taskSchema = z.object({
 })
 
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const status     = searchParams.get('status')
   const assigneeId = searchParams.get('assigneeId')
@@ -41,12 +45,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const body = await request.json()
     const data = taskSchema.parse(body)
     const task = await prisma.task.create({
       data: {
         ...data,
+        createdById:   session.id,
         dueAt:         data.dueAt         ? new Date(data.dueAt)         : null,
         startDatetime: data.startDatetime ? new Date(data.startDatetime) : null,
         endDatetime:   data.endDatetime   ? new Date(data.endDatetime)   : null,

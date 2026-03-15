@@ -66,6 +66,14 @@ export async function POST(request: Request) {
       include: { steps: { orderBy: { order: 'asc' } } },
     })
 
+    await prisma.activity.create({
+      data: {
+        type:    'campaign',
+        subject: `Created campaign: ${campaign.name}`,
+        userId:  session.id,
+      },
+    })
+
     return NextResponse.json({ data: campaign }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })

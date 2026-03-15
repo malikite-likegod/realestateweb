@@ -41,11 +41,22 @@ export async function GET(request: Request) {
   const taskEvents = tasks.map(task => {
     const start = task.startDatetime ?? task.dueAt
     const end   = task.endDatetime   ?? task.dueAt
+
+    // All-day events must use a date-only string (YYYY-MM-DD) in UTC so
+    // FullCalendar places them on the correct calendar day. A full ISO
+    // datetime would be converted to local time and could land on the
+    // previous day for timezones behind UTC.
+    const toFC = (d: Date | null) => {
+      if (!d) return null
+      if (task.allDay) return d.toISOString().split('T')[0]
+      return d.toISOString()
+    }
+
     return {
       id:              `task_${task.id}`,
       title:           task.title,
-      start:           start?.toISOString() ?? null,
-      end:             end?.toISOString()   ?? null,
+      start:           toFC(start),
+      end:             toFC(end),
       allDay:          task.allDay,
       backgroundColor: task.taskType?.color ?? '#6366f1',
       borderColor:     task.taskType?.color ?? '#6366f1',

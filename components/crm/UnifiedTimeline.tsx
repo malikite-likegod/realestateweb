@@ -9,9 +9,9 @@
  */
 
 import {
-  Phone, MessageSquare, Mail, FileText, CheckSquare,
+  Mail, FileText, CheckSquare,
   ArrowRight, PhoneIncoming, PhoneOutgoing, PhoneMissed,
-  Mic, ArrowDownLeft, ArrowUpRight,
+  Mic, ArrowDownLeft, ArrowUpRight, Zap, Users,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { TimelineEntry, TimelineEntryType } from '@/lib/communications/timeline-service'
@@ -46,17 +46,21 @@ function getConfig(entry: TimelineEntry): EntryConfig {
       return { icon: <FileText size={12} />, color: 'bg-amber-100 text-amber-600', label: 'Note' }
     case 'task':
       return { icon: <CheckSquare size={12} />, color: 'bg-green-100 text-green-600', label: 'Task' }
+    case 'enrollment':
+      return { icon: <Users size={12} />, color: 'bg-indigo-100 text-indigo-600', label: 'Campaign Enrolled' }
+    case 'campaign':
+      return { icon: <Zap size={12} />, color: 'bg-violet-100 text-violet-600', label: 'Campaign Created' }
     case 'activity':
     default:
       return { icon: <ArrowRight size={12} />, color: 'bg-charcoal-100 text-charcoal-600', label: 'Activity' }
   }
 }
 
-function EntryItem({ entry, isLast }: { entry: TimelineEntry; isLast: boolean }) {
+function EntryItem({ entry }: { entry: TimelineEntry }) {
   const config = getConfig(entry)
 
   return (
-    <div className={`relative flex gap-4 pb-5 ${isLast ? '' : ''}`}>
+    <div className="relative flex gap-4 pb-5">
       {/* Timeline dot */}
       <div className={`absolute -left-6 flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-white ${config.color}`}>
         {config.icon}
@@ -99,6 +103,12 @@ function EntryItem({ entry, isLast }: { entry: TimelineEntry; isLast: boolean })
 
         <div className="flex items-center gap-2 mt-1 text-xs text-charcoal-300">
           {entry.userName && <span>{entry.userName}</span>}
+          {entry.contactName && (
+            <>
+              <span>·</span>
+              <span className="text-charcoal-400">{entry.contactName}</span>
+            </>
+          )}
           <span>·</span>
           <span>{formatDate(new Date(entry.occurredAt), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
         </div>
@@ -116,8 +126,8 @@ export function UnifiedTimeline({ entries }: UnifiedTimelineProps) {
     <div className="relative pl-6">
       <div className="absolute left-2 top-0 bottom-0 w-px bg-charcoal-100" />
       <div className="flex flex-col gap-0">
-        {entries.map((entry, i) => (
-          <EntryItem key={`${entry.type}-${entry.id}`} entry={entry} isLast={i === entries.length - 1} />
+        {entries.map((entry) => (
+          <EntryItem key={`${entry.type}-${entry.id}`} entry={entry} />
         ))}
       </div>
     </div>
