@@ -8,13 +8,13 @@ import { Card } from '@/components/layout'
 import {
   ActivityTimeline, NotesPanel, TaskList,
   CallLogger, SmsThread, EmailComposer, UnifiedTimeline,
-  ContactEditModal,
+  ContactEditModal, ContactTagEditor,
 } from '@/components/crm'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
   Phone, Mail, MapPin, TrendingUp, Cake, Briefcase,
-  Building2, Tag as TagIcon, Star,
+  Building2, Star,
 } from 'lucide-react'
 import type { ActivityFeedItem } from '@/types'
 
@@ -26,7 +26,7 @@ export default async function ContactDetailPage({ params }: Props) {
 
   const { id } = await params
 
-  const [contact, timeline] = await Promise.all([
+  const [contact, timeline, allTags] = await Promise.all([
     prisma.contact.findUnique({
       where: { id },
       include: {
@@ -70,6 +70,7 @@ export default async function ContactDetailPage({ params }: Props) {
       },
     }),
     getContactTimeline(id, { limit: 60 }),
+    prisma.tag.findMany({ orderBy: { name: 'asc' } }),
   ])
 
   if (!contact) notFound()
@@ -248,24 +249,13 @@ export default async function ContactDetailPage({ params }: Props) {
 
           {/* Tags & meta */}
           <Card>
-            {contact.tags.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <TagIcon size={11} /> Tags
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {contact.tags.map(({ tag }) => (
-                    <span
-                      key={tag.id}
-                      style={{ backgroundColor: tag.color + '22', color: tag.color }}
-                      className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="mb-4">
+              <ContactTagEditor
+                contactId={id}
+                initialTags={contact.tags.map(({ tag }) => tag)}
+                allTags={allTags}
+              />
+            </div>
 
             {/* Notes */}
             {contact.notes && (
