@@ -52,7 +52,7 @@ const testimonials = [
 const features = [
   { icon: <Home size={20} />, title: 'Deep Market Knowledge', description: 'Over 15 years specializing in Toronto\'s luxury real estate market with unparalleled neighbourhood expertise.' },
   { icon: <TrendingUp size={20} />, title: 'Results-Driven Strategy', description: 'Our data-driven approach consistently delivers above-asking offers and top-dollar results for our sellers.' },
-  { icon: <Award size={20} />, title: 'Award-Winning Service', description: 'Consistently ranked among Toronto\'s top 1% of Realtors® with hundreds of successful transactions.' },
+  { icon: <Award size={20} />, title: 'White-Glove Service', description: 'Ensuring that every detail of the buying or selling process is handled with care, professionalism, and clear communication. ' },
   { icon: <Users size={20} />, title: 'Personal Attention', description: 'Every client receives dedicated, white-glove service tailored to their unique needs and goals.' },
   { icon: <Shield size={20} />, title: 'Trusted & Transparent', description: 'Honest, straightforward advice you can rely on — we put your interests first, always.' },
   { icon: <Clock size={20} />, title: '24/7 Availability', description: 'The Toronto market moves fast. We\'re always available when you need us, day or night.' },
@@ -110,7 +110,7 @@ export default async function HomePage() {
             phone="(416) 888-8352"
             email="miketaylor.realty@gmail.com"
             bio="With over 19 years of experience in The Greater Toronto Area's real estate market, Michael has built a reputation for exceptional results and unparalleled client service. His deep market knowledge and strategic approach consistently deliver above-market outcomes for his clients."
-            photo="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80"
+            photo="/images/test.png"
             stats={[
               { value: '100+', label: 'Transactions' },
               { value: '$50M+', label: 'In Sales' },
@@ -123,7 +123,7 @@ export default async function HomePage() {
       {/* Why us */}
       <Section padding="xl">
         <Container>
-          <ContentBlock eyebrow="Why LuxeRealty" title="The Standard of Excellence" body="We combine deep market expertise with personalized service to deliver extraordinary results." centered />
+          <ContentBlock eyebrow="Why Work With Michael" title="The Standard of Excellence" body="We combine deep market expertise with personalized service to deliver extraordinary results." centered />
           <div className="mt-16">
             <FeatureGrid features={features} columns={3} />
           </div>

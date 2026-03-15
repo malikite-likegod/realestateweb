@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import { randomUUID } from 'crypto'
 
 export async function POST(request: Request) {
   const session = await getSession()
@@ -16,27 +15,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Expected multipart/form-data' }, { status: 400 })
   }
 
-  const formData = await request.formData()
+  let formData: FormData
+  try {
+    formData = await request.formData()
+  } catch (err) {
+    console.error('[POST /api/uploads] Failed to parse formData:', err)
+    return NextResponse.json({ error: 'Could not parse request body' }, { status: 400 })
+  }
+
   const file = formData.get('file')
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
-  const uploadDir = join(process.cwd(), 'public', 'uploads')
-  await mkdir(uploadDir, { recursive: true })
+  try {
+    const uploadDir = join(process.cwd(), 'public', 'uploads')
+    await mkdir(uploadDir, { recursive: true })
 
-  const ext      = file.name.includes('.') ? '.' + file.name.split('.').pop() : ''
-  const filename = `${randomUUID()}${ext}`
-  const buffer   = Buffer.from(await file.arrayBuffer())
+    const ext      = file.name.includes('.') ? '.' + file.name.split('.').pop() : ''
+    const filename = `${globalThis.crypto.randomUUID()}${ext}`
+    const buffer   = Buffer.from(await file.arrayBuffer())
 
-  await writeFile(join(uploadDir, filename), buffer)
+    await writeFile(join(uploadDir, filename), buffer)
 
-  return NextResponse.json({
-    data: {
-      url:          `/uploads/${filename}`,
-      originalName: file.name,
-      size:         file.size,
-    },
-  }, { status: 201 })
+    return NextResponse.json({
+      data: {
+        url:          `/uploads/${filename}`,
+        originalName: file.name,
+        size:         file.size,
+      },
+    }, { status: 201 })
+  } catch (err) {
+    console.error('[POST /api/uploads]', err)
+    return NextResponse.json({ error: 'Failed to save file' }, { status: 500 })
+  }
 }

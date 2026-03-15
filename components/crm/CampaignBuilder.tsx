@@ -295,7 +295,8 @@ function StepConfig({ type, config, onChange }: {
   config:   Record<string, string | number>
   onChange: (key: string, value: string | number) => void
 }) {
-  const [uploading, setUploading] = useState(false)
+  const [uploading, setUploading]     = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
 
@@ -303,16 +304,20 @@ function StepConfig({ type, config, onChange }: {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
+    setUploadError('')
     try {
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch('/api/uploads', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error((json as { error?: string }).error ?? 'Upload failed')
+      }
       const { data } = await res.json()
       onChange('attachmentUrl',  data.url)
       onChange('attachmentName', data.originalName)
-    } catch {
-      // leave existing attachment unchanged on failure
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -336,6 +341,7 @@ function StepConfig({ type, config, onChange }: {
 
           {/* Attachment */}
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachmentPick} />
+          {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
           {config.attachmentName ? (
             <div className="flex items-center gap-2 text-xs text-charcoal-700">
               <Paperclip size={11} className="text-charcoal-400 shrink-0" />
