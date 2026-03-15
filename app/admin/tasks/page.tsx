@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { TaskList } from '@/components/crm'
-import { Button } from '@/components/ui'
-import { Plus } from 'lucide-react'
+import { NewTaskButton } from '@/components/crm/NewTaskButton'
 
 export default async function TasksPage() {
   const session = await getSession()
@@ -25,7 +24,7 @@ export default async function TasksPage() {
         title="Tasks"
         subtitle={`${tasks.length} open tasks`}
         breadcrumbs={[{ label: 'Dashboard', href: '/admin/dashboard' }, { label: 'Tasks' }]}
-        actions={<Button variant="primary" leftIcon={<Plus size={16} />}>New Task</Button>}
+        actions={<NewTaskButton />}
       />
       <TaskList tasks={tasks} />
     </DashboardLayout>

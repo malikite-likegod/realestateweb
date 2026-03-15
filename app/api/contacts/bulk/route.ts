@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const VALID_STATUSES = ['lead', 'prospect', 'client', 'past_client'] as const
@@ -23,6 +24,9 @@ const bulkImportSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const body = await request.json()
 

@@ -13,6 +13,7 @@ import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
 import { ActivityTimeline, TaskList } from '@/components/crm'
+import { DealEditModal } from '@/components/crm/DealEditModal'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate, formatPrice } from '@/lib/utils'
 import {
@@ -88,6 +89,21 @@ export default async function DealDetailPage({ params }: Props) {
           { label: 'Deals',     href: '/admin/deals' },
           { label: deal.title },
         ]}
+        actions={
+          <DealEditModal
+            deal={{
+              id:            deal.id,
+              title:         deal.title,
+              value:         deal.value,
+              stageId:       deal.stageId,
+              assigneeId:    deal.assigneeId,
+              probability:   deal.probability,
+              expectedClose: deal.expectedClose?.toISOString() ?? null,
+              notes:         deal.notes,
+              closedAt:      deal.closedAt?.toISOString() ?? null,
+            }}
+          />
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

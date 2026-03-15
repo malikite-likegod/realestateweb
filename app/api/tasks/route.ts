@@ -3,30 +3,37 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 
 const taskSchema = z.object({
-  title:       z.string().min(1),
-  description: z.string().optional(),
-  status:      z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(),
-  priority:    z.enum(['low', 'normal', 'high', 'urgent']).optional(),
-  dueAt:       z.string().optional(),
-  assigneeId:  z.string().optional(),
-  contactId:   z.string().optional(),
-  dealId:      z.string().optional(),
+  title:         z.string().min(1),
+  description:   z.string().optional(),
+  status:        z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(),
+  priority:      z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  dueAt:         z.string().optional(),
+  startDatetime: z.string().optional(),
+  endDatetime:   z.string().optional(),
+  allDay:        z.boolean().optional(),
+  taskTypeId:    z.string().optional(),
+  assigneeId:    z.string().optional(),
+  contactId:     z.string().optional(),
+  dealId:        z.string().optional(),
 })
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const status    = searchParams.get('status')
+  const status     = searchParams.get('status')
   const assigneeId = searchParams.get('assigneeId')
+  const contactId  = searchParams.get('contactId')
 
   const tasks = await prisma.task.findMany({
     where: {
       ...(status     && { status }),
       ...(assigneeId && { assigneeId }),
+      ...(contactId  && { contactId }),
     },
     orderBy: [{ dueAt: 'asc' }, { createdAt: 'desc' }],
     include: {
       assignee: { select: { name: true } },
       contact:  { select: { firstName: true, lastName: true } },
+      taskType: true,
     },
   })
 
@@ -38,8 +45,17 @@ export async function POST(request: Request) {
     const body = await request.json()
     const data = taskSchema.parse(body)
     const task = await prisma.task.create({
-      data: { ...data, dueAt: data.dueAt ? new Date(data.dueAt) : null },
-      include: { assignee: { select: { name: true } } },
+      data: {
+        ...data,
+        dueAt:         data.dueAt         ? new Date(data.dueAt)         : null,
+        startDatetime: data.startDatetime ? new Date(data.startDatetime) : null,
+        endDatetime:   data.endDatetime   ? new Date(data.endDatetime)   : null,
+      },
+      include: {
+        assignee: { select: { name: true } },
+        taskType: true,
+        contact:  { select: { firstName: true, lastName: true } },
+      },
     })
     return NextResponse.json({ data: task }, { status: 201 })
   } catch (error) {

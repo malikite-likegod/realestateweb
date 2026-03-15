@@ -10,11 +10,13 @@ const noteSchema = z.object({
 
 export async function POST(request: Request) {
   const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const body = await request.json()
     const data = noteSchema.parse(body)
     const note = await prisma.note.create({
-      data: { ...data, userId: session?.id ?? null },
+      data: { ...data, userId: session.id },
       include: { user: { select: { name: true } } },
     })
     return NextResponse.json({ data: note }, { status: 201 })
