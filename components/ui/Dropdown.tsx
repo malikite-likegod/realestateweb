@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +23,7 @@ interface DropdownProps {
 export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -52,7 +54,11 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
               ) : (
                 <button
                   key={i}
-                  onClick={() => { item.onClick?.(); setOpen(false) }}
+                  onClick={() => {
+                    setOpen(false)
+                    if (item.href) router.push(item.href)
+                    else item.onClick?.()
+                  }}
                   className={cn(
                     'flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors',
                     item.danger

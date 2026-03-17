@@ -19,8 +19,10 @@ import { enqueueJob } from './job-queue'
 /**
  * Enroll a contact in a campaign (AutomationSequence).
  * Idempotent — silently skips if already enrolled and active.
+ *
+ * @param startAtStep  0-indexed step to begin at (default 0). Used by transfer_campaign steps.
  */
-export async function enrollContact(sequenceId: string, contactId: string) {
+export async function enrollContact(sequenceId: string, contactId: string, startAtStep = 0) {
   const sequence = await prisma.automationSequence.findUnique({
     where:   { id: sequenceId },
     include: { steps: { orderBy: { order: 'asc' } } },
@@ -34,19 +36,21 @@ export async function enrollContact(sequenceId: string, contactId: string) {
   })
   if (existing && existing.status === 'active') return existing
 
-  const firstStep = sequence.steps[0]
-  const nextRunAt = addMinutes(new Date(), firstStep.delayMinutes)
+  // Clamp startAtStep to valid range
+  const clampedStep = Math.max(0, Math.min(startAtStep, sequence.steps.length - 1))
+  const entryStep   = sequence.steps[clampedStep]
+  const nextRunAt   = addMinutes(new Date(), entryStep.delayMinutes)
 
   const enrollment = existing
     ? await prisma.campaignEnrollment.update({
         where: { id: existing.id },
-        data:  { status: 'active', currentStep: 0, nextRunAt, completedAt: null },
+        data:  { status: 'active', currentStep: clampedStep, nextRunAt, completedAt: null },
       })
     : await prisma.campaignEnrollment.create({
-        data: { sequenceId, contactId, currentStep: 0, nextRunAt },
+        data: { sequenceId, contactId, currentStep: clampedStep, nextRunAt },
       })
 
-  // Queue the first step
+  // Queue the entry step
   await enqueueJob('execute_campaign_step', { enrollmentId: enrollment.id }, nextRunAt)
   return enrollment
 }
@@ -127,6 +131,9 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
   try {
     const config = JSON.parse(step.config) as Record<string, unknown>
 
+    // transfer_campaign completes the current enrollment then re-enrolls — skip normal advancement
+    let transferred = false
+
     switch (step.type) {
       case 'send_email':
         await enqueueJob('send_email_job', {
@@ -177,6 +184,26 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
       case 'wait':
         // 'wait' steps just pause; the delay is handled by nextRunAt below
         break
+
+      case 'transfer_campaign': {
+        const targetSequenceId = config.targetSequenceId as string
+        const startAtStep      = typeof config.startAtStep === 'number' ? config.startAtStep : 0
+
+        // Enroll in the target campaign FIRST so that if it throws,
+        // the current enrollment stays active and the job can be retried.
+        if (targetSequenceId) {
+          await enrollContact(targetSequenceId, enrollment.contactId, startAtStep)
+        }
+
+        // Only mark the current enrollment as completed after a successful transfer
+        await prisma.campaignEnrollment.update({
+          where: { id: enrollmentId },
+          data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+        })
+
+        transferred = true
+        break
+      }
     }
 
     // Mark step as completed
@@ -184,6 +211,9 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
       where: { id: execution.id },
       data:  { status: 'completed', ranAt: new Date(), result: JSON.stringify({ type: step.type }) },
     })
+
+    // Transfer already handled enrollment completion — skip normal advancement
+    if (transferred) return
 
     // Advance enrollment to next step
     const nextStepIndex = stepIndex + 1

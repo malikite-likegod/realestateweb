@@ -11,9 +11,15 @@ import { useState, useRef } from 'react'
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 
-type StepType   = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score'
+type StepType    = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign'
 type TriggerType = 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual'
-type DelayUnit  = 'minutes' | 'days'
+type DelayUnit   = 'minutes' | 'days'
+
+interface CampaignSummary {
+  id:    string
+  name:  string
+  steps: Array<{ order: number; type: string }>
+}
 
 interface StepForm {
   order:        number
@@ -37,21 +43,26 @@ interface InitialCampaignData {
 
 interface CampaignBuilderProps {
   /** Called after a successful create */
-  onCreated?:   () => void
+  onCreated?:        () => void
   /** Called after a successful update (edit mode) */
-  onUpdated?:   () => void
+  onUpdated?:        () => void
   /** When provided, the form operates in edit mode */
-  campaignId?:  string
+  campaignId?:       string
   /** Pre-filled data for edit mode */
-  initialData?: InitialCampaignData
+  initialData?:      InitialCampaignData
+  /** All campaigns available for transfer steps (should exclude self) */
+  allCampaigns?:     CampaignSummary[]
+  /** Id of the campaign being edited — used to exclude self from transfer targets */
+  currentCampaignId?: string
 }
 
 const STEP_LABELS: Record<StepType, string> = {
   send_email:         'Send Email',
   send_sms:           'Send SMS',
-  create_task:        'Create Task',
+  create_task:        'Call',
   wait:               'Wait / Delay',
   update_lead_score:  'Update Lead Score',
+  transfer_campaign:  'Transfer to Campaign',
 }
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -68,6 +79,7 @@ function defaultConfig(type: StepType): Record<string, string | number> {
     case 'create_task':       return { title: '', priority: 'normal' }
     case 'wait':              return {}
     case 'update_lead_score': return { delta: 5 }
+    case 'transfer_campaign': return { targetSequenceId: '', targetSequenceName: '', startAtStep: 0 }
   }
 }
 
@@ -86,7 +98,7 @@ function initialStepForm(s: InitialCampaignData['steps'][number]): StepForm {
   }
 }
 
-export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData }: CampaignBuilderProps) {
+export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData, allCampaigns, currentCampaignId }: CampaignBuilderProps) {
   const isEditMode = Boolean(campaignId)
 
   const [name,        setName]        = useState(initialData?.name        ?? '')
@@ -169,8 +181,12 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData 
         body:    JSON.stringify({ name, description, trigger, steps: apiSteps }),
       })
       if (!res.ok) {
-        const json = await res.json()
-        throw new Error(JSON.stringify(json.error))
+        let message = `Failed to ${isEditMode ? 'update' : 'create'} campaign`
+        try {
+          const json = await res.json()
+          if (json.error) message = typeof json.error === 'string' ? json.error : JSON.stringify(json.error)
+        } catch { /* response body was empty or not JSON */ }
+        throw new Error(message)
       }
       if (isEditMode) {
         onUpdated?.()
@@ -273,8 +289,13 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData 
               </div>
 
               {/* Step-type-specific config */}
-              <StepConfig type={step.type} config={step.config}
-                onChange={(k, v) => updateConfig(i, k, v)} />
+              <StepConfig
+                type={step.type}
+                config={step.config}
+                onChange={(k, v) => updateConfig(i, k, v)}
+                allCampaigns={allCampaigns}
+                currentCampaignId={campaignId ?? currentCampaignId}
+              />
             </div>
           ))}
         </div>
@@ -290,10 +311,12 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData 
   )
 }
 
-function StepConfig({ type, config, onChange }: {
-  type:     StepType
-  config:   Record<string, string | number>
-  onChange: (key: string, value: string | number) => void
+function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }: {
+  type:               StepType
+  config:             Record<string, string | number>
+  onChange:           (key: string, value: string | number) => void
+  allCampaigns?:      CampaignSummary[]
+  currentCampaignId?: string
 }) {
   const [uploading, setUploading]     = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -392,6 +415,60 @@ function StepConfig({ type, config, onChange }: {
       )
     case 'wait':
       return <p className="text-xs text-charcoal-400">This step pauses the sequence for the delay above.</p>
+
+    case 'transfer_campaign': {
+      const available = (allCampaigns ?? []).filter(c => c.id !== currentCampaignId)
+      const selected  = available.find(c => c.id === (config.targetSequenceId as string))
+      return (
+        <div className="flex flex-col gap-2">
+          {available.length === 0 ? (
+            <p className="text-xs text-charcoal-400 italic">No other campaigns exist yet. Create another campaign first.</p>
+          ) : (
+            <>
+              <select
+                value={config.targetSequenceId as string}
+                onChange={e => {
+                  const target = available.find(c => c.id === e.target.value)
+                  onChange('targetSequenceId',  e.target.value)
+                  onChange('targetSequenceName', target?.name ?? '')
+                  onChange('startAtStep', 0)
+                }}
+                className={inputCls}
+              >
+                <option value="">— Select target campaign —</option>
+                {available.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              {selected && selected.steps.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-charcoal-500 shrink-0">Start at step</label>
+                  <select
+                    value={config.startAtStep as number}
+                    onChange={e => onChange('startAtStep', parseInt(e.target.value))}
+                    className={`${inputCls} w-auto`}
+                  >
+                    {selected.steps.map((s, idx) => (
+                      <option key={idx} value={idx}>
+                        Step {idx + 1} — {STEP_LABELS[s.type as StepType] ?? s.type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selected && (
+                <p className="text-xs text-charcoal-400">
+                  Contact will be moved out of this campaign and enrolled in &quot;{selected.name}&quot;.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )
+    }
+
     default:
       return null
   }

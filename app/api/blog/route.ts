@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/auth'
 import { slugify } from '@/lib/utils'
 
 const blogSchema = z.object({
@@ -34,6 +35,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const body = await request.json()
     const data = blogSchema.parse(body)

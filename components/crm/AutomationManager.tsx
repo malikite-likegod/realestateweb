@@ -78,15 +78,22 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
 
   // Refresh campaigns from server
   async function refreshCampaigns() {
-    const res  = await fetch('/api/campaigns')
-    const json = await res.json()
-    if (json.data) {
-      setCampaigns(json.data.map((c: Campaign & { enrollments: { id: string }[], steps: Array<CampaignStep & { config: string }> }) => ({
-        ...c,
-        activeEnrollments: c.enrollments.length,
-        steps: c.steps.map(s => ({ ...s, config: typeof s.config === 'string' ? JSON.parse(s.config) : s.config })),
-      })))
-    }
+    try {
+      const res  = await fetch('/api/campaigns')
+      if (!res.ok) return
+      const json = await res.json()
+      if (json.data) {
+        setCampaigns(json.data.map((c: Campaign & { enrollments: { id: string }[], steps: Array<CampaignStep & { config: string }> }) => ({
+          ...c,
+          activeEnrollments: c.enrollments.length,
+          steps: c.steps.map((s: CampaignStep & { config: string }) => {
+            let config: Record<string, unknown> = {}
+            try { config = typeof s.config === 'string' ? JSON.parse(s.config) : s.config } catch { /* skip bad config */ }
+            return { ...s, config }
+          }),
+        })))
+      }
+    } catch { /* network error — keep current list */ }
     setShowNewCampaign(false)
   }
 
@@ -131,8 +138,8 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
   }
 
   const stepTypeLabels: Record<string, string> = {
-    send_email: 'Email', send_sms: 'SMS', create_task: 'Task',
-    wait: 'Wait', update_lead_score: 'Score',
+    send_email: 'Email', send_sms: 'SMS', create_task: 'Call',
+    wait: 'Wait', update_lead_score: 'Score', transfer_campaign: 'Transfer',
   }
 
   // ─── Campaigns tab ──────────────────────────────────────────────────────────
@@ -149,7 +156,7 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
       {showNewCampaign && (
         <div className="rounded-xl border border-charcoal-200 bg-white p-5">
           <h3 className="font-semibold text-charcoal-900 mb-4">New Drip Campaign</h3>
-          <CampaignBuilder onCreated={refreshCampaigns} />
+          <CampaignBuilder onCreated={refreshCampaigns} allCampaigns={campaigns} />
         </div>
       )}
 
@@ -191,8 +198,11 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                   <div key={step.id} className="flex items-center gap-2 text-xs">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-charcoal-100 text-charcoal-600 font-medium shrink-0">{i + 1}</span>
                     <span className="text-charcoal-700">{stepTypeLabels[step.type] ?? step.type}</span>
+                    {step.type === 'transfer_campaign' && typeof step.config.targetSequenceName === 'string' && step.config.targetSequenceName && (
+                      <span className="text-charcoal-500 truncate">→ {step.config.targetSequenceName}</span>
+                    )}
                     {step.delayMinutes > 0 && (
-                      <span className="text-charcoal-400">
+                      <span className="text-charcoal-400 shrink-0">
                         +{step.delayMinutes >= 1440 ? `${Math.round(step.delayMinutes / 1440)}d` : `${step.delayMinutes}m`}
                       </span>
                     )}
@@ -209,13 +219,15 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                 <div className="border-t border-charcoal-100 pt-4 mt-3">
                   <CampaignBuilder
                     campaignId={c.id}
+                    currentCampaignId={c.id}
+                    allCampaigns={campaigns}
                     initialData={{
                       name:        c.name,
                       description: c.description ?? '',
                       trigger:     c.trigger as 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual',
                       steps:       c.steps.map(s => ({
                         order:        s.order,
-                        type:         s.type as 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score',
+                        type:         s.type as 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign',
                         delayMinutes: s.delayMinutes,
                         config:       s.config as Record<string, string | number>,
                       })),

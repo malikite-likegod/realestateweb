@@ -113,5 +113,33 @@ export async function GET(request: Request) {
     return events
   })
 
-  return NextResponse.json({ data: [...taskEvents, ...birthdayEvents] })
+  // ── Bookings ────────────────────────────────────────────────────────────────
+  const bookings = await prisma.bookingEvent.findMany({
+    where: {
+      status:  { not: 'cancelled' },
+      ...(rangeFilter && { startAt: rangeFilter }),
+    },
+    include: { schedule: { select: { meetingTitle: true } } },
+  })
+
+  const bookingEvents = bookings.map(b => ({
+    id:              `booking_${b.id}`,
+    title:           `📅 ${b.guestName}`,
+    start:           b.startAt.toISOString(),
+    end:             b.endAt.toISOString(),
+    allDay:          false,
+    backgroundColor: '#0ea5e9',
+    borderColor:     '#0ea5e9',
+    extendedProps: {
+      recordType:  'booking',
+      bookingId:   b.id,
+      guestName:   b.guestName,
+      guestEmail:  b.guestEmail,
+      guestPhone:  b.guestPhone,
+      description: b.guestMessage ?? b.schedule.meetingTitle,
+      status:      b.status,
+    },
+  }))
+
+  return NextResponse.json({ data: [...taskEvents, ...birthdayEvents, ...bookingEvents] })
 }

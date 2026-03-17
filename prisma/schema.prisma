@@ -440,19 +440,59 @@ model BlogPost {
   @@map("blog_posts")
 }
 
+// ─── Market Reports ───────────────────────────────────────────────────────────
+
+model MarketReport {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  reportMonth String?   // e.g. "March 2026"
+  area        String?   // neighbourhood / city the report covers
+  excerpt     String?
+  body        String    // HTML overview content shown publicly
+  coverImage  String?
+  status      String    @default("draft") // draft | published
+  publishedAt DateTime?
+  authorName  String?
+  ctaTitle    String?   // headline above the lead capture form
+  ctaSubtitle String?   // sub-copy below ctaTitle
+  views       Int       @default(0)
+  leads       Int       @default(0)
+  metaTitle   String?
+  metaDesc    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("market_reports")
+}
+
 // ─── Landing Pages ────────────────────────────────────────────────────────────
 
 model LandingPage {
-  id         String    @id @default(cuid())
-  title      String
-  slug       String    @unique
-  content    String    // JSON blocks
-  status     String    @default("draft")
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  content     String    // Raw HTML body rendered on the public page
+  status      String    @default("draft") // draft | published
   publishedAt DateTime?
-  views      Int       @default(0)
-  leads      Int       @default(0)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  views       Int       @default(0)
+  leads       Int       @default(0)
+  // Lead form
+  ctaTitle    String?   // Heading above the form
+  ctaSubtitle String?   // Sub-copy above the form
+  autoTags    String?   // JSON array of tag names auto-applied to every lead
+  // Agent info shown below the form
+  agentName   String?
+  agentTitle  String?
+  agentPhone  String?
+  agentEmail  String?
+  agentPhoto  String?
+  agentBio    String?
+  // SEO
+  metaTitle   String?
+  metaDesc    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   leadMagnets LeadMagnet[]
 
@@ -725,6 +765,54 @@ model PropertySearchLog {
   occurredAt DateTime @default(now())
 
   @@map("property_search_logs")
+}
+
+// ─── Booking / Availability ───────────────────────────────────────────────────
+
+// AvailabilitySchedule: the agent's bookable calendar (Calendly-like).
+// windows is a JSON array: [{ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }]
+// dayOfWeek: 0=Sun, 1=Mon … 6=Sat
+model AvailabilitySchedule {
+  id                 String   @id @default(cuid())
+  slug               String   @unique  // used in the public booking URL /book/[slug]
+  agentName          String
+  agentTitle         String?
+  agentEmail         String?
+  agentPhone         String?
+  agentPhoto         String?
+  meetingTitle       String   @default("Book a Meeting")
+  meetingDescription String?
+  meetingDurationMin Int      @default(30)  // length of each meeting slot
+  bufferMinutes      Int      @default(15)  // gap between consecutive bookings
+  advanceDays        Int      @default(30)  // how many days ahead guests can book
+  timezone           String   @default("America/Toronto")
+  windows            String   @default("[]") // JSON availability windows
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  bookings BookingEvent[]
+
+  @@map("availability_schedules")
+}
+
+// BookingEvent: a guest-confirmed meeting slot from the public booking page.
+model BookingEvent {
+  id           String               @id @default(cuid())
+  scheduleId   String
+  schedule     AvailabilitySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  guestName    String
+  guestEmail   String
+  guestPhone   String?
+  guestMessage String?
+  startAt      DateTime
+  endAt        DateTime
+  status       String               @default("confirmed") // confirmed | cancelled | rescheduled
+  adminNotes   String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@map("booking_events")
 }
 
 // ─── AI ───────────────────────────────────────────────────────────────────────

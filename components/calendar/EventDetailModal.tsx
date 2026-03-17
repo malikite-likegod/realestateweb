@@ -1,8 +1,7 @@
 'use client'
 
 import { Modal, Button, Badge } from '@/components/ui'
-import { CalendarDays, Clock, User, Tag, CheckSquare, Briefcase } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { CalendarDays, User, Tag, CheckSquare, Briefcase, Mail, Phone } from 'lucide-react'
 
 interface EventDetail {
   id: string
@@ -11,8 +10,9 @@ interface EventDetail {
   end: string | null
   allDay: boolean
   extendedProps: {
-    recordType: 'task' | 'birthday'
+    recordType: 'task' | 'birthday' | 'booking'
     taskId?: string
+    bookingId?: string
     status?: string
     priority?: string
     description?: string
@@ -20,6 +20,9 @@ interface EventDetail {
     contactName?: string
     dealTitle?: string
     assignee?: string
+    guestName?: string
+    guestEmail?: string
+    guestPhone?: string
   }
 }
 
@@ -49,6 +52,40 @@ export function EventDetailModal({ open, onClose, event, onEdit }: EventDetailMo
   if (!event) return null
   const { extendedProps: ep } = event
   const isBirthday = ep.recordType === 'birthday'
+  const isBooking  = ep.recordType === 'booking'
+
+  if (isBooking) {
+    return (
+      <Modal open={open} onClose={onClose} title="Booking" size="sm">
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-charcoal-900">{ep.guestName}</h3>
+          <div className="space-y-2 text-sm text-charcoal-600">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={14} className="shrink-0 text-charcoal-400" />
+              <span>{fmt(event.start, false)}</span>
+              {event.end && <span className="text-charcoal-400">→ {fmt(event.end, false)}</span>}
+            </div>
+            {ep.guestEmail && (
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="shrink-0 text-charcoal-400" />
+                <span>{ep.guestEmail}</span>
+              </div>
+            )}
+            {ep.guestPhone && (
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="shrink-0 text-charcoal-400" />
+                <span>{ep.guestPhone}</span>
+              </div>
+            )}
+            {ep.description && <p className="mt-2 text-charcoal-500">{ep.description}</p>}
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button variant="ghost" onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={isBirthday ? 'Client Birthday' : 'Task Details'} size="sm">
