@@ -77,8 +77,32 @@ export async function sendEmail(input: SendEmailInput) {
   // Resolve merge-tag variables from the contact record
   const contact = await prisma.contact.findUnique({
     where:  { id: input.contactId },
-    select: { firstName: true, lastName: true, email: true, phone: true },
+    select: { firstName: true, lastName: true, email: true, phone: true, emailOptOut: true },
   })
+
+  // Block delivery for opted-out contacts — record the attempt without sending
+  if (contact?.emailOptOut) {
+    return prisma.emailMessage.create({
+      data: {
+        contactId:  input.contactId,
+        direction:  'outbound',
+        status:     'opted_out',
+        subject:    input.subject,
+        body:       input.body,
+        fromEmail,
+        toEmail:    input.toEmail,
+        templateId: input.templateId ?? null,
+        trackingId: globalThis.crypto.randomUUID(),
+        sentById:   input.sentById ?? null,
+      },
+      include: {
+        contact:  { select: { firstName: true, lastName: true } },
+        template: { select: { name: true } },
+        sentBy:   { select: { name: true } },
+      },
+    })
+  }
+
   const mergeVars: Record<string, string> = {
     firstName:  contact?.firstName ?? '',
     lastName:   contact?.lastName  ?? '',
