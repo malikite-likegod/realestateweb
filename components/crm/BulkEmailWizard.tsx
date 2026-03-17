@@ -51,6 +51,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
   const router            = useRouter()
   const { toast }         = useToast()
   const bodyRef           = useRef<HTMLTextAreaElement>(null)
+  const subjectRef        = useRef<HTMLTextAreaElement | null>(null)
 
   // Step — always start at 1; preSelectedIds pre-populate selectedIds state below
   const [step, setStep]   = useState<1 | 2 | 3>(1)
@@ -192,11 +193,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
             {(['tag', 'individual'] as const).map(m => (
               <button
                 key={m}
-                onClick={() => {
-                  setMode(m)
-                  if (m === 'tag') setIds([])
-                  else             setTagIds([])
-                }}
+                onClick={() => setMode(m)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   mode === m ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-600 hover:bg-charcoal-200'
                 }`}
@@ -322,6 +319,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
           <div>
             <label className="block text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-1">Subject</label>
             <input
+              ref={subjectRef as unknown as React.Ref<HTMLInputElement>}
               type="text"
               value={subject}
               onChange={e => setSubject(e.target.value)}
@@ -332,7 +330,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
 
           {/* Merge tags for subject */}
           <MergeTagPicker
-            textareaRef={{ current: null }}
+            textareaRef={subjectRef}
             value={subject}
             onChange={setSubject}
           />
@@ -422,6 +420,12 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
             />
           </div>
 
+          {withEmail.length > 2000 && (
+            <p className="text-xs text-red-600 font-medium">
+              Recipient list exceeds the 2000-contact limit. Go back and narrow your selection.
+            </p>
+          )}
+
           <div className="flex justify-between">
             <Button variant="outline" leftIcon={<ChevronLeft size={16} />} onClick={() => setStep(2)}>
               Back
@@ -430,7 +434,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
               variant="primary"
               leftIcon={<Mail size={16} />}
               onClick={handleSend}
-              disabled={sending || withEmail.length === 0}
+              disabled={sending || withEmail.length === 0 || withEmail.length > 2000}
             >
               {sending ? 'Sending…' : scheduledAt ? 'Schedule Send' : `Send to ${withEmail.length} Contact${withEmail.length !== 1 ? 's' : ''}`}
             </Button>
