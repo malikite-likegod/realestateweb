@@ -10,6 +10,7 @@
 import { useState, useRef } from 'react'
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
+import { MergeTagPicker } from './MergeTagPicker'
 
 type StepType    = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign'
 type TriggerType = 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual'
@@ -321,6 +322,7 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
   const [uploading, setUploading]     = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bodyRef      = useRef<HTMLTextAreaElement>(null)
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
 
   async function handleAttachmentPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -358,7 +360,8 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
         <div className="flex flex-col gap-2">
           <input type="text" placeholder="Email subject" value={config.subject as string}
             onChange={e => onChange('subject', e.target.value)} className={inputCls} />
-          <textarea placeholder="Email body (HTML allowed)" rows={3} value={config.body as string}
+          <MergeTagPicker textareaRef={bodyRef} value={config.body as string} onChange={v => onChange('body', v)} />
+          <textarea ref={bodyRef} placeholder="Email body (HTML allowed)" rows={3} value={config.body as string}
             onChange={e => onChange('body', e.target.value)}
             className={`${inputCls} resize-none font-mono`} />
 

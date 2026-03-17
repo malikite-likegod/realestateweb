@@ -17,6 +17,7 @@
 import { useState, useRef } from 'react'
 import { Plus, Trash2, Save, Star, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
+import { MergeTagPicker } from './MergeTagPicker'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,7 @@ function StepActionConfig({
   const [uploading, setUploading]     = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
 
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
 
@@ -150,7 +152,8 @@ function StepActionConfig({
           <input className={inputCls} type="text" placeholder="Email subject"
             value={step.config.subject as string}
             onChange={e => onConfigChange('subject', e.target.value)} />
-          <textarea className={`${inputCls} resize-none font-mono`} rows={3}
+          <MergeTagPicker textareaRef={bodyRef} value={step.config.body as string} onChange={v => onConfigChange('body', v)} />
+          <textarea ref={bodyRef} className={`${inputCls} resize-none font-mono`} rows={3}
             placeholder="Email body (HTML allowed)"
             value={step.config.body as string}
             onChange={e => onConfigChange('body', e.target.value)} />

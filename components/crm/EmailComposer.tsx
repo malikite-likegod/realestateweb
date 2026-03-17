@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Mail, Send, ChevronDown, Eye, MousePointerClick, Paperclip, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { Button, useToast } from '@/components/ui'
+import { MergeTagPicker } from './MergeTagPicker'
 
 type EmailTemplate = {
   id:      string
@@ -52,6 +53,7 @@ export function EmailComposer({ emails, contactId, contactEmail }: EmailComposer
   const [sentEmails, setSentEmails] = useState<EmailEntry[]>(emails)
   const { toast }                 = useToast()
   const fileInputRef              = useRef<HTMLInputElement>(null)
+  const bodyRef                   = useRef<HTMLTextAreaElement>(null)
 
   // Load templates on mount
   useEffect(() => {
@@ -144,9 +146,11 @@ export function EmailComposer({ emails, contactId, contactEmail }: EmailComposer
           />
         </div>
 
-        <div>
-          <label className="text-xs text-charcoal-500 mb-1 block">Body</label>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-charcoal-500">Body</label>
+          <MergeTagPicker textareaRef={bodyRef} value={body} onChange={setBody} />
           <textarea
+            ref={bodyRef}
             value={body}
             onChange={e => setBody(e.target.value)}
             placeholder="Email body (HTML allowed)…"
