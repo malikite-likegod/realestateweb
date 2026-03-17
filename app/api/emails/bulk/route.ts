@@ -1,8 +1,9 @@
 import { NextResponse }  from 'next/server'
 import { z }             from 'zod'
 import { prisma }        from '@/lib/prisma'
-import { enqueueJob }    from '@/lib/automation/job-queue'
 import { getSession }    from '@/lib/auth'
+
+const MAX_RECIPIENTS = 2000
 
 const schema = z.object({
   tagIds:      z.array(z.string()).optional().default([]),
@@ -22,8 +23,8 @@ export async function POST(request: Request) {
 
   let parsed: z.infer<typeof schema>
   try {
-    const body = await request.json()
-    parsed = schema.parse(body)
+    const rawBody = await request.json()
+    parsed = schema.parse(rawBody)
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.errors[0]?.message ?? 'Invalid request' }, { status: 400 })
@@ -31,50 +32,69 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { tagIds, contactIds, subject, body, templateId, scheduledAt } = parsed
+  const { tagIds, contactIds, subject, body: emailBody, templateId, scheduledAt } = parsed
 
-  // Fetch contacts by tag(s)
-  const tagContacts = tagIds.length > 0
-    ? await prisma.contact.findMany({
-        where:  { tags: { some: { tagId: { in: tagIds } } } },
-        select: { id: true, email: true },
-      })
-    : []
+  try {
+    // Fetch contacts by tag(s)
+    const tagContacts = tagIds.length > 0
+      ? await prisma.contact.findMany({
+          where:  { tags: { some: { tagId: { in: tagIds } } } },
+          select: { id: true, email: true },
+        })
+      : []
 
-  // Fetch individually-selected contacts
-  const indivContacts = contactIds.length > 0
-    ? await prisma.contact.findMany({
-        where:  { id: { in: contactIds } },
-        select: { id: true, email: true },
-      })
-    : []
+    // Fetch individually-selected contacts
+    const indivContacts = contactIds.length > 0
+      ? await prisma.contact.findMany({
+          where:  { id: { in: contactIds } },
+          select: { id: true, email: true },
+        })
+      : []
 
-  // Deduplicate by contact ID
-  const contactMap = new Map<string, { id: string; email: string | null }>()
-  for (const c of [...tagContacts, ...indivContacts]) contactMap.set(c.id, c)
-  const allContacts = Array.from(contactMap.values())
+    // Deduplicate by contact ID
+    const contactMap = new Map<string, { id: string; email: string | null }>()
+    for (const c of [...tagContacts, ...indivContacts]) contactMap.set(c.id, c)
+    const allContacts = Array.from(contactMap.values())
 
-  const runAt       = scheduledAt ? new Date(scheduledAt) : new Date()
-  const bulkSendId  = crypto.randomUUID()
-  let scheduled = 0
-  let skipped   = 0
+    // Enforce recipient cap
+    if (allContacts.length > MAX_RECIPIENTS) {
+      return NextResponse.json(
+        { error: `Recipient list exceeds maximum of ${MAX_RECIPIENTS}` },
+        { status: 422 },
+      )
+    }
 
-  for (const contact of allContacts) {
-    if (!contact.email) { skipped++; continue }
-    await enqueueJob('bulk_email_send', {
-      contactId:   contact.id,
-      toEmail:     contact.email,
-      subject,
-      body,
-      templateId,
+    // Separate contacts with and without email
+    const recipients = allContacts.filter(c => c.email)
+    const skipped    = allContacts.length - recipients.length
+
+    const runAt      = scheduledAt ? new Date(scheduledAt) : new Date()
+    const bulkSendId = crypto.randomUUID()
+
+    // Batch-enqueue all jobs in one DB write
+    await prisma.jobQueue.createMany({
+      data: recipients.map(contact => ({
+        type:    'bulk_email_send',
+        payload: JSON.stringify({
+          contactId:  contact.id,
+          toEmail:    contact.email,
+          subject,
+          body:       emailBody,
+          templateId,
+          bulkSendId,
+        }),
+        runAt,
+      })),
+    })
+
+    return NextResponse.json({
+      total:     allContacts.length,
+      scheduled: recipients.length,
+      skipped,
       bulkSendId,
-    }, runAt)
-    scheduled++
+    })
+  } catch (err) {
+    console.error('[POST /api/emails/bulk]', err)
+    return NextResponse.json({ error: 'Failed to queue emails' }, { status: 500 })
   }
-
-  return NextResponse.json({
-    total:     allContacts.length,
-    scheduled,
-    skipped,
-  })
 }
