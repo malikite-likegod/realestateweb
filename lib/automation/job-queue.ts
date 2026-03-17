@@ -23,6 +23,7 @@ export type JobType =
   | 'send_sms_job'
   | 'execute_campaign_step'
   | 'evaluate_rules'
+  | 'bulk_email_send'
 
 /**
  * Add a job to the queue.
@@ -162,6 +163,20 @@ async function runJob(type: JobType, payload: Record<string, unknown>): Promise<
         payload.dealId    as string | undefined,
         payload.meta      as Record<string, unknown> | undefined,
       )
+      break
+    }
+
+    case 'bulk_email_send': {
+      const { sendEmail } = await import('@/lib/communications/email-service')
+      // Note: sendEmail() resolves merge tags internally (spec "runner behavior step 2")
+      // — no separate resolveMergeTags call is needed here.
+      await sendEmail({
+        contactId:  payload.contactId  as string,
+        subject:    payload.subject    as string,
+        body:       payload.body       as string,
+        toEmail:    payload.toEmail    as string,
+        templateId: payload.templateId as string | undefined,
+      })
       break
     }
 
