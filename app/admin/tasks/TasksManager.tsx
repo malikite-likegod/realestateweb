@@ -69,7 +69,9 @@ function filterByPeriod(tasks: Task[], period: Period, dateKey: 'dueAt' | 'compl
   if (!from) return tasks
   return tasks.filter(t => {
     const val = t[dateKey]
-    if (!val) return period === 'all'
+    // Pending tasks with no due date have no deadline, so always include them.
+    // Completed tasks with no completedAt are excluded from period views.
+    if (!val) return dateKey === 'dueAt'
     return new Date(val) >= from
   })
 }
@@ -187,19 +189,21 @@ export function TasksManager({ initialPending, initialCompleted }: Props) {
   async function handleToggle(id: string, markDone: boolean) {
     setToggling(id)
 
+    // Capture the original task snapshot BEFORE any state mutation so the
+    // catch rollback always has a valid reference regardless of closure timing.
+    const originalTask = markDone
+      ? pending.find(t => t.id === id)
+      : completed.find(t => t.id === id)
+
+    if (!originalTask) { setToggling(null); return }
+
     // Optimistic update
     if (markDone) {
-      const task = pending.find(t => t.id === id)
-      if (task) {
-        setPending(prev => prev.filter(t => t.id !== id))
-        setCompleted(prev => [{ ...task, status: 'done', completedAt: new Date().toISOString() }, ...prev])
-      }
+      setPending(prev  => prev.filter(t => t.id !== id))
+      setCompleted(prev => [{ ...originalTask, status: 'done', completedAt: new Date().toISOString() }, ...prev])
     } else {
-      const task = completed.find(t => t.id === id)
-      if (task) {
-        setCompleted(prev => prev.filter(t => t.id !== id))
-        setPending(prev => [{ ...task, status: 'todo', completedAt: null }, ...prev])
-      }
+      setCompleted(prev => prev.filter(t => t.id !== id))
+      setPending(prev   => [{ ...originalTask, status: 'todo', completedAt: null }, ...prev])
     }
 
     try {
@@ -211,20 +215,16 @@ export function TasksManager({ initialPending, initialCompleted }: Props) {
       if (!res.ok) throw new Error()
       toast('success', markDone ? 'Task completed' : 'Task reopened')
     } catch {
-      // Revert optimistic update on failure
+      // Revert the optimistic update using the captured snapshot
       toast('error', 'Failed to update task')
       if (markDone) {
-        const task = completed.find(t => t.id === id)
-        if (task) {
-          setCompleted(prev => prev.filter(t => t.id !== id))
-          setPending(prev => [{ ...task, status: 'todo', completedAt: null }, ...prev])
-        }
+        // Was completing — move back to pending
+        setCompleted(prev => prev.filter(t => t.id !== id))
+        setPending(prev   => [{ ...originalTask, status: originalTask.status }, ...prev])
       } else {
-        const task = pending.find(t => t.id === id)
-        if (task) {
-          setPending(prev => prev.filter(t => t.id !== id))
-          setCompleted(prev => [{ ...task, status: 'done' }, ...prev])
-        }
+        // Was undoing — move back to completed (restore original completedAt)
+        setPending(prev   => prev.filter(t => t.id !== id))
+        setCompleted(prev => [{ ...originalTask, status: 'done', completedAt: originalTask.completedAt }, ...prev])
       }
     } finally {
       setToggling(null)
