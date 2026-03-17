@@ -48,8 +48,10 @@ export async function enrollContact(sequenceId: string, contactId: string, start
       select: { birthday: true },
     })
     const lastDeal = await getLastClosedDealDate(contactId)
-    const config   = JSON.parse(entryStep.config) as Record<string, unknown>
-    nextRunAt = computeSpecialEventDate(config, contact?.birthday ?? null, lastDeal) ?? addMinutes(new Date(), 0)
+    const config        = JSON.parse(entryStep.config) as Record<string, unknown>
+    const computedDate  = computeSpecialEventDate(config, contact?.birthday ?? null, lastDeal)
+    if (!computedDate) return null   // Required contact data missing — skip enrollment
+    nextRunAt = computedDate
   } else {
     nextRunAt = addMinutes(new Date(), entryStep.delayMinutes)
   }
@@ -235,10 +237,18 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
     if (nextStep) {
       let nextRunAt: Date
       if (enrollment.sequence.trigger === 'special_event') {
-        const nextConfig = JSON.parse(nextStep.config) as Record<string, unknown>
-        const lastDeal   = await getLastClosedDealDate(enrollment.contactId)
-        nextRunAt = computeSpecialEventDate(nextConfig, enrollment.contact.birthday, lastDeal)
-          ?? addMinutes(new Date(), 0)
+        const nextConfig    = JSON.parse(nextStep.config) as Record<string, unknown>
+        const lastDeal      = await getLastClosedDealDate(enrollment.contactId)
+        const computedDate  = computeSpecialEventDate(nextConfig, enrollment.contact.birthday, lastDeal)
+        if (!computedDate) {
+          // Required contact data missing — cannot schedule next step; complete enrollment
+          await prisma.campaignEnrollment.update({
+            where: { id: enrollmentId },
+            data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+          })
+          return
+        }
+        nextRunAt = computedDate
       } else {
         nextRunAt = addMinutes(new Date(), nextStep.delayMinutes)
       }
