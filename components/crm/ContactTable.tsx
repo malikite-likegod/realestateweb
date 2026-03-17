@@ -10,15 +10,38 @@ const statusVariants: Record<string, 'default' | 'info' | 'success' | 'gold' | '
 }
 
 interface ContactTableProps {
-  contacts: ContactWithTags[]
+  contacts:          ContactWithTags[]
+  selectedIds?:      Set<string>
+  onToggle?:         (id: string) => void
+  onToggleAll?:      (checked: boolean) => void
 }
 
-export function ContactTable({ contacts }: ContactTableProps) {
+export function ContactTable({
+  contacts,
+  selectedIds,
+  onToggle,
+  onToggleAll,
+}: ContactTableProps) {
+  const selectable   = !!onToggle
+  const allChecked   = selectable && contacts.length > 0 && contacts.every(c => selectedIds?.has(c.id))
+  const someChecked  = selectable && !allChecked && contacts.some(c => selectedIds?.has(c.id))
+
   return (
     <div className="overflow-x-auto rounded-xl border border-charcoal-100">
       <table className="w-full text-sm">
         <thead className="bg-charcoal-50 border-b border-charcoal-100">
           <tr>
+            {selectable && (
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={el => { if (el) el.indeterminate = someChecked }}
+                  onChange={e => onToggleAll?.(e.target.checked)}
+                  className="rounded border-charcoal-300 text-charcoal-900 cursor-pointer"
+                />
+              </th>
+            )}
             {['Name', 'Email', 'Phone', 'Status', 'Lead Score', 'Added'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-charcoal-500 uppercase tracking-wide">{h}</th>
             ))}
@@ -26,7 +49,20 @@ export function ContactTable({ contacts }: ContactTableProps) {
         </thead>
         <tbody className="divide-y divide-charcoal-100 bg-white">
           {contacts.map(c => (
-            <tr key={c.id} className="hover:bg-charcoal-50 transition-colors">
+            <tr
+              key={c.id}
+              className={`hover:bg-charcoal-50 transition-colors ${selectable && selectedIds?.has(c.id) ? 'bg-indigo-50' : ''}`}
+            >
+              {selectable && (
+                <td className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds?.has(c.id) ?? false}
+                    onChange={() => onToggle?.(c.id)}
+                    className="rounded border-charcoal-300 text-charcoal-900 cursor-pointer"
+                  />
+                </td>
+              )}
               <td className="px-4 py-3">
                 <Link href={`/admin/contacts/${c.id}`} className="flex items-center gap-3">
                   <Avatar name={`${c.firstName} ${c.lastName}`} size="sm" />
