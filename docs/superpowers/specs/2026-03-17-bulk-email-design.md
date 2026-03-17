@@ -27,6 +27,7 @@ Add bulk email sending to the LuxeRealty CRM. Users can select recipients by ind
 ### 1. Contacts List (`/admin/contacts`)
 - Checkbox column added as first column; header checkbox selects all visible rows
 - Selection toolbar appears when ≥1 contact is checked: "X selected", **Email Selected** button, **Clear** link
+- Header checkbox selects all contacts on the **current page only**; if the list is paginated, cross-page selection is not supported (keep it simple)
 - Tag dropdown filter added alongside existing status pills — filter by tag(s) first, then select all visible to target a tag's contacts
 - **Email Selected** navigates to `/admin/bulk-email?contactIds=c1,c2,...`
 
@@ -44,7 +45,7 @@ Two modes, combinable:
 
 **By Tag**
 - Multi-select tag picker with color swatches and checkboxes
-- Live count of unique recipients updates as tags are toggled
+- Live count of unique recipients updates as tags are toggled (computed client-side from tag membership data loaded with the page — no server round-trip per toggle)
 
 **Individual**
 - Searchable contact list with checkboxes
@@ -86,12 +87,14 @@ Final recipient set = union of tag contacts + individual picks, deduplicated by 
 
 At least one of `tagIds` or `contactIds` must be provided. `scheduledAt` is optional; omit for immediate send.
 
+**Validation errors** return HTTP 400 with `{ "error": "<reason>" }` — e.g., missing both `tagIds` and `contactIds`, empty arrays for both, or unresolvable tag/contact IDs.
+
 **Server logic:**
 1. Fetch all contacts matching `tagIds` (via `ContactTag` join) + explicit `contactIds`
 2. Deduplicate by contact ID
 3. Filter out contacts with no email address — track count for response
 4. Generate a shared `bulkSendId` (UUID) to group this blast
-5. Create one `job_queue` entry per recipient (type: `bulk_email_send`)
+5. Create one `job_queue` entry per recipient (type: `bulk_email_send`); if `scheduledAt` is provided, set it as the `scheduledAt` column on the job row — the runner ignores jobs until that time
 6. Return `{ total, scheduled, skipped }`
 
 **Response:**
