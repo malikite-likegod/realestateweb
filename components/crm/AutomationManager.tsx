@@ -14,6 +14,7 @@ import { Badge, Button, Tabs } from '@/components/ui'
 import { CampaignBuilder } from './CampaignBuilder'
 import { RuleBuilder } from './RuleBuilder'
 import { SpecialEventBuilder } from './SpecialEventBuilder'
+import { CampaignEnrollmentsModal } from './CampaignEnrollmentsModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
   const [processing,          setProcessing]          = useState(false)
   const [editingCampaignId,   setEditingCampaignId]   = useState<string | null>(null)
   const [editingEventId,      setEditingEventId]      = useState<string | null>(null)
+  const [enrollmentModal, setEnrollmentModal] = useState<{ campaignId: string; campaignName: string; totalSteps: number } | null>(null)
 
   // Refresh campaigns from server
   function normaliseCampaigns(raw: (Campaign & { enrollments: { id: string }[], steps: Array<CampaignStep & { config: string }> })[]) {
@@ -258,9 +260,12 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                 ))}
               </div>
 
-              <p className="text-xs text-charcoal-400">
+              <button
+                type="button"
+                onClick={() => setEnrollmentModal({ campaignId: c.id, campaignName: c.name, totalSteps: c.steps.length })}
+                className="text-xs text-charcoal-400 hover:text-charcoal-700 hover:underline text-left">
                 {c.activeEnrollments} active enrollment{c.activeEnrollments !== 1 ? 's' : ''}
-              </p>
+              </button>
 
               {/* Inline editor */}
               {editingCampaignId === c.id && (
@@ -471,9 +476,12 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                 ))}
               </div>
 
-              <p className="text-xs text-charcoal-400">
+              <button
+                type="button"
+                onClick={() => setEnrollmentModal({ campaignId: c.id, campaignName: c.name, totalSteps: c.steps.length })}
+                className="text-xs text-charcoal-400 hover:text-charcoal-700 hover:underline text-left">
                 {c.activeEnrollments} active enrollment{c.activeEnrollments !== 1 ? 's' : ''}
-              </p>
+              </button>
 
               {editingEventId === c.id && (
                 <div className="border-t border-charcoal-100 pt-4 mt-3">
@@ -504,11 +512,23 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
   )
 
   return (
-    <Tabs tabs={[
-      { id: 'campaigns',      label: `Drip Campaigns (${campaigns.length})`,     content: CampaignsTab },
-      { id: 'special_events', label: `Special Events (${specialEvents.length})`, content: SpecialEventsTab },
-      { id: 'rules',          label: `Automation Rules (${rules.length})`,       content: RulesTab },
-      { id: 'queue',          label: `Job Queue (${jobStats.pending} pending)`,  content: QueueTab },
-    ]} />
+    <>
+      <Tabs tabs={[
+        { id: 'campaigns',      label: `Drip Campaigns (${campaigns.length})`,     content: CampaignsTab },
+        { id: 'special_events', label: `Special Events (${specialEvents.length})`, content: SpecialEventsTab },
+        { id: 'rules',          label: `Automation Rules (${rules.length})`,       content: RulesTab },
+        { id: 'queue',          label: `Job Queue (${jobStats.pending} pending)`,  content: QueueTab },
+      ]} />
+
+      {enrollmentModal && (
+        <CampaignEnrollmentsModal
+          open={!!enrollmentModal}
+          onClose={() => setEnrollmentModal(null)}
+          campaignId={enrollmentModal.campaignId}
+          campaignName={enrollmentModal.campaignName}
+          totalSteps={enrollmentModal.totalSteps}
+        />
+      )}
+    </>
   )
 }
