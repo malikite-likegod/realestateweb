@@ -1,4 +1,5 @@
 export type ContactStatus = 'lead' | 'prospect' | 'client' | 'past_client'
+export type Tag = { id: string; name: string; color: string }
 export type DealStage = string
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled'
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
