@@ -534,15 +534,16 @@ model LeadMagnet {
 // ─── Automation ───────────────────────────────────────────────────────────────
 
 model AutomationSequence {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  trigger     String   // new_lead | deal_stage_change | showing_scheduled | manual
-  isActive    Boolean  @default(true)
-  steps       AutomationStep[]
-  enrollments CampaignEnrollment[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  trigger        String   // new_lead | deal_stage_change | showing_scheduled | manual | special_event
+  isActive       Boolean  @default(true)
+  repeatAnnually Boolean  @default(false)
+  steps          AutomationStep[]
+  enrollments    CampaignEnrollment[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("automation_sequences")
 }
