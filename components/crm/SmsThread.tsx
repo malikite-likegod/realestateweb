@@ -28,9 +28,10 @@ interface SmsThreadProps {
   initialMessages: SmsEntry[]
   contactId:       string
   contactPhone?:   string | null
+  smsOptOut?:      boolean
 }
 
-export function SmsThread({ initialMessages, contactId, contactPhone }: SmsThreadProps) {
+export function SmsThread({ initialMessages, contactId, contactPhone, smsOptOut = false }: SmsThreadProps) {
   const [messages, setMessages] = useState<SmsEntry[]>(initialMessages)
   const [text, setText]         = useState('')
   const [sending, setSending]   = useState(false)
@@ -109,7 +110,11 @@ export function SmsThread({ initialMessages, contactId, contactPhone }: SmsThrea
       </div>
 
       {/* Composer */}
-      {contactPhone ? (
+      {smsOptOut ? (
+        <div className="px-4 py-3 border-t border-charcoal-100 text-sm text-red-700 bg-red-50">
+          This contact has opted out of SMS communications. Edit the contact to re-enable.
+        </div>
+      ) : contactPhone ? (
         <form onSubmit={handleSend} className="flex gap-2">
           <input
             type="text"

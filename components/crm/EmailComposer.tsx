@@ -40,9 +40,10 @@ interface EmailComposerProps {
   emails:       EmailEntry[]
   contactId:    string
   contactEmail: string | null
+  emailOptOut?: boolean
 }
 
-export function EmailComposer({ emails, contactId, contactEmail }: EmailComposerProps) {
+export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = false }: EmailComposerProps) {
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [subject, setSubject]     = useState('')
   const [body, setBody]           = useState('')
@@ -116,90 +117,96 @@ export function EmailComposer({ emails, contactId, contactEmail }: EmailComposer
   return (
     <div className="flex flex-col gap-5">
       {/* Compose form */}
-      <form onSubmit={handleSend} className="rounded-xl border border-charcoal-200 bg-charcoal-50 p-4 flex flex-col gap-3">
-        <p className="text-xs font-semibold text-charcoal-700 uppercase tracking-wide">Compose Email</p>
-
-        {templates.length > 0 && (
-          <div>
-            <label className="text-xs text-charcoal-500 mb-1 block">Template (optional)</label>
-            <select
-              value={templateId}
-              onChange={e => applyTemplate(e.target.value)}
-              className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
-            >
-              <option value="">— No template —</option>
-              {templates.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div>
-          <label className="text-xs text-charcoal-500 mb-1 block">Subject</label>
-          <input
-            type="text"
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            placeholder="Subject line…"
-            className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
-          />
+      {emailOptOut ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          This contact has opted out of email communications. Edit the contact to re-enable.
         </div>
+      ) : (
+        <form onSubmit={handleSend} className="rounded-xl border border-charcoal-200 bg-charcoal-50 p-4 flex flex-col gap-3">
+          <p className="text-xs font-semibold text-charcoal-700 uppercase tracking-wide">Compose Email</p>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-charcoal-500">Body</label>
-          <MergeTagPicker textareaRef={bodyRef} value={body} onChange={setBody} />
-          <textarea
-            ref={bodyRef}
-            value={body}
-            onChange={e => setBody(e.target.value)}
-            placeholder="Email body (HTML allowed)…"
-            rows={5}
-            className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900 resize-none font-mono"
-          />
-        </div>
-
-        {/* Attachments */}
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFilePick}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
-          >
-            <Paperclip size={13} />
-            Attach files
-          </button>
-          {attachments.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-1">
-              {attachments.map((f, i) => (
-                <li key={i} className="flex items-center gap-2 text-xs text-charcoal-700">
-                  <Paperclip size={11} className="text-charcoal-400 shrink-0" />
-                  <span className="truncate flex-1">{f.name}</span>
-                  <span className="text-charcoal-400 shrink-0">({(f.size / 1024).toFixed(0)} KB)</span>
-                  <button type="button" onClick={() => removeAttachment(i)} className="text-charcoal-400 hover:text-red-500 transition-colors">
-                    <X size={12} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {templates.length > 0 && (
+            <div>
+              <label className="text-xs text-charcoal-500 mb-1 block">Template (optional)</label>
+              <select
+                value={templateId}
+                onChange={e => applyTemplate(e.target.value)}
+                className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
+              >
+                <option value="">— No template —</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
           )}
-        </div>
 
-        {contactEmail ? (
-          <Button type="submit" variant="primary" size="sm" loading={sending} leftIcon={<Send size={14} />}>
-            Send to {contactEmail}
-          </Button>
-        ) : (
-          <p className="text-xs text-charcoal-400">Add an email address to this contact to send emails.</p>
-        )}
-      </form>
+          <div>
+            <label className="text-xs text-charcoal-500 mb-1 block">Subject</label>
+            <input
+              type="text"
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              placeholder="Subject line…"
+              className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-charcoal-500">Body</label>
+            <MergeTagPicker textareaRef={bodyRef} value={body} onChange={setBody} />
+            <textarea
+              ref={bodyRef}
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              placeholder="Email body (HTML allowed)…"
+              rows={5}
+              className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900 resize-none font-mono"
+            />
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFilePick}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
+            >
+              <Paperclip size={13} />
+              Attach files
+            </button>
+            {attachments.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1">
+                {attachments.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs text-charcoal-700">
+                    <Paperclip size={11} className="text-charcoal-400 shrink-0" />
+                    <span className="truncate flex-1">{f.name}</span>
+                    <span className="text-charcoal-400 shrink-0">({(f.size / 1024).toFixed(0)} KB)</span>
+                    <button type="button" onClick={() => removeAttachment(i)} className="text-charcoal-400 hover:text-red-500 transition-colors">
+                      <X size={12} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {contactEmail ? (
+            <Button type="submit" variant="primary" size="sm" loading={sending} leftIcon={<Send size={14} />}>
+              Send to {contactEmail}
+            </Button>
+          ) : (
+            <p className="text-xs text-charcoal-400">Add an email address to this contact to send emails.</p>
+          )}
+        </form>
+      )}
 
       {/* Email history */}
       <div className="flex flex-col gap-3">
