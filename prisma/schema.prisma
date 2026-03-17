@@ -33,6 +33,7 @@ model User {
   emailMessages     EmailMessage[]
   assignedDeals     Deal[]             @relation("AssignedDeals")
   stageHistoryMoves DealStageHistory[] @relation("StageHistoryMover")
+  optLogEntries     CommunicationOptLog[]
 
   @@map("users")
 }
@@ -66,6 +67,8 @@ model Contact {
   status       String   @default("lead") // lead | prospect | client | past_client
   leadScore    Int      @default(0)
   birthday     DateTime?
+  emailOptOut  Boolean  @default(false) // true = do not send email
+  smsOptOut    Boolean  @default(false) // true = do not send SMS
   notes        String?
   address      String?
   city         String?
@@ -91,8 +94,24 @@ model Contact {
   smsMessages       SmsMessage[]
   emailMessages     EmailMessage[]
   campaignEnrollments CampaignEnrollment[]
+  optLogs           CommunicationOptLog[]
 
   @@map("contacts")
+}
+
+model CommunicationOptLog {
+  id          String   @id @default(cuid())
+  contactId   String
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel     String   // 'email' | 'sms'
+  action      String   // 'opt_in' | 'opt_out'
+  changedAt   DateTime @default(now())
+  changedById String?
+  changedBy   User?    @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  reason      String?
+
+  @@index([contactId, changedAt])
+  @@map("communication_opt_log")
 }
 
 model ContactPhone {
@@ -656,7 +675,7 @@ model SmsMessage {
   contactId   String?
   contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   direction   String   @default("outbound") // inbound | outbound
-  status      String   @default("sent")     // queued | sent | delivered | failed | received
+  status      String   @default("sent")     // queued | sent | delivered | failed | received | opted_out
   body        String
   fromNumber  String?
   toNumber    String?
@@ -678,7 +697,7 @@ model EmailMessage {
   contactId   String?
   contact     Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
   direction   String         @default("outbound") // inbound | outbound
-  status      String         @default("sent") // draft | sent | delivered | bounced | failed
+  status      String         @default("sent") // draft | sent | delivered | bounced | failed | opted_out
   subject     String
   body        String         // HTML content
   fromEmail   String?

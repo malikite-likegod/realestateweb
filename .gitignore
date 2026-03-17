@@ -16,7 +16,7 @@ build/
 # db
 *.db
 *.db-journal
-prisma/migrations/
+# prisma/migrations/ — intentionally tracked in git
 
 # misc
 .DS_Store
