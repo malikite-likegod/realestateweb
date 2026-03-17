@@ -47,6 +47,8 @@ interface ContactData {
   country:    string
   phones:     IncomingPhone[]
   addresses:  IncomingAddress[]
+  emailOptOut: boolean
+  smsOptOut:   boolean
 }
 
 interface Props {
@@ -75,6 +77,11 @@ export function ContactEditModal({ contact }: Props) {
       : '',
     notes: contact.notes ?? '',
   })
+
+  const [emailOptOut, setEmailOptOut] = useState(contact.emailOptOut)
+  const [smsOptOut,   setSmsOptOut]   = useState(contact.smsOptOut)
+  const [emailReason, setEmailReason] = useState('')
+  const [smsReason,   setSmsReason]   = useState('')
 
   // Seed phones — strip extra Prisma fields (id, contactId, createdAt) to clean form state
   const [phones, setPhones] = useState<PhoneEntry[]>(() =>
@@ -178,6 +185,9 @@ export function ContactEditModal({ contact }: Props) {
           notes:    form.notes    || null,
           phones,
           addresses,
+          emailOptOut,
+          smsOptOut,
+          optOutReason: (emailReason || smsReason) || undefined,
         }),
       })
       if (!res.ok) throw new Error('Save failed')
@@ -382,6 +392,70 @@ export function ContactEditModal({ contact }: Props) {
               ))}
             </div>
           </section>
+
+          {/* Communication preferences */}
+          <div className="pt-2 border-t border-charcoal-100">
+            <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-3">
+              Communication Preferences
+            </p>
+            <div className="flex flex-col gap-3">
+
+              {/* Email toggle */}
+              <div>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm text-charcoal-700">Receive email communications</span>
+                  <button
+                    type="button"
+                    onClick={() => { setEmailOptOut(v => !v); setEmailReason('') }}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                      emailOptOut ? 'bg-red-500' : 'bg-green-500'
+                    }`}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      emailOptOut ? 'translate-x-1' : 'translate-x-4'
+                    }`} />
+                  </button>
+                </label>
+                {emailOptOut && !contact.emailOptOut && (
+                  <input
+                    type="text"
+                    value={emailReason}
+                    onChange={e => setEmailReason(e.target.value)}
+                    placeholder="Reason (optional)…"
+                    className={INPUT_CLASS}
+                  />
+                )}
+              </div>
+
+              {/* SMS toggle */}
+              <div>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm text-charcoal-700">Receive SMS communications</span>
+                  <button
+                    type="button"
+                    onClick={() => { setSmsOptOut(v => !v); setSmsReason('') }}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                      smsOptOut ? 'bg-red-500' : 'bg-green-500'
+                    }`}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      smsOptOut ? 'translate-x-1' : 'translate-x-4'
+                    }`} />
+                  </button>
+                </label>
+                {smsOptOut && !contact.smsOptOut && (
+                  <input
+                    type="text"
+                    value={smsReason}
+                    onChange={e => setSmsReason(e.target.value)}
+                    placeholder="Reason (optional)…"
+                    className={INPUT_CLASS}
+                  />
+                )}
+              </div>
+
+            </div>
+          </div>
 
         </div>
 
