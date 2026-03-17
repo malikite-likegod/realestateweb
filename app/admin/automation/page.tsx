@@ -19,8 +19,17 @@ export default async function AutomationPage() {
   const session = await getSession()
   if (!session) return null
 
-  const [campaigns, rules, jobStats] = await Promise.all([
+  const [campaigns, specialEvents, rules, jobStats] = await Promise.all([
     prisma.automationSequence.findMany({
+      where:   { trigger: { not: 'special_event' } },
+      include: {
+        steps:       { orderBy: { order: 'asc' } },
+        enrollments: { where: { status: 'active' }, select: { id: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.automationSequence.findMany({
+      where:   { trigger: 'special_event' },
       include: {
         steps:       { orderBy: { order: 'asc' } },
         enrollments: { where: { status: 'active' }, select: { id: true } },
@@ -48,6 +57,11 @@ export default async function AutomationPage() {
       />
       <AutomationManager
         initialCampaigns={campaigns.map(c => ({
+          ...c,
+          activeEnrollments: c.enrollments.length,
+          steps: c.steps.map(s => ({ ...s, config: JSON.parse(s.config) })),
+        }))}
+        initialSpecialEvents={specialEvents.map(c => ({
           ...c,
           activeEnrollments: c.enrollments.length,
           steps: c.steps.map(s => ({ ...s, config: JSON.parse(s.config) })),

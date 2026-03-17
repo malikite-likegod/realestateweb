@@ -39,7 +39,20 @@ export async function enrollContact(sequenceId: string, contactId: string, start
   // Clamp startAtStep to valid range
   const clampedStep = Math.max(0, Math.min(startAtStep, sequence.steps.length - 1))
   const entryStep   = sequence.steps[clampedStep]
-  const nextRunAt   = addMinutes(new Date(), entryStep.delayMinutes)
+
+  // For special_event campaigns compute the next run from the contact's data
+  let nextRunAt: Date
+  if (sequence.trigger === 'special_event') {
+    const contact = await prisma.contact.findUnique({
+      where:  { id: contactId },
+      select: { birthday: true },
+    })
+    const lastDeal = await getLastClosedDealDate(contactId)
+    const config   = JSON.parse(entryStep.config) as Record<string, unknown>
+    nextRunAt = computeSpecialEventDate(config, contact?.birthday ?? null, lastDeal) ?? addMinutes(new Date(), 0)
+  } else {
+    nextRunAt = addMinutes(new Date(), entryStep.delayMinutes)
+  }
 
   const enrollment = existing
     ? await prisma.campaignEnrollment.update({
@@ -220,7 +233,15 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
     const nextStep      = steps[nextStepIndex]
 
     if (nextStep) {
-      const nextRunAt = addMinutes(new Date(), nextStep.delayMinutes)
+      let nextRunAt: Date
+      if (enrollment.sequence.trigger === 'special_event') {
+        const nextConfig = JSON.parse(nextStep.config) as Record<string, unknown>
+        const lastDeal   = await getLastClosedDealDate(enrollment.contactId)
+        nextRunAt = computeSpecialEventDate(nextConfig, enrollment.contact.birthday, lastDeal)
+          ?? addMinutes(new Date(), 0)
+      } else {
+        nextRunAt = addMinutes(new Date(), nextStep.delayMinutes)
+      }
       await prisma.campaignEnrollment.update({
         where: { id: enrollmentId },
         data:  { currentStep: nextStepIndex, nextRunAt },
@@ -246,4 +267,67 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
 
 function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60_000)
+}
+
+/**
+ * Compute the next run date for a special-event step.
+ *
+ * scheduleType:
+ *   'contact_birthday'  — fires on the contact's next birthday
+ *   'last_deal_closed'  — fires on the next anniversary of their last closed deal
+ *   'fixed_date'        — fires on the next occurrence of month/day (e.g. Dec 25)
+ *
+ * offsetDays: negative = N days before the event, positive = after, 0 = same day
+ *
+ * Returns null if the required contact data is missing.
+ */
+function computeSpecialEventDate(
+  config:              Record<string, unknown>,
+  birthday:            Date | null,
+  lastClosedDealDate:  Date | null,
+): Date | null {
+  const scheduleType = config.scheduleType as string
+  const offsetDays   = (config.offsetDays  as number) ?? 0
+  const now          = new Date()
+
+  function nextAnnual(month: number, day: number): Date {
+    // month is 0-indexed here
+    const thisYear = new Date(now.getFullYear(), month, day)
+    const runDate  = new Date(thisYear.getTime() + offsetDays * 86_400_000)
+    if (runDate > now) return runDate
+    const nextYear = new Date(now.getFullYear() + 1, month, day)
+    return new Date(nextYear.getTime() + offsetDays * 86_400_000)
+  }
+
+  if (scheduleType === 'contact_birthday') {
+    if (!birthday) return null
+    const d = new Date(birthday)
+    return nextAnnual(d.getMonth(), d.getDate())
+  }
+
+  if (scheduleType === 'last_deal_closed') {
+    if (!lastClosedDealDate) return null
+    const d = new Date(lastClosedDealDate)
+    return nextAnnual(d.getMonth(), d.getDate())
+  }
+
+  if (scheduleType === 'fixed_date') {
+    const month = ((config.fixedMonth as number) ?? 1) - 1 // convert 1-indexed to 0-indexed
+    const day   = (config.fixedDay  as number) ?? 1
+    return nextAnnual(month, day)
+  }
+
+  return null
+}
+
+/**
+ * Fetch the date of the most recent closed deal a contact was a participant in.
+ */
+async function getLastClosedDealDate(contactId: string): Promise<Date | null> {
+  const participant = await prisma.dealParticipant.findFirst({
+    where:   { contactId, deal: { closedAt: { not: null } } },
+    include: { deal: { select: { closedAt: true } } },
+    orderBy: { deal: { closedAt: 'desc' } },
+  })
+  return participant?.deal.closedAt ?? null
 }

@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/utils'
 import { Badge, Button, Tabs } from '@/components/ui'
 import { CampaignBuilder } from './CampaignBuilder'
 import { RuleBuilder } from './RuleBuilder'
+import { SpecialEventBuilder } from './SpecialEventBuilder'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,41 +61,58 @@ type JobStats = {
 }
 
 interface AutomationManagerProps {
-  initialCampaigns: Campaign[]
-  initialRules:     Rule[]
-  initialJobStats:  JobStats
+  initialCampaigns:      Campaign[]
+  initialRules:          Rule[]
+  initialJobStats:       JobStats
+  initialSpecialEvents?: Campaign[]
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AutomationManager({ initialCampaigns, initialRules, initialJobStats }: AutomationManagerProps) {
-  const [campaigns,  setCampaigns]  = useState<Campaign[]>(initialCampaigns)
-  const [rules,      setRules]      = useState<Rule[]>(initialRules)
-  const [jobStats,   setJobStats]   = useState<JobStats>(initialJobStats)
-  const [showNewCampaign,  setShowNewCampaign]  = useState(false)
-  const [showNewRule,      setShowNewRule]      = useState(false)
-  const [processing,       setProcessing]       = useState(false)
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null)
+export function AutomationManager({ initialCampaigns, initialRules, initialJobStats, initialSpecialEvents }: AutomationManagerProps) {
+  const [campaigns,      setCampaigns]      = useState<Campaign[]>(initialCampaigns)
+  const [specialEvents,  setSpecialEvents]  = useState<Campaign[]>(initialSpecialEvents ?? [])
+  const [rules,          setRules]          = useState<Rule[]>(initialRules)
+  const [jobStats,       setJobStats]       = useState<JobStats>(initialJobStats)
+  const [showNewCampaign,     setShowNewCampaign]     = useState(false)
+  const [showNewSpecialEvent, setShowNewSpecialEvent] = useState(false)
+  const [showNewRule,         setShowNewRule]         = useState(false)
+  const [processing,          setProcessing]          = useState(false)
+  const [editingCampaignId,   setEditingCampaignId]   = useState<string | null>(null)
+  const [editingEventId,      setEditingEventId]      = useState<string | null>(null)
 
   // Refresh campaigns from server
+  function normaliseCampaigns(raw: (Campaign & { enrollments: { id: string }[], steps: Array<CampaignStep & { config: string }> })[]) {
+    return raw.map(c => ({
+      ...c,
+      activeEnrollments: c.enrollments.length,
+      steps: c.steps.map((s: CampaignStep & { config: string }) => {
+        let config: Record<string, unknown> = {}
+        try { config = typeof s.config === 'string' ? JSON.parse(s.config) : s.config } catch { /* skip bad config */ }
+        return { ...s, config }
+      }),
+    }))
+  }
+
   async function refreshCampaigns() {
     try {
-      const res  = await fetch('/api/campaigns')
+      const res  = await fetch('/api/campaigns?trigger=drip')
       if (!res.ok) return
       const json = await res.json()
-      if (json.data) {
-        setCampaigns(json.data.map((c: Campaign & { enrollments: { id: string }[], steps: Array<CampaignStep & { config: string }> }) => ({
-          ...c,
-          activeEnrollments: c.enrollments.length,
-          steps: c.steps.map((s: CampaignStep & { config: string }) => {
-            let config: Record<string, unknown> = {}
-            try { config = typeof s.config === 'string' ? JSON.parse(s.config) : s.config } catch { /* skip bad config */ }
-            return { ...s, config }
-          }),
-        })))
-      }
+      if (json.data) setCampaigns(normaliseCampaigns(json.data))
     } catch { /* network error — keep current list */ }
     setShowNewCampaign(false)
+  }
+
+  async function refreshSpecialEvents() {
+    try {
+      const res  = await fetch('/api/campaigns?trigger=special_event')
+      if (!res.ok) return
+      const json = await res.json()
+      if (json.data) setSpecialEvents(normaliseCampaigns(json.data))
+    } catch { /* network error */ }
+    setShowNewSpecialEvent(false)
+    setEditingEventId(null)
   }
 
   async function refreshRules() {
@@ -140,6 +158,12 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
   const stepTypeLabels: Record<string, string> = {
     send_email: 'Email', send_sms: 'SMS', create_task: 'Call',
     wait: 'Wait', update_lead_score: 'Score', transfer_campaign: 'Transfer',
+  }
+
+  const scheduleTypeLabels: Record<string, string> = {
+    contact_birthday: 'Birthday',
+    last_deal_closed: 'Deal Anniversary',
+    fixed_date:       'Fixed Date',
   }
 
   // ─── Campaigns tab ──────────────────────────────────────────────────────────
@@ -351,11 +375,116 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
     </div>
   )
 
+  // ─── Special Events tab ────────────────────────────────────────────────────
+
+  const specialEventScheduleLabel = (step: CampaignStep): string => {
+    const cfg        = step.config as Record<string, unknown>
+    const type       = scheduleTypeLabels[cfg.scheduleType as string] ?? 'Event'
+    const offset     = (cfg.offsetDays as number) ?? 0
+    const absOffset  = Math.abs(offset)
+    if (offset === 0) return `On ${type}`
+    if (offset < 0)   return `${absOffset}d before ${type}`
+    return `${absOffset}d after ${type}`
+  }
+
+  const SpecialEventsTab = (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}
+          onClick={() => setShowNewSpecialEvent(v => !v)}>
+          {showNewSpecialEvent ? 'Cancel' : 'New Special Event'}
+        </Button>
+      </div>
+
+      {showNewSpecialEvent && (
+        <div className="rounded-xl border border-charcoal-200 bg-white p-5">
+          <h3 className="font-semibold text-charcoal-900 mb-4">New Special Event Campaign</h3>
+          <SpecialEventBuilder onCreated={refreshSpecialEvents} />
+        </div>
+      )}
+
+      {specialEvents.length === 0 && !showNewSpecialEvent ? (
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-charcoal-100">
+            <Zap size={24} className="text-charcoal-400" />
+          </div>
+          <h3 className="font-serif text-xl font-bold text-charcoal-900">No Special Events Yet</h3>
+          <p className="text-charcoal-400 max-w-sm text-sm">
+            Send messages on birthdays, deal anniversaries, or fixed dates like holidays.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {specialEvents.map(c => (
+            <div key={c.id} className="rounded-xl border border-charcoal-200 bg-white p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-semibold text-charcoal-900">{c.name}</h3>
+                  {c.description && <p className="text-xs text-charcoal-400 mt-0.5">{c.description}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={c.isActive ? 'success' : 'default'}>{c.isActive ? 'Active' : 'Paused'}</Badge>
+                  <button
+                    onClick={() => setEditingEventId(editingEventId === c.id ? null : c.id)}
+                    className="text-charcoal-400 hover:text-charcoal-700" title="Edit">
+                    {editingEventId === c.id ? <X size={16} /> : <Pencil size={16} />}
+                  </button>
+                  <button onClick={() => toggleCampaign(c.id, c.isActive)}
+                    className="text-charcoal-400 hover:text-charcoal-700" title="Toggle">
+                    {c.isActive ? <ToggleRight size={20} className="text-green-600" /> : <ToggleLeft size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Steps preview */}
+              <div className="flex flex-col gap-1.5 border-t border-charcoal-100 pt-3 mb-3">
+                {c.steps.map((step, i) => (
+                  <div key={step.id} className="flex items-center gap-2 text-xs">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-charcoal-100 text-charcoal-600 font-medium shrink-0">{i + 1}</span>
+                    <span className="text-charcoal-700">{stepTypeLabels[step.type] ?? step.type}</span>
+                    <span className="text-charcoal-400 truncate">· {specialEventScheduleLabel(step)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-charcoal-400">
+                {c.activeEnrollments} active enrollment{c.activeEnrollments !== 1 ? 's' : ''}
+              </p>
+
+              {editingEventId === c.id && (
+                <div className="border-t border-charcoal-100 pt-4 mt-3">
+                  <SpecialEventBuilder
+                    campaignId={c.id}
+                    initialData={{
+                      name:        c.name,
+                      description: c.description ?? '',
+                      steps: c.steps.map(s => ({
+                        order:        s.order,
+                        type:         s.type as 'send_email' | 'send_sms' | 'create_task' | 'update_lead_score',
+                        delayMinutes: s.delayMinutes,
+                        config:       s.config as Record<string, string | number>,
+                      })),
+                    }}
+                    onUpdated={() => {
+                      setEditingEventId(null)
+                      refreshSpecialEvents()
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <Tabs tabs={[
-      { id: 'campaigns', label: `Drip Campaigns (${campaigns.length})`, content: CampaignsTab },
-      { id: 'rules',     label: `Automation Rules (${rules.length})`,   content: RulesTab },
-      { id: 'queue',     label: `Job Queue (${jobStats.pending} pending)`, content: QueueTab },
+      { id: 'campaigns',      label: `Drip Campaigns (${campaigns.length})`,     content: CampaignsTab },
+      { id: 'special_events', label: `Special Events (${specialEvents.length})`, content: SpecialEventsTab },
+      { id: 'rules',          label: `Automation Rules (${rules.length})`,       content: RulesTab },
+      { id: 'queue',          label: `Job Queue (${jobStats.pending} pending)`,  content: QueueTab },
     ]} />
   )
 }

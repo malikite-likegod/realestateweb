@@ -11,13 +11,13 @@ const stepSchema = z.object({
   order:        z.number().int().min(0),
   type:         z.enum(['send_email', 'send_sms', 'create_task', 'wait', 'update_lead_score', 'transfer_campaign']),
   delayMinutes: z.number().int().min(0),
-  config:       z.record(z.union([z.string(), z.number()])),
+  config:       z.record(z.unknown()),
 })
 
 const patchSchema = z.object({
   name:        z.string().min(1).optional(),
   description: z.string().optional(),
-  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual']).optional(),
+  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']).optional(),
   isActive:    z.boolean().optional(),
   /** When provided, replaces all existing steps */
   steps:       z.array(stepSchema).min(1).optional(),

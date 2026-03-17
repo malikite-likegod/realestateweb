@@ -16,7 +16,7 @@ const stepSchema = z.object({
 const createSchema = z.object({
   name:        z.string().min(1),
   description: z.string().optional(),
-  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual']),
+  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']),
   isActive:    z.boolean().default(true),
   steps:       z.array(stepSchema).min(1),
 })
@@ -29,7 +29,11 @@ export async function GET(request: Request) {
   const trigger = searchParams.get('trigger') ?? undefined
 
   const campaigns = await prisma.automationSequence.findMany({
-    where:   trigger ? { trigger } : {},
+    where: trigger === 'drip'
+      ? { trigger: { not: 'special_event' } }
+      : trigger
+        ? { trigger }
+        : {},
     include: {
       steps:       { orderBy: { order: 'asc' } },
       enrollments: { where: { status: 'active' }, select: { id: true } },
