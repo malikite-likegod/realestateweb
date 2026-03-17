@@ -258,10 +258,36 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
       })
       await enqueueJob('execute_campaign_step', { enrollmentId }, nextRunAt)
     } else {
-      await prisma.campaignEnrollment.update({
-        where: { id: enrollmentId },
-        data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
-      })
+      // Last step done — either cycle annually or complete
+      const shouldRepeat =
+        enrollment.sequence.repeatAnnually &&
+        enrollment.sequence.trigger === 'special_event'
+
+      if (shouldRepeat && steps.length > 0) {
+        const step0Config    = JSON.parse(steps[0].config) as Record<string, unknown>
+        const lastDeal       = await getLastClosedDealDate(enrollment.contactId)
+        const nextRunAt      = computeSpecialEventDate(step0Config, enrollment.contact.birthday, lastDeal)
+
+        if (nextRunAt) {
+          // Cycle back to step 0 for next year
+          await prisma.campaignEnrollment.update({
+            where: { id: enrollmentId },
+            data:  { currentStep: 0, nextRunAt },
+          })
+          await enqueueJob('execute_campaign_step', { enrollmentId }, nextRunAt)
+        } else {
+          // Required contact data missing — fall back to completing
+          await prisma.campaignEnrollment.update({
+            where: { id: enrollmentId },
+            data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+          })
+        }
+      } else {
+        await prisma.campaignEnrollment.update({
+          where: { id: enrollmentId },
+          data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+        })
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
