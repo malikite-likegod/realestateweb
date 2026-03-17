@@ -11,8 +11,6 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
-import { Card } from '@/components/layout'
-import { Tabs } from '@/components/ui'
 import { AutomationManager } from '@/components/crm/AutomationManager'
 
 export default async function AutomationPage() {

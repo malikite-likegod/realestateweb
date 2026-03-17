@@ -131,6 +131,15 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, isActive: !current } : c))
   }
 
+  async function toggleSpecialEvent(id: string, current: boolean) {
+    await fetch(`/api/campaigns/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !current }),
+    })
+    setSpecialEvents(prev => prev.map(c => c.id === id ? { ...c, isActive: !current } : c))
+  }
+
   async function toggleRule(id: string, current: boolean) {
     await fetch(`/api/automation/rules/${id}`, {
       method: 'PATCH',
@@ -429,7 +438,7 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                     className="text-charcoal-400 hover:text-charcoal-700" title="Edit">
                     {editingEventId === c.id ? <X size={16} /> : <Pencil size={16} />}
                   </button>
-                  <button onClick={() => toggleCampaign(c.id, c.isActive)}
+                  <button onClick={() => toggleSpecialEvent(c.id, c.isActive)}
                     className="text-charcoal-400 hover:text-charcoal-700" title="Toggle">
                     {c.isActive ? <ToggleRight size={20} className="text-green-600" /> : <ToggleLeft size={20} />}
                   </button>

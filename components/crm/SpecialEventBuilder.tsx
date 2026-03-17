@@ -14,10 +14,9 @@
  * date anchor and offset.  delayMinutes is stored as 0 and ignored.
  */
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Plus, Trash2, Save, Star, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { useRef } from 'react'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -345,12 +344,13 @@ export function SpecialEventBuilder({ onCreated, onUpdated, campaignId, initialD
                 {/* Offset value */}
                 <input
                   type="number" min={0}
-                  value={Math.abs(step.offsetDays)}
+                  disabled={step.offsetDays === 0}
+                  value={step.offsetDays === 0 ? '' : Math.abs(step.offsetDays)}
                   onChange={e => {
                     const abs = parseInt(e.target.value) || 0
                     updateStep(i, { offsetDays: step.offsetDays < 0 ? -abs : abs })
                   }}
-                  className="w-14 rounded border border-charcoal-200 bg-charcoal-50 px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-1 focus:ring-charcoal-900"
+                  className="w-14 rounded border border-charcoal-200 bg-charcoal-50 px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-1 focus:ring-charcoal-900 disabled:opacity-40 disabled:cursor-not-allowed"
                 />
 
                 {/* Before / On / After */}
