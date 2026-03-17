@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { Plus, Zap, CheckCircle, XCircle, Clock, Play, ToggleLeft, ToggleRight, Pencil, X } from 'lucide-react'
+import { Plus, Zap, CheckCircle, XCircle, Clock, Play, ToggleLeft, ToggleRight, Pencil, X, RefreshCw } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { Badge, Button, Tabs } from '@/components/ui'
 import { CampaignBuilder } from './CampaignBuilder'
@@ -32,6 +32,7 @@ type Campaign = {
   description:       string | null
   trigger:           string
   isActive:          boolean
+  repeatAnnually:    boolean
   activeEnrollments: number
   steps:             CampaignStep[]
   createdAt:         Date | string
@@ -154,6 +155,21 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
     } catch {
       // Revert optimistic update on failure
       setSpecialEvents(prev => prev.map(c => c.id === id ? { ...c, isActive: current } : c))
+    }
+  }
+
+  async function toggleRepeatAnnually(id: string, current: boolean) {
+    setSpecialEvents(prev => prev.map(c => c.id === id ? { ...c, repeatAnnually: !current } : c))
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repeatAnnually: !current }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      // Revert optimistic update on failure
+      setSpecialEvents(prev => prev.map(c => c.id === id ? { ...c, repeatAnnually: current } : c))
     }
   }
 
@@ -453,6 +469,12 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={c.isActive ? 'success' : 'default'}>{c.isActive ? 'Active' : 'Paused'}</Badge>
+                  <button
+                    onClick={() => toggleRepeatAnnually(c.id, c.repeatAnnually)}
+                    className="text-charcoal-400 hover:text-charcoal-700"
+                    title={c.repeatAnnually ? 'Repeats annually' : 'Does not repeat'}>
+                    <RefreshCw size={16} className={c.repeatAnnually ? 'text-green-600' : ''} />
+                  </button>
                   <button
                     onClick={() => setEditingEventId(editingEventId === c.id ? null : c.id)}
                     className="text-charcoal-400 hover:text-charcoal-700" title="Edit">
