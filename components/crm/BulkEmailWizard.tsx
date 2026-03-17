@@ -51,7 +51,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
   const router            = useRouter()
   const { toast }         = useToast()
   const bodyRef           = useRef<HTMLTextAreaElement>(null)
-  const subjectRef        = useRef<HTMLTextAreaElement | null>(null)
+  const subjectRef        = useRef<HTMLInputElement | null>(null)
 
   // Step — always start at 1; preSelectedIds pre-populate selectedIds state below
   const [step, setStep]   = useState<1 | 2 | 3>(1)
@@ -319,7 +319,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
           <div>
             <label className="block text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-1">Subject</label>
             <input
-              ref={subjectRef as unknown as React.Ref<HTMLInputElement>}
+              ref={subjectRef}
               type="text"
               value={subject}
               onChange={e => setSubject(e.target.value)}

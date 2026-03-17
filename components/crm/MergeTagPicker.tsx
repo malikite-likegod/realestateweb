@@ -24,7 +24,7 @@ export const MERGE_TAGS = [
 ]
 
 interface Props {
-  textareaRef: RefObject<HTMLTextAreaElement | null>
+  textareaRef: RefObject<HTMLTextAreaElement | HTMLInputElement | null>
   value:    string
   onChange: (val: string) => void
 }
