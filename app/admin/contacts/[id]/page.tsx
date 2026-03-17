@@ -9,12 +9,13 @@ import {
   NotesPanel, TaskList,
   CallLogger, SmsThread, EmailComposer, UnifiedTimeline,
   ContactEditModal, ContactTagEditor, ContactCampaigns,
+  CommOptLogPanel,
 } from '@/components/crm'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
   Phone, Mail, MapPin, TrendingUp, Cake, Briefcase,
-  Building2, Star,
+  Building2, Star, MessageSquare,
 } from 'lucide-react'
 
 interface Props { params: Promise<{ id: string }> }
@@ -60,6 +61,11 @@ export default async function ContactDetailPage({ params }: Props) {
         },
         deals: {
           include: { deal: { include: { stage: true } } },
+        },
+        optLogs: {
+          orderBy: { changedAt: 'desc' },
+          take:    10,
+          include: { changedBy: { select: { name: true } } },
         },
       },
     }),
@@ -145,6 +151,21 @@ export default async function ContactDetailPage({ params }: Props) {
               <Badge variant={statusVariants[contact.status] ?? 'default'} className="capitalize">
                 {contact.status.replace('_', ' ')}
               </Badge>
+              {/* Opt-out badges */}
+              {(contact.emailOptOut || contact.smsOptOut) && (
+                <div className="flex flex-wrap gap-1.5 justify-center">
+                  {contact.emailOptOut && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                      <Mail size={10} /> Email opted out
+                    </span>
+                  )}
+                  {contact.smsOptOut && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                      <MessageSquare size={10} /> SMS opted out
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Lead score */}
@@ -296,6 +317,12 @@ export default async function ContactDetailPage({ params }: Props) {
             </div>
           </Card>
 
+          <CommOptLogPanel
+            emailOptOut={contact.emailOptOut}
+            smsOptOut={contact.smsOptOut}
+            optLogs={contact.optLogs}
+          />
+
         </div>
 
         {/* ── Main content: tabbed communication hub ───────────────────── */}
@@ -321,6 +348,7 @@ export default async function ContactDetailPage({ params }: Props) {
                     displayPhones[0]?.number ??
                     contact.phone
                   }
+                  smsOptOut={contact.smsOptOut}
                 />
               ),
             },
@@ -335,6 +363,7 @@ export default async function ContactDetailPage({ params }: Props) {
                   }))}
                   contactId={id}
                   contactEmail={contact.email}
+                  emailOptOut={contact.emailOptOut}
                 />
               ),
             },
