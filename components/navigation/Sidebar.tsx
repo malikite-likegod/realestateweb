@@ -80,7 +80,13 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
           <Home size={18} className="shrink-0" />
           {!collapsed && <span>View Site</span>}
         </Link>
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-charcoal-400 hover:text-red-400 hover:bg-charcoal-800 transition-colors">
+        <button
+          onClick={async () => {
+            await fetch('/api/auth/logout', { method: 'POST' })
+            window.location.href = '/admin/login'
+          }}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-charcoal-400 hover:text-red-400 hover:bg-charcoal-800 transition-colors"
+        >
           <LogOut size={18} className="shrink-0" />
           {!collapsed && <span>Log Out</span>}
         </button>
