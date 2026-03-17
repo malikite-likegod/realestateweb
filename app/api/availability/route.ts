@@ -43,7 +43,10 @@ export async function PUT(request: Request) {
     bufferMinutes:       bufferMinutes       ?? 15,
     advanceDays:         advanceDays         ?? 30,
     timezone:            timezone            ?? 'America/Toronto',
-    windows:             JSON.stringify(typeof windows === 'string' ? JSON.parse(windows) : (windows ?? [])),
+    windows:             JSON.stringify((() => {
+      try { return typeof windows === 'string' ? JSON.parse(windows) : (windows ?? []) }
+      catch { return [] }
+    })()),
     isActive:            isActive            ?? true,
   }
 

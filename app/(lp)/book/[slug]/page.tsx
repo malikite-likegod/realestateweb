@@ -32,7 +32,6 @@ function addDays(d: Date, n: number) {
 function toYMD(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-function sameMonth(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() }
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1) }
 function getDaysInMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() }
 
@@ -128,10 +127,9 @@ export default function BookPage({ params }: { params: Promise<{ slug: string }>
 
   const maxDate = schedule ? addDays(today, schedule.advanceDays) : addDays(today, 30)
   const prevMonthStart = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)
+  const nextMonthStart = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
   const canGoPrev = prevMonthStart >= startOfMonth(today)
-  const canGoNext = sameMonth(viewMonth, today)
-    ? true
-    : addDays(viewMonth, 32) <= maxDate
+  const canGoNext = nextMonthStart <= maxDate
 
   const daysInMonth     = getDaysInMonth(viewMonth)
   const firstDayOfWeek  = viewMonth.getDay()

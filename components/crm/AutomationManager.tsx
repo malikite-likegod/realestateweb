@@ -116,28 +116,43 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
   }
 
   async function refreshRules() {
-    const res  = await fetch('/api/automation/rules')
-    const json = await res.json()
-    if (json.data) setRules(json.data)
+    try {
+      const res  = await fetch('/api/automation/rules')
+      if (!res.ok) return
+      const json = await res.json()
+      if (json.data) setRules(json.data)
+    } catch { /* network error — keep current list */ }
     setShowNewRule(false)
   }
 
   async function toggleCampaign(id: string, current: boolean) {
-    await fetch(`/api/campaigns/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !current }),
-    })
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, isActive: !current } : c))
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !current }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      // Revert optimistic update on failure
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, isActive: current } : c))
+    }
   }
 
   async function toggleSpecialEvent(id: string, current: boolean) {
-    await fetch(`/api/campaigns/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !current }),
-    })
     setSpecialEvents(prev => prev.map(c => c.id === id ? { ...c, isActive: !current } : c))
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !current }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      // Revert optimistic update on failure
+      setSpecialEvents(prev => prev.map(c => c.id === id ? { ...c, isActive: current } : c))
+    }
   }
 
   async function toggleRule(id: string, current: boolean) {

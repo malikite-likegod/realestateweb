@@ -106,6 +106,16 @@ export async function GET(
 
 // ── POST — create booking ─────────────────────────────────────────────────────
 
+/** Escape HTML special characters to prevent XSS in email bodies. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 async function sendBookingEmails(opts: {
   schedule:     { agentName: string; agentEmail: string | null; meetingTitle: string; meetingDurationMin: number }
   guestName:    string
@@ -130,16 +140,23 @@ async function sendBookingEmails(opts: {
     hour: 'numeric', minute: '2-digit',
   })
 
+  // Escape all user-supplied values before inserting into HTML
+  const safeGuestName    = escapeHtml(opts.guestName)
+  const safeGuestEmail   = escapeHtml(opts.guestEmail)
+  const safeMeetingTitle = escapeHtml(opts.schedule.meetingTitle)
+  const safeAgentName    = escapeHtml(opts.schedule.agentName)
+  const safeDuration     = String(opts.schedule.meetingDurationMin)
+
   // Email to guest
   await transporter.sendMail({
     from,
     to:      opts.guestEmail,
     subject: `Your meeting with ${opts.schedule.agentName} is confirmed`,
     html: `
-      <p>Hi ${opts.guestName},</p>
-      <p>Your <strong>${opts.schedule.meetingTitle}</strong> with <strong>${opts.schedule.agentName}</strong> is confirmed.</p>
-      <p><strong>Date & Time:</strong> ${formattedDate}</p>
-      <p><strong>Duration:</strong> ${opts.schedule.meetingDurationMin} minutes</p>
+      <p>Hi ${safeGuestName},</p>
+      <p>Your <strong>${safeMeetingTitle}</strong> with <strong>${safeAgentName}</strong> is confirmed.</p>
+      <p><strong>Date &amp; Time:</strong> ${formattedDate}</p>
+      <p><strong>Duration:</strong> ${safeDuration} minutes</p>
       <p>We look forward to speaking with you!</p>
     `,
   })
@@ -152,10 +169,10 @@ async function sendBookingEmails(opts: {
       subject: `New booking: ${opts.guestName} — ${formattedDate}`,
       html: `
         <p>You have a new booking!</p>
-        <p><strong>Guest:</strong> ${opts.guestName} (${opts.guestEmail})</p>
-        <p><strong>Meeting:</strong> ${opts.schedule.meetingTitle}</p>
-        <p><strong>Date & Time:</strong> ${formattedDate}</p>
-        <p><strong>Duration:</strong> ${opts.schedule.meetingDurationMin} minutes</p>
+        <p><strong>Guest:</strong> ${safeGuestName} (${safeGuestEmail})</p>
+        <p><strong>Meeting:</strong> ${safeMeetingTitle}</p>
+        <p><strong>Date &amp; Time:</strong> ${formattedDate}</p>
+        <p><strong>Duration:</strong> ${safeDuration} minutes</p>
       `,
     })
   }
