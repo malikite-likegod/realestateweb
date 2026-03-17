@@ -78,7 +78,7 @@ export function CampaignEnrollmentsModal({ open, onClose, campaignId, campaignNa
     }
   }
 
-  async function updateStatus(enrollmentId: string, status: 'active' | 'paused' | 'cancelled') {
+  async function updateStatus(enrollmentId: string, status: 'active' | 'paused' | 'cancelled' | 'restart') {
     setError('')
     try {
       const res  = await fetch(`/api/campaigns/enrollments/${enrollmentId}`, {
@@ -88,7 +88,8 @@ export function CampaignEnrollmentsModal({ open, onClose, campaignId, campaignNa
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to update enrollment')
-      setRows(prev => prev.map(r => r.id === enrollmentId ? { ...r, status } : r))
+      const optimisticStatus = status === 'restart' ? 'active' : status
+      setRows(prev => prev.map(r => r.id === enrollmentId ? { ...r, status: optimisticStatus } : r))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update enrollment')
     }
@@ -175,6 +176,20 @@ export function CampaignEnrollmentsModal({ open, onClose, campaignId, campaignNa
                                 onClick={() => updateStatus(row.id, 'cancelled')}
                                 className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50 transition-colors">
                                 Unenroll
+                              </button>
+                            </>
+                          )}
+                          {row.status === 'completed' && (
+                            <>
+                              <button
+                                onClick={() => updateStatus(row.id, 'restart')}
+                                className="rounded px-2 py-1 text-xs text-green-600 hover:bg-green-50 transition-colors">
+                                Restart
+                              </button>
+                              <button
+                                onClick={() => updateStatus(row.id, 'cancelled')}
+                                className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50 transition-colors">
+                                Remove
                               </button>
                             </>
                           )}
