@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import Link from 'next/link'
 import { Avatar, Badge } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
@@ -26,6 +27,10 @@ export function ContactTable({
   const allChecked   = selectable && contacts.length > 0 && contacts.every(c => selectedIds?.has(c.id))
   const someChecked  = selectable && !allChecked && contacts.some(c => selectedIds?.has(c.id))
 
+  const headerRef = useCallback((el: HTMLInputElement | null) => {
+    if (el) el.indeterminate = someChecked
+  }, [someChecked])
+
   return (
     <div className="overflow-x-auto rounded-xl border border-charcoal-100">
       <table className="w-full text-sm">
@@ -36,7 +41,7 @@ export function ContactTable({
                 <input
                   type="checkbox"
                   checked={allChecked}
-                  ref={el => { if (el) el.indeterminate = someChecked }}
+                  ref={headerRef}
                   onChange={e => onToggleAll?.(e.target.checked)}
                   className="rounded border-charcoal-300 text-charcoal-900 cursor-pointer"
                 />

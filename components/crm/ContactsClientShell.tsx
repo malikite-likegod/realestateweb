@@ -7,7 +7,7 @@
  * and renders: tag/status filters, selection toolbar, contacts table.
  */
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, X } from 'lucide-react'
 import { ContactTable } from './ContactTable'
@@ -22,6 +22,10 @@ interface Props {
 export function ContactsClientShell({ contacts, tags }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    setSelected(new Set())
+  }, [contacts])
 
   function toggle(id: string) {
     setSelected(prev => {
