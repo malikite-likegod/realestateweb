@@ -5,9 +5,10 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { enqueueJob } from '@/lib/automation/job-queue'
+import { enrollContact } from '@/lib/automation/campaign-service'
 
 const patchSchema = z.object({
-  status: z.enum(['active', 'paused', 'cancelled']),
+  status: z.enum(['active', 'paused', 'cancelled', 'restart']),
 })
 
 interface Props { params: Promise<{ enrollmentId: string }> }
@@ -24,6 +25,25 @@ export async function PATCH(request: Request, { params }: Props) {
     const existing = await prisma.campaignEnrollment.findUnique({ where: { id: enrollmentId } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    // ── Restart command ────────────────────────────────────────────────────────
+    if (parsed.status === 'restart') {
+      if (existing.status !== 'completed' && existing.status !== 'cancelled') {
+        return NextResponse.json(
+          { error: 'Can only restart a completed or cancelled enrollment' },
+          { status: 422 },
+        )
+      }
+      const result = await enrollContact(existing.sequenceId, existing.contactId, 0)
+      if (!result) {
+        return NextResponse.json(
+          { error: 'Could not restart enrollment' },
+          { status: 422 },
+        )
+      }
+      return NextResponse.json({ data: result })
+    }
+
+    // ── Normal status update ───────────────────────────────────────────────────
     const enrollment = await prisma.campaignEnrollment.update({
       where: { id: enrollmentId },
       data:  {
