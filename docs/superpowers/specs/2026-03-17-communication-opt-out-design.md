@@ -118,6 +118,10 @@ No SMTP call is made. The returned `EmailMessage` record has `status: 'opted_out
 - Provides a visible record in the contact's email history
 - Returns a real record to the direct-send API route so the UI can surface it
 
+**`opted_out` is a new valid status value** for `EmailMessage` (existing values: `draft`, `sent`, `delivered`, `bounced`, `failed`). The schema comment and any UI components that display or switch on email status must be updated to recognise `opted_out` and render it appropriately (e.g. a grey "Opted out" badge).
+
+**Already-queued jobs:** If a `send_email_job` or `bulk_email_send` row is already in the job queue when a contact opts out, the job is still picked up by the worker. The service-layer guard reads the contact's current `emailOptOut` flag at execution time, so the email is not delivered. The job completes with `status: 'completed'` in the job queue (no error, no retry), and an `EmailMessage` row with `status: 'opted_out'` is written. This is intentional — the job queue shows "completed" because the guard ran correctly, not because the email was sent.
+
 ### `sendSms()` — `lib/communications/sms-service.ts`
 
 A contact fetch is added at the top of `sendSms()` (it does not currently fetch the contact):
@@ -145,6 +149,10 @@ if (contact?.smsOptOut) {
 ```
 
 No Twilio call is made. Same reasoning as email: job completes, record exists, no retry.
+
+**`opted_out` is a new valid status value** for `SmsMessage` (existing values: `queued`, `sent`, `delivered`, `failed`, `received`). The schema comment and any UI components that render SMS status must be updated accordingly.
+
+**Already-queued jobs:** Same behavior as email — the worker picks up the job, the guard fires at execution time, no SMS is delivered, the job completes cleanly, and an `SmsMessage` row with `status: 'opted_out'` is written.
 
 ### Coverage
 
@@ -177,7 +185,7 @@ Two toggle switches added to the existing edit form:
 - **"Receive email communications"** — maps to `!emailOptOut`
 - **"Receive SMS communications"** — maps to `!smsOptOut`
 
-When switching either toggle to off (opting out), an optional **"Reason"** text field appears. The reason is sent as `optOutReason` in the PATCH body and stored in the opt log.
+When switching either toggle to off (opting out), an optional **"Reason"** text field appears beneath that toggle. If the user toggles back to opted-in before saving, the reason field is hidden and its value is cleared — no reason is sent or stored for an opt-in action. `optOutReason` is only stored in the opt log when the saved action is `'opt_out'`; it is ignored on opt-in.
 
 ### EmailComposer — opted-out notice
 
