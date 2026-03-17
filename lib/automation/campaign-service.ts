@@ -272,7 +272,7 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
           // Cycle back to step 0 for next year
           await prisma.campaignEnrollment.update({
             where: { id: enrollmentId },
-            data:  { currentStep: 0, nextRunAt },
+            data:  { currentStep: 0, nextRunAt, status: 'active', completedAt: null },
           })
           await enqueueJob('execute_campaign_step', { enrollmentId }, nextRunAt)
         } else {
