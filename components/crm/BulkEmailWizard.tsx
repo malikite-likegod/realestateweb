@@ -9,7 +9,7 @@
  *   3. Preview deduplicated list, schedule, and send
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter }                   from 'next/navigation'
 import { ChevronRight, ChevronLeft, Mail, Search, Check, Clock } from 'lucide-react'
 import { Button, useToast }            from '@/components/ui'
@@ -73,16 +73,21 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
 
   // Load templates
   useEffect(() => {
-    fetch('/api/email-templates')
+    const controller = new AbortController()
+    fetch('/api/email-templates', { signal: controller.signal })
       .then(r => r.json())
       .then(d => setTemplates(d.data ?? []))
-      .catch(() => {})
+      .catch(err => { if (err.name !== 'AbortError') console.error('[BulkEmailWizard] template fetch failed:', err) })
+    return () => controller.abort()
   }, [])
 
-  // Computed recipients (deduplicated)
-  const recipients = computeRecipients(contacts, selectedTagIds, selectedIds)
-  const withEmail  = recipients.filter(c => c.email)
-  const noEmail    = recipients.filter(c => !c.email)
+  // Computed recipients (deduplicated, memoized)
+  const recipients = useMemo(
+    () => computeRecipients(contacts, selectedTagIds, selectedIds),
+    [contacts, selectedTagIds, selectedIds],
+  )
+  const withEmail  = useMemo(() => recipients.filter(c => c.email),  [recipients])
+  const noEmail    = useMemo(() => recipients.filter(c => !c.email), [recipients])
 
   // ── Step 1 helpers ──────────────────────────────────────────────────────
 
@@ -98,11 +103,14 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
     )
   }
 
-  const filteredContacts = search.trim()
-    ? contacts.filter(c =>
-        `${c.firstName} ${c.lastName} ${c.email ?? ''}`.toLowerCase().includes(search.toLowerCase())
-      )
-    : contacts
+  const filteredContacts = useMemo(
+    () => search.trim()
+      ? contacts.filter(c =>
+          `${c.firstName} ${c.lastName} ${c.email ?? ''}`.toLowerCase().includes(search.toLowerCase())
+        )
+      : contacts,
+    [contacts, search],
+  )
 
   // ── Step 2 helpers ──────────────────────────────────────────────────────
 
@@ -126,7 +134,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
           subject,
           body,
           templateId:  templateId || undefined,
-          scheduledAt: scheduledAt || undefined,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         }),
       })
       const data = await res.json()
@@ -184,7 +192,11 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
             {(['tag', 'individual'] as const).map(m => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
+                onClick={() => {
+                  setMode(m)
+                  if (m === 'tag') setIds([])
+                  else             setTagIds([])
+                }}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   mode === m ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-600 hover:bg-charcoal-200'
                 }`}
@@ -263,12 +275,17 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
             <span className="font-semibold text-charcoal-900">{recipients.length}</span> unique recipient{recipients.length !== 1 ? 's' : ''} selected
             {noEmail.length > 0 && <span className="text-amber-600 ml-2">({noEmail.length} have no email and will be skipped)</span>}
           </div>
+          {recipients.length > 2000 && (
+            <p className="text-xs text-red-600 font-medium">
+              Warning: recipient list exceeds the 2000-contact limit. Please narrow your selection.
+            </p>
+          )}
 
           <div className="flex justify-end">
             <Button
               variant="primary"
               rightIcon={<ChevronRight size={16} />}
-              disabled={recipients.length === 0 || withEmail.length === 0}
+              disabled={recipients.length === 0 || withEmail.length === 0 || withEmail.length > 2000}
               onClick={() => setStep(2)}
             >
               Next: Compose
