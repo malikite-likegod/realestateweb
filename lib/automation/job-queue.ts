@@ -12,6 +12,7 @@
  *   send_sms_job            → sends an SMS via sms-service
  *   execute_campaign_step   → advances a campaign enrollment one step
  *   evaluate_rules          → fires automation rules for a given trigger+contact
+ *   bulk_email_send         → sends one email to a bulk-send recipient via email-service
  */
 
 import { prisma } from '@/lib/prisma'
