@@ -688,8 +688,8 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
   // Step — always start at 1; preSelectedIds pre-populate selectedIds state below
   const [step, setStep]   = useState<1 | 2 | 3>(1)
 
-  // Step 1 state
-  const [mode, setMode]             = useState<'tag' | 'individual'>('tag')
+  // Step 1 state — default to 'individual' mode when arriving with pre-selected contacts
+  const [mode, setMode]             = useState<'tag' | 'individual'>(preSelectedIds.length > 0 ? 'individual' : 'tag')
   const [selectedTagIds, setTagIds] = useState<string[]>([])
   const [selectedIds, setIds]       = useState<string[]>(preSelectedIds)
   const [search, setSearch]         = useState('')
@@ -765,18 +765,18 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Send failed')
 
-      toast({
-        title:       scheduledAt ? 'Emails scheduled' : 'Emails queued',
-        description: `${data.scheduled} email${data.scheduled !== 1 ? 's' : ''} queued${data.skipped > 0 ? `, ${data.skipped} skipped (no email)` : ''}.`,
-        variant:     'success',
-      })
+      toast(
+        'success',
+        scheduledAt ? 'Emails scheduled' : 'Emails queued',
+        `${data.scheduled} email${data.scheduled !== 1 ? 's' : ''} queued${data.skipped > 0 ? `, ${data.skipped} skipped (no email)` : ''}.`,
+      )
       router.push('/admin/contacts')
     } catch (err) {
-      toast({
-        title:       'Send failed',
-        description: err instanceof Error ? err.message : 'Something went wrong.',
-        variant:     'error',
-      })
+      toast(
+        'error',
+        'Send failed',
+        err instanceof Error ? err.message : 'Something went wrong.',
+      )
     } finally {
       setSending(false)
     }
