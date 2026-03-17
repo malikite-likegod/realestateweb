@@ -53,6 +53,30 @@ export type SendSmsInput = {
 }
 
 export async function sendSms(input: SendSmsInput) {
+  // Block delivery for opted-out contacts — record the attempt without sending
+  const contactPref = await prisma.contact.findUnique({
+    where:  { id: input.contactId },
+    select: { smsOptOut: true },
+  })
+  if (contactPref?.smsOptOut) {
+    return prisma.smsMessage.create({
+      data: {
+        contactId:  input.contactId,
+        direction:  'outbound',
+        status:     'opted_out',
+        body:       input.body,
+        fromNumber: process.env.TWILIO_FROM_NUMBER ?? null,
+        toNumber:   input.toNumber,
+        sentById:   input.sentById ?? null,
+        groupId:    input.groupId  ?? null,
+      },
+      include: {
+        contact: { select: { firstName: true, lastName: true } },
+        sentBy:  { select: { name: true } },
+      },
+    })
+  }
+
   const fromNumber = process.env.TWILIO_FROM_NUMBER ?? null
 
   let twilioSid: string | null = null
