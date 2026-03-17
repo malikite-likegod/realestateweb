@@ -44,7 +44,7 @@ const STATUS_CONFIG: Record<EnrollmentStatus, { label: string; variant: 'success
   active:    { label: 'Active',    variant: 'success', icon: <Zap        size={12} className="text-green-500" /> },
   paused:    { label: 'Paused',    variant: 'gold',    icon: <PauseCircle size={12} className="text-amber-500" /> },
   completed: { label: 'Completed', variant: 'info',    icon: <CheckCircle size={12} className="text-blue-500" /> },
-  cancelled: { label: 'Cancelled', variant: 'default', icon: <XCircle    size={12} className="text-charcoal-400" /> },
+  cancelled: { label: 'Unenrolled', variant: 'default', icon: <XCircle    size={12} className="text-charcoal-400" /> },
 }
 
 export function ContactCampaigns({ contactId, initialEnrollments, availableCampaigns }: ContactCampaignsProps) {
@@ -172,7 +172,7 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
                       <p className="text-xs text-charcoal-400">
                         Enrolled {formatDate(new Date(e.enrolledAt), { month: 'short', day: 'numeric', year: 'numeric' })}
                         {e.completedAt && (
-                          <> · {e.status === 'completed' ? 'Completed' : 'Cancelled'} {formatDate(new Date(e.completedAt), { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                          <> · {e.status === 'completed' ? 'Completed' : 'Unenrolled'} {formatDate(new Date(e.completedAt), { month: 'short', day: 'numeric', year: 'numeric' })}</>
                         )}
                       </p>
                     )}
@@ -190,7 +190,7 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
                         <button
                           onClick={() => updateEnrollmentStatus(e.id, 'cancelled')}
                           className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50 transition-colors">
-                          Cancel
+                          Unenroll
                         </button>
                       </>
                     )}
@@ -204,7 +204,7 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
                         <button
                           onClick={() => updateEnrollmentStatus(e.id, 'cancelled')}
                           className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50 transition-colors">
-                          Cancel
+                          Unenroll
                         </button>
                       </>
                     )}
