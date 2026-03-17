@@ -161,7 +161,7 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
                     <p className="text-xs text-charcoal-400 capitalize mb-1">
                       Trigger: {e.sequence.trigger.replace(/_/g, ' ')}
                     </p>
-                    {e.status === 'active' || e.status === 'paused' ? (
+                    {(e.status === 'active' || e.status === 'paused') ? (
                       <div className="flex items-center gap-1.5 text-xs text-charcoal-500">
                         <Clock size={11} />
                         Step {e.currentStep + 1} of {e.sequence.totalSteps}

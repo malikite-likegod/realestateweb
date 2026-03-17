@@ -88,7 +88,7 @@ export async function sendSms(input: SendSmsInput) {
     data: {
       contactId:  input.contactId,
       direction:  'outbound',
-      status:     twilioSid ? 'sent' : 'sent', // update to 'delivered' via webhook
+      status:     'sent', // updated to 'delivered' via Twilio status-callback webhook
       body:       input.body,
       fromNumber: fromNumber,
       toNumber:   input.toNumber,

@@ -92,7 +92,7 @@ export async function sendEmail(input: SendEmailInput) {
         fromEmail,
         toEmail:    input.toEmail,
         templateId: input.templateId ?? null,
-        trackingId: globalThis.crypto.randomUUID(),
+        trackingId,
         sentById:   input.sentById ?? null,
       },
       include: {

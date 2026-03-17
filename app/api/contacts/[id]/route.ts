@@ -40,9 +40,10 @@ const updateSchema = z.object({
   phones:    z.array(phoneSchema).optional(),
   addresses: z.array(addressSchema).optional(),
   // communication opt-out fields
-  emailOptOut:  z.boolean().optional(),
-  smsOptOut:    z.boolean().optional(),
-  optOutReason: z.string().optional(),
+  emailOptOut:       z.boolean().optional(),
+  smsOptOut:         z.boolean().optional(),
+  emailOptOutReason: z.string().optional(),
+  smsOptOutReason:   z.string().optional(),
 })
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +73,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params
   try {
     const body = await request.json()
-    const { birthday, phones, addresses, emailOptOut, smsOptOut, optOutReason, ...rest } = updateSchema.parse(body)
+    const { birthday, phones, addresses, emailOptOut, smsOptOut, emailOptOutReason, smsOptOutReason, ...rest } = updateSchema.parse(body)
 
     const scalarData = {
       ...rest,
@@ -107,7 +108,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             channel:     'email',
             action:      emailOptOut ? 'opt_out' : 'opt_in',
             changedById: session?.id ?? null,
-            reason:      emailOptOut ? (optOutReason ?? null) : null,
+            reason:      emailOptOut ? (emailOptOutReason ?? null) : null,
           },
         })
       }
@@ -120,7 +121,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             channel:     'sms',
             action:      smsOptOut ? 'opt_out' : 'opt_in',
             changedById: session?.id ?? null,
-            reason:      smsOptOut ? (optOutReason ?? null) : null,
+            reason:      smsOptOut ? (smsOptOutReason ?? null) : null,
           },
         })
       }

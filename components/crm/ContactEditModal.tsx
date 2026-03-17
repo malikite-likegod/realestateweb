@@ -187,7 +187,8 @@ export function ContactEditModal({ contact }: Props) {
           addresses,
           emailOptOut,
           smsOptOut,
-          optOutReason: (emailReason || smsReason) || undefined,
+          emailOptOutReason: emailReason || undefined,
+          smsOptOutReason:   smsReason   || undefined,
         }),
       })
       if (!res.ok) throw new Error('Save failed')
