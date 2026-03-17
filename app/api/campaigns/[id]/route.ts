@@ -18,9 +18,10 @@ const patchSchema = z.object({
   name:        z.string().min(1).optional(),
   description: z.string().optional(),
   trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']).optional(),
-  isActive:    z.boolean().optional(),
+  isActive:       z.boolean().optional(),
+  repeatAnnually: z.boolean().optional(),
   /** When provided, replaces all existing steps */
-  steps:       z.array(stepSchema).min(1).optional(),
+  steps:          z.array(stepSchema).min(1).optional(),
 })
 
 interface Props { params: Promise<{ id: string }> }
