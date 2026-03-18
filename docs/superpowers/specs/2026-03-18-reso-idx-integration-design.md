@@ -87,22 +87,61 @@ RESO Data Dictionary-aligned fields:
 
 ### `SavedSearch` (new table)
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | String (cuid) | Primary key |
-| `name` | String? | User-given label |
-| `filters` | String | JSON blob of filter params |
-| `contactId` | String? | FK → Contact (public lead) |
-| `userId` | String? | FK → User (admin-created) |
-| `lastRunAt` | DateTime? | Updated on re-run |
-| `createdAt` | DateTime | |
+Prisma model:
 
-- At least one of `contactId` or `userId` must be set (enforced in route handlers).
-- `Contact` and `User` models gain `savedSearches SavedSearch[]` relation fields.
+```prisma
+model SavedSearch {
+  id        String    @id @default(cuid())
+  name      String?
+  filters   String                          // JSON blob of PropertyFilters
+  contactId String?
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastRunAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("saved_searches")
+}
+```
+
+- At least one of `contactId` or `userId` must be set — enforced in route handlers (not at DB level).
+- Add `savedSearches SavedSearch[]` relation field to both the `Contact` model and the `User` model (inside their model bodies, before `@@map`).
+
+### `ContactPropertyInterest` — FK update
+
+`ContactPropertyInterest.propertyId` currently points to `Property`. After this migration it points to `ResoProperty` instead. The field is **renamed** to `resoPropertyId` and the FK target changes to `ResoProperty`.
+
+Updated model:
+
+```prisma
+model ContactPropertyInterest {
+  id             String       @id @default(cuid())
+  contactId      String
+  contact        Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  resoPropertyId String
+  resoProperty   ResoProperty @relation(fields: [resoPropertyId], references: [id], onDelete: Cascade)
+  source         String       @default("auto")   // "auto" | "manual"
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([contactId, resoPropertyId])
+  @@map("contact_property_interests")
+}
+```
+
+`ResoProperty` must include the back-relation: `contactInterests ContactPropertyInterest[]`.
+
+**Impact on existing code:**
+- `app/api/behavior/route.ts` — upsert uses `resoPropertyId` (was `propertyId`). The `entityId` in `BehaviorEvent` stores `ResoProperty.id` (previously `Property.id`) when `eventType = listing_view`.
+- `app/api/contacts/[id]/property-interests/route.ts` — queries use `resoPropertyId`.
+- `components/admin/contacts/PropertyInterestsPanel.tsx` — field references update to RESO fields.
+- The `Property` model retains its own separate `contactInterests` relation field — **remove it** from `Property` in this migration since interests now track `ResoProperty` only.
 
 ### `ResoSyncLog` (replaces `IdxUpdate`)
 
-Same fields as `IdxUpdate`, renamed:
+The `IdxUpdate` table is **dropped** in this migration and replaced by `ResoSyncLog`. Any existing `IdxUpdate` rows are lost (acceptable — sync history resets). Same fields, new name:
 
 | Field | Type | Notes |
 |---|---|---|
@@ -140,7 +179,21 @@ Response:
 }
 ```
 
-Token is a signed JWT (using `RESO_TOKEN_SECRET` env var). The mock Property/Member/Office routes validate the `Authorization: Bearer <token>` header.
+Token is a signed JWT signed with `RESO_TOKEN_SECRET` env var (using Node.js `crypto.createHmac('sha256', secret)`). Payload: `{ sub: 'mock-client', exp: <unix timestamp> }`.
+
+**Token validation** is handled by a shared helper `lib/mock-reso-auth.ts`:
+
+```typescript
+export function validateMockResoToken(request: Request): boolean {
+  const auth = request.headers.get('authorization') ?? ''
+  if (!auth.startsWith('Bearer ')) return false
+  const token = auth.slice(7)
+  // verify HMAC-SHA256 signature and exp claim
+  // return false if invalid or expired
+}
+```
+
+Every mock Property/Member/Office route calls this helper and returns `401` if it returns `false`. This file is only used by the mock routes — the real RESO client uses standard OAuth bearer tokens validated by PropTx.
 
 ### Endpoints
 
@@ -156,11 +209,27 @@ Token is a signed JWT (using `RESO_TOKEN_SECRET` env var). The mock Property/Mem
 
 | Param | Supported expressions |
 |---|---|
-| `$filter` | `City eq 'Toronto'`, `ListPrice ge 500000`, `ListPrice le 900000`, `BedroomsTotal ge 3`, `StandardStatus eq 'Active'`, `and` combinations |
+| `$filter` | `City eq 'Toronto'`, `ListPrice ge 500000`, `ListPrice le 900000`, `BedroomsTotal ge 3`, `StandardStatus eq 'Active'`, `and` combinations. Parsed with a hand-rolled tokeniser (see below). |
 | `$select` | Comma-separated field list; trims response to those fields only |
 | `$top` | Page size, max 100, default 20 |
 | `$skip` | Offset for pagination |
 | `$orderby` | e.g. `ListPrice desc`, `ModificationTimestamp desc` |
+
+### OData `$filter` Parser
+
+Implemented as a standalone function `parseODataFilter(filter: string): FilterClause[]` in `lib/odata-filter.ts`. No external library.
+
+Supported grammar (sufficient for RESO sync and mock):
+```
+filter     = clause (SP 'and' SP clause)*
+clause     = identifier SP operator SP value
+operator   = 'eq' | 'ne' | 'gt' | 'ge' | 'lt' | 'le'
+value      = quoted-string | number | 'true' | 'false' | 'null'
+```
+
+Implementation approach: split on ` and ` (case-insensitive), then for each clause use a regex: `/^(\w+)\s+(eq|ne|gt|ge|lt|le)\s+(.+)$/i`. Strip surrounding single quotes from string values. Return `FilterClause[]` where each entry is `{ field: string, op: string, value: string | number | boolean | null }`.
+
+Invalid syntax returns `[]` (no filter applied) with a console warning. The mock routes apply each clause to the in-memory seed array; unsupported field names are silently ignored.
 
 ### Response Envelope
 
@@ -239,7 +308,11 @@ PropertyService.getProperty(listingKey: string): Promise<ResoProperty | null>
 withCache<T>(key: string, ttlSeconds: number, fn: () => Promise<T>): Promise<T>
 ```
 
-Initially uses an in-memory `Map` with TTL tracking. Replacing with Redis = swap the implementation of `withCache` only. `PropertyService.getProperties` wraps its Prisma query with `withCache`.
+Uses the `lru-cache` npm package (`npm install lru-cache`). Configure a single module-level `LRUCache<string, unknown>` instance with `max: 500` entries and per-item TTL support (`ttl` option). `withCache` checks for a cache hit; on miss, calls `fn()`, stores the result, and returns it.
+
+Replacing with Redis = swap the body of `withCache` only — the signature and call sites are unchanged.
+
+`PropertyService.getProperties` wraps its Prisma query with `withCache`. `PropertyService.getProperty` also uses `withCache` with a per-listing key. Cache keys include serialised filter params to avoid collisions (e.g. `properties:city=Toronto:minPrice=600000:page=1`).
 
 ---
 
@@ -269,6 +342,8 @@ Initially uses an in-memory `Map` with TTL tracking. Replacing with Redis = swap
 | `DELETE` | `/api/contacts/[id]/saved-searches/[searchId]` | Admin JWT | Delete |
 
 `/api/admin` is already in `PROTECTED_PATHS` in `middleware.ts`. The `/api/saved-searches` routes read the `re_verified` cookie directly — no middleware protection needed.
+
+**`middleware.ts` — no changes required.** The existing `/listings/:path*` matcher and gate cookie logic work with `listingKey` route params identically to how they worked with `Property.id` — the regex `/^\/listings\/([^/]+)$/` captures any non-slash string and the captured value is stored in `re_views` cookie. `BehaviorEvent.entityId` now stores `ResoProperty.id` (the cuid primary key) when `eventType = listing_view`, consistent with `ContactPropertyInterest.resoPropertyId`.
 
 ---
 
@@ -324,6 +399,8 @@ When real credentials arrive, only `RESO_API_BASE_URL`, `RESO_CLIENT_ID`, and `R
 - `services/reso/sync.ts`
 - `lib/property-service.ts`
 - `lib/cache.ts`
+- `lib/odata-filter.ts`
+- `lib/mock-reso-auth.ts`
 - `app/api/mock-reso/token/route.ts`
 - `app/api/mock-reso/Property/route.ts`
 - `app/api/mock-reso/Property/[ListingKey]/route.ts`
@@ -339,7 +416,7 @@ When real credentials arrive, only `RESO_API_BASE_URL`, `RESO_CLIENT_ID`, and `R
 - `components/admin/contacts/SavedSearchesTab.tsx`
 
 ### Modified Files
-- `prisma/schema.prisma` — add ResoProperty, SavedSearch, ResoSyncLog; drop IdxProperty
+- `prisma/schema.prisma` — add ResoProperty, SavedSearch, ResoSyncLog; drop IdxProperty, IdxUpdate; update ContactPropertyInterest FK; add savedSearches relation to Contact and User
 - `app/(public)/listings/page.tsx` — use PropertyService + ListingFilters
 - `app/(public)/listings/[id]/page.tsx` — use PropertyService + RESO field names
 - `app/admin/listings/page.tsx` — use ResoProperty
@@ -352,6 +429,8 @@ When real credentials arrive, only `RESO_API_BASE_URL`, `RESO_CLIENT_ID`, and `R
 - `services/idx/sync.ts`
 - `services/idx/types.ts`
 - `app/api/idx/sync/route.ts`
+
+**Deletion order:** Delete idx files only after `services/reso/` and `lib/property-service.ts` are in place, to avoid broken imports during development.
 
 ---
 
