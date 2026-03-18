@@ -22,6 +22,10 @@ model User {
   resetTokenHash    String?
   resetTokenExpiry  DateTime?
   passwordChangedAt DateTime?
+  totpEnabled        Boolean   @default(false)
+  pendingOtpHash     String?
+  pendingOtpExpiry   DateTime?
+  pendingOtpAttempts Int       @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
