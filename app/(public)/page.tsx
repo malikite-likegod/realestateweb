@@ -11,7 +11,7 @@ import { Button } from '@/components/ui'
 import { SearchBar } from '@/components/navigation'
 import { prisma } from '@/lib/prisma'
 import { parseJsonSafe } from '@/lib/utils'
-import { Home, TrendingUp, Award, Users, Shield, Clock } from 'lucide-react'
+import { Home, TrendingUp, Phone, Users, Shield, Clock } from 'lucide-react'
 import Link from 'next/link'
 import type { PropertySummary } from '@/types'
 
@@ -52,8 +52,8 @@ const testimonials = [
 
 const features = [
   { icon: <Home size={20} />, title: 'Deep Market Knowledge', description: 'Over 15 years specializing in Toronto\'s luxury real estate market with unparalleled neighbourhood expertise.' },
-  { icon: <TrendingUp size={20} />, title: 'Results-Driven Strategy', description: 'Our data-driven approach consistently delivers above-asking offers and top-dollar results for our sellers.' },
-  { icon: <Award size={20} />, title: 'White-Glove Service', description: 'Ensuring that every detail of the buying or selling process is handled with care, professionalism, and clear communication. ' },
+  { icon: <TrendingUp size={20} />, title: 'Results-Driven Strategy', description: 'My data-driven approach consistently delivers above-asking offers and top-dollar results for my sellers.' },
+  { icon: <Phone size={20} />, title: 'Clear Communication', description: 'You’ll always know what’s happening. I provide consistent updates, honest advice, and full transparency throughout the process.' },
   { icon: <Users size={20} />, title: 'Personal Attention', description: 'Every client receives dedicated, white-glove service tailored to their unique needs and goals.' },
   { icon: <Shield size={20} />, title: 'Trusted & Transparent', description: 'Honest, straightforward advice you can rely on — we put your interests first, always.' },
   { icon: <Clock size={20} />, title: '24/7 Availability', description: 'The Toronto market moves fast. We\'re always available when you need us, day or night.' },
@@ -66,8 +66,8 @@ export default async function HomePage() {
     <>
       {/* Hero */}
       <HeroSection
-        title="Find Your Dream Home in Toronto"
-        subtitle="Helping first time home buyers and upsizers navigate The Greater Toronto Area's neighbourhoods. I deliver exceptional results for buyers and sellers."
+        title="Find Your Dream Home"
+        subtitle="Helping first time home buyers and upsizers navigate The Greater Toronto Area neighbourhoods."
         backgroundImage="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80"
       >
         <div className="mt-10 flex justify-center">

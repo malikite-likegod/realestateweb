@@ -18,7 +18,7 @@ const footerLinks = {
     { label: 'Market Reports', href: '/blog?tag=market' },
   ],
   'Company': [
-    { label: 'About Us', href: '/about' },
+    { label: 'About Me', href: '/about' },
     { label: 'Contact', href: '/contact' },
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
