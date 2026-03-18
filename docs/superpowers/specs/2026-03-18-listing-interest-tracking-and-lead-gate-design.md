@@ -39,6 +39,9 @@ Two related features that together improve lead capture and contact intelligence
 - Unique constraint on `(contactId, propertyId)` — one record per pair, updated on repeat views.
 - `auto` records are created/upserted whenever a verified (identified) contact views a listing.
 - `manual` records are created by the agent from the contact profile or listing detail page.
+- The `Contact` model in `schema.prisma` must include a `propertyInterests ContactPropertyInterest[]` relation field (Prisma requires both sides of a relation).
+
+**Note on IDs:** `BehaviorEvent.entityId` stores the `Property.id` (not `Listing.id`) when `eventType = listing_view`. The listing detail page URL uses `Property.id` as the route param. `ContactPropertyInterest.propertyId` is therefore consistent with `BehaviorEvent.entityId` — both reference `Property.id`. The View History tab joins on `entityId = property.id` cleanly.
 
 #### `SiteSettings` (new table)
 
@@ -63,12 +66,13 @@ Initial keys:
 | `lastName` | String | Captured from gate form |
 | `tokenHash` | String | Hashed token (SHA-256) |
 | `sessionId` | String | Browser session UUID (re_session cookie) |
+| `returnUrl` | String? | The listing URL the visitor was trying to view when gated |
 | `expiresAt` | DateTime | 24 hours from creation |
 | `usedAt` | DateTime? | Set when token is consumed |
 | `createdAt` | DateTime | |
 
 - Single-use: once `usedAt` is set, token is invalid.
-- On verification, the `sessionId` is used to identify which browser session to unblock.
+- `sessionId` is stored for audit/linking purposes but is not required to match during verification (cross-device support — see Verification Flow).
 
 ### Contact Profile UI
 
@@ -82,14 +86,14 @@ Located at `/app/admin/contacts/[id]/page.tsx` — a new **"Property Interests"*
 
 **Tab 1 — Interests**
 - Lists all `ContactPropertyInterest` records for this contact.
-- Columns: property thumbnail, address, price, property type, source badge (`Viewed` / `Saved`), date added, notes.
+- Columns: property thumbnail, address, price, property type, source badge (`Viewed` for `auto` / `Linked` for `manual`), date added, notes.
 - **Add button** — opens a listing search modal; selecting a listing creates a `manual` interest record.
 - **Remove button** per row — deletes the interest record (does not affect BehaviorEvents).
 - Sorted by `updatedAt` descending.
 
 **Tab 2 — View History**
 - Reads directly from `BehaviorEvent` where `eventType = listing_view` and `contactId = contact.id`.
-- Groups by `entityId` (property), shows: property address, total view count, first seen, last seen.
+- Groups by `entityId` (which is `Property.id` — see ID note above), shows: property address, total view count, first seen, last seen.
 - Read-only audit trail.
 
 ### Listing Detail Page — Assign Contact
@@ -123,26 +127,29 @@ The existing `POST /api/behavior` endpoint is updated to upsert a `ContactProper
 
 ### Session & View Tracking (Anonymous)
 
-Two cookies are set on first visit to any public page:
+Cookies used by the gate system:
 
-| Cookie | Value | Expiry | Purpose |
-|--------|-------|--------|---------|
-| `re_session` | UUID v4 | 1 year | Persistent session ID, links anon behavior to future contact |
-| `re_views` | JSON array of listing IDs | 30 days | Tracks which listings the visitor has viewed |
+| Cookie | Value | Expiry | Flags | Purpose |
+|--------|-------|--------|-------|---------|
+| `re_session` | UUID v4 | 1 year | `HttpOnly; SameSite=Lax` | Persistent session ID, links anon behavior to future contact |
+| `re_views` | JSON array of property IDs | 30 days | `SameSite=Lax` | Tracks which listings the visitor has viewed (not HttpOnly — read by middleware) |
+| `re_pending` | email string | Session | `SameSite=Lax` | Set after gate form submitted; persists "waiting for verification" state across navigations |
+| `re_verified` | contactId string | 1 year | `HttpOnly; Secure; SameSite=Lax` | Set after email verification; unlocks unrestricted browsing |
 
-- `re_views` stores listing IDs (not a raw count) so revisiting the same listing doesn't increment the gate counter.
-- Unique listing count is compared against `listing_gate_limit`.
+- `re_views` stores property IDs (not a raw count) so revisiting the same listing doesn't increment the gate counter.
+- Unique property count is compared against `listing_gate_limit`.
+- `Secure` flag is applied to `re_verified` (contains a contact ID — sensitive). Other cookies (`re_session`, `re_views`, `re_pending`) are not sensitive enough to require `Secure` in dev, but should have it added in production via environment-based config.
 
 ### Gate Trigger
 
-On each public listing page load (`/app/(public)/listings/[id]/page.tsx`):
+**Cookie write constraint:** Next.js 15 Server Components cannot write cookies during render — `cookies()` from `next/headers` is read-only in that context. The gate logic must therefore run in **Next.js Middleware** (`middleware.ts`), which can set response cookies. The middleware reads `re_views` and `re_session`, increments the view array, writes the updated cookie on the response, and sets a request header (`x-gate-triggered: true`) that the Server Component reads to decide whether to render the gate modal.
 
-1. Read `re_views` cookie.
-2. Check if current listing ID is already in the array.
-   - If yes: don't increment, render normally (revisit doesn't count).
-   - If no: add to array, write cookie.
-3. If unique count now ≥ `listing_gate_limit` AND session is not verified AND `listing_gate_enabled = true`: render gate modal over blurred page content.
-4. If session is verified (cookie `re_verified = <contactId>`): render normally, track BehaviorEvent.
+On each public listing page request:
+
+1. **Middleware** reads `re_views` cookie (JSON array of property IDs).
+2. If current `propertyId` is not in array: add it, write updated `re_views` on response.
+3. If unique count ≥ `listing_gate_limit` AND `re_verified` cookie absent AND `listing_gate_enabled = true`: set request header `x-gate-triggered: true`.
+4. **Server Component** reads `x-gate-triggered` header. If present, renders page content blurred with gate modal overlay. If absent (or `re_verified` present), renders normally.
 
 ### Gate Modal
 
@@ -158,11 +165,11 @@ Submit button: **"Get Full Access"**
 Subtext: *"We'll send you a quick verification link — then you can browse freely."*
 
 **On submit:**
-1. `POST /api/gate/submit` — creates `EmailVerificationToken`, sends verification email.
+1. `POST /api/gate/submit` — creates `EmailVerificationToken`, sends verification email. Also stores `re_pending=<email>` cookie (session-scoped) so the "waiting" state persists across page navigations.
 2. Modal transitions to **"Check your inbox"** state:
    - Shows the email address entered.
-   - "Resend email" link (rate-limited: once per 60 seconds).
-3. Every listing page now shows a **"Waiting for verification"** overlay with the same "Check your inbox" message until the token is used.
+   - "Resend email" link (rate-limited: once per 60 seconds — enforced server-side by querying the most recent `EmailVerificationToken` for the `(email, sessionId)` pair and rejecting if `createdAt > now - 60s`).
+3. Every listing page now shows a **"Waiting for verification"** overlay with the same "Check your inbox" message until the token is used. Middleware detects `re_pending` cookie (without `re_verified`) and sets `x-gate-triggered: true` regardless of view count.
 
 ### Verification Email
 
@@ -174,13 +181,14 @@ Subtext: *"We'll send you a quick verification link — then you can browse free
 ### Verification Flow (`/verify-email`)
 
 1. Read `token` from query string, hash it, look up `EmailVerificationToken`.
-2. Validate: exists, not expired, not used, `sessionId` matches `re_session` cookie.
-3. Mark `usedAt = now`.
-4. Upsert `Contact` (`email`, `firstName`, `lastName`, `source: web`, `status: lead`).
-5. Set `re_verified=<contactId>` cookie (1-year expiry, HTTP-only).
-6. Redirect to the listing page the visitor was trying to view when gated (stored in the token or `re_returnUrl` cookie).
+2. Validate: exists, not expired (`expiresAt > now`), not already used (`usedAt` is null).
+3. **Session match (cross-device aware):** If `re_session` cookie is present and matches `token.sessionId`, proceed normally. If `re_session` is absent or differs (e.g., visitor opened the email on a different device), still proceed — drop the session-match requirement and simply consume the token. This is intentional: a lead-capture gate is a friction incentive, not a security boundary, so cross-device verification is acceptable.
+4. Mark `usedAt = now`.
+5. Upsert `Contact` (`email`, `firstName`, `lastName`, `source: web`, `status: lead`).
+6. Set `re_verified=<contactId>` cookie (1-year expiry, `HttpOnly`, `Secure`, `SameSite=Lax`). Clear `re_pending` cookie.
+7. Redirect to the listing page the visitor was trying to view (stored in `EmailVerificationToken.returnUrl` or fallback to `/listings`).
 
-If token is invalid/expired: show error page with option to re-enter email and get a new link.
+If token is invalid/expired/already used: show error page with option to re-enter email and get a new link.
 
 ### Post-Verification Behavior
 
@@ -213,6 +221,8 @@ Settings are fetched server-side on listing pages with a 60-second revalidation 
 |--------|------|------|-------------|
 | `GET` | `/api/admin/settings` | Admin JWT | Returns all `SiteSettings` as flat key/value object |
 | `PATCH` | `/api/admin/settings` | Admin JWT | Upserts one or more settings by key |
+
+**Middleware update required:** Add `/api/admin` to the `PROTECTED_PATHS` array in `middleware.ts` so all `/api/admin/*` routes require a valid admin JWT. The public gate routes (`/api/gate/submit`, `/api/gate/resend`, `/verify-email`) do not need protection — they are intentionally public and are not listed in `PROTECTED_PATHS`.
 
 ---
 
