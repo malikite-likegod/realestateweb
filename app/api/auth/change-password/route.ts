@@ -7,23 +7,20 @@ export async function POST(request: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: { currentPassword?: string; newPassword?: string; confirmPassword?: string }
+  let body: { currentPassword?: string; newPassword?: string }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { currentPassword, newPassword, confirmPassword } = body
+  const { currentPassword, newPassword } = body
 
-  if (!currentPassword || !newPassword || !confirmPassword) {
+  if (!currentPassword || !newPassword) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
   }
   if (newPassword.length < 8) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
-  }
-  if (newPassword !== confirmPassword) {
-    return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 })
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.id } })
