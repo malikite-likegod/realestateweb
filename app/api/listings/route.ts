@@ -27,16 +27,27 @@ const listingSchema = z.object({
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') ?? '1')
-  const status = searchParams.get('status') ?? 'active'
+  const page     = parseInt(searchParams.get('page')     ?? '1')
+  const pageSize = parseInt(searchParams.get('pageSize') ?? '20')
+  const status   = searchParams.get('status') ?? 'active'
+  const search   = searchParams.get('search') ?? ''
+
+  const where: Record<string, unknown> = { status }
+  if (search) {
+    (where as { OR?: unknown[] }).OR = [
+      { title:   { contains: search } },
+      { address: { contains: search } },
+      { city:    { contains: search } },
+    ]
+  }
 
   const [total, properties] = await Promise.all([
-    prisma.property.count({ where: { status } }),
+    prisma.property.count({ where }),
     prisma.property.findMany({
-      where: { status },
+      where,
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * 20,
-      take: 20,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: { listings: { where: { featured: true }, take: 1 } },
     }),
   ])
