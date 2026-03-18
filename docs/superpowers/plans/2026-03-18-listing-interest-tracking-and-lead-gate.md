@@ -840,47 +840,56 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Parse and validate first — return 400 on bad input
+  let data: z.infer<typeof schema>
   try {
-    const body      = await request.json()
-    const data      = schema.parse(body)
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get('re_session')?.value ?? 'unknown'
+    const body = await request.json()
+    data = schema.parse(body)
+  } catch {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
 
-    // Generate a secure random token
-    const rawToken  = crypto.randomUUID() + crypto.randomUUID()
-    const tokenHash = await hashToken(rawToken)
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  const cookieStore = await cookies()
+  const sessionId   = cookieStore.get('re_session')?.value ?? 'unknown'
 
-    await prisma.emailVerificationToken.create({
-      data: {
-        email:     data.email,
-        firstName: data.firstName,
-        lastName:  data.lastName,
-        tokenHash,
-        sessionId,
-        returnUrl: data.returnUrl ?? '/listings',
-        expiresAt,
-      },
-    })
+  // Generate a secure random token and write to DB
+  const rawToken  = crypto.randomUUID() + crypto.randomUUID()
+  const tokenHash = await hashToken(rawToken)
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
+  await prisma.emailVerificationToken.create({
+    data: {
+      email:     data.email,
+      firstName: data.firstName,
+      lastName:  data.lastName,
+      tokenHash,
+      sessionId,
+      returnUrl: data.returnUrl ?? '/listings',
+      expiresAt,
+    },
+  })
+
+  // Send email — return 500 if SMTP is configured but fails
+  // (token is already in DB; resend is available)
+  try {
     await sendVerificationEmail({
       to:        data.email,
       firstName: data.firstName,
       token:     rawToken,
       returnUrl: data.returnUrl ?? '/listings',
     })
-
-    // Set re_pending cookie so all subsequent listing pages show "waiting" overlay
-    const response = NextResponse.json({ success: true })
-    response.cookies.set('re_pending', data.email, {
-      sameSite: 'lax',
-      path:     '/',
-      // session cookie (no maxAge)
-    })
-    return response
   } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: 'Failed to send verification email. Please try again.' }, { status: 500 })
   }
+
+  // Set re_pending cookie so listing pages show "waiting" overlay
+  const response = NextResponse.json({ success: true })
+  response.cookies.set('re_pending', data.email, {
+    sameSite: 'lax',
+    path:     '/',
+    // session cookie (no maxAge)
+  })
+  return response
 }
 
 async function hashToken(token: string): Promise<string> {
@@ -904,7 +913,9 @@ interface VerificationEmailOpts {
 
 export async function sendVerificationEmail(opts: VerificationEmailOpts) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
-  const link    = `${baseUrl}/verify-email?token=${encodeURIComponent(opts.token)}`
+  // Uses /api/gate/verify (Route Handler) so the handler can set cookies + redirect.
+  // Page Server Components cannot write cookies in Next.js 15.
+  const link    = `${baseUrl}/api/gate/verify?token=${encodeURIComponent(opts.token)}`
 
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
@@ -1030,22 +1041,22 @@ git commit -m "feat: add gate resend route with 60s rate limiting"
 
 ---
 
-## Chunk 7: Email Verification Page
+## Chunk 7: Email Verification Route Handler
 
-### Task 9: /verify-email page
+### Task 9: /api/gate/verify Route Handler
+
+**Important:** Next.js 15 Page Server Components cannot call `cookies().set()` — only Route Handlers and Server Actions can. The verification link therefore points to `/api/gate/verify?token=...` (a GET Route Handler), which sets cookies and then redirects to the listing page.
 
 **Files:**
-- Create: `app/(public)/verify-email/page.tsx`
+- Create: `app/api/gate/verify/route.ts`
 
-- [ ] **Step 1: Create the verification page**
+- [ ] **Step 1: Create the verify Route Handler**
 
-Create `app/(public)/verify-email/page.tsx`:
+Create `app/api/gate/verify/route.ts`:
 
 ```typescript
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
 
 async function hashToken(token: string): Promise<string> {
   const data   = new TextEncoder().encode(token)
@@ -1053,22 +1064,18 @@ async function hashToken(token: string): Promise<string> {
   return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-interface Props {
-  searchParams: Promise<{ token?: string }>
-}
-
-export default async function VerifyEmailPage({ searchParams }: Props) {
-  const { token: rawToken } = await searchParams
+export async function GET(request: NextRequest) {
+  const rawToken = request.nextUrl.searchParams.get('token')
 
   if (!rawToken) {
-    return <ErrorView message="Invalid verification link." />
+    return NextResponse.redirect(new URL('/listings?gate_error=invalid', request.url))
   }
 
   const tokenHash = await hashToken(rawToken)
   const record    = await prisma.emailVerificationToken.findUnique({ where: { tokenHash } })
 
   if (!record || record.usedAt || record.expiresAt < new Date()) {
-    return <ErrorView message="This link has expired or already been used." />
+    return NextResponse.redirect(new URL('/listings?gate_error=expired', request.url))
   }
 
   // Mark token as used
@@ -1090,46 +1097,38 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
     },
   })
 
-  // Set verified cookie and clear pending
-  const cookieStore = await cookies()
-  const isSecure    = process.env.NODE_ENV === 'production'
+  const returnUrl = record.returnUrl ?? '/listings'
+  const isSecure  = process.env.NODE_ENV === 'production'
+  const response  = NextResponse.redirect(new URL(returnUrl, request.url))
 
-  cookieStore.set('re_verified', contact.id, {
+  // Set verified cookie (Route Handler — cookie writes are permitted here)
+  response.cookies.set('re_verified', contact.id, {
     maxAge:   365 * 24 * 60 * 60,
     httpOnly: true,
     secure:   isSecure,
     sameSite: 'lax',
     path:     '/',
   })
-  cookieStore.delete('re_pending')
+  // Clear pending cookie
+  response.cookies.set('re_pending', '', { maxAge: 0, path: '/' })
 
-  redirect(record.returnUrl ?? '/listings')
-}
-
-function ErrorView({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="text-center max-w-sm">
-        <h1 className="font-serif text-2xl font-bold text-charcoal-900 mb-3">Verification Failed</h1>
-        <p className="text-charcoal-500 mb-6">{message}</p>
-        <Link href="/listings" className="text-gold-600 hover:underline text-sm">
-          Back to listings
-        </Link>
-      </div>
-    </div>
-  )
+  return response
 }
 ```
 
-- [ ] **Step 2: Test the verification flow manually**
+- [ ] **Step 2: Confirm `/api/gate/verify` is public**
 
-Start dev server. Submit the gate form on a listing page. Check console for the verification link (when SMTP not configured). Open the link. Verify you're redirected to the listing, `re_verified` cookie is set, and `re_pending` is cleared.
+Check `PROTECTED_PATHS` in `middleware.ts` — `/api/gate` is not listed, so this route is accessible without auth. No middleware change needed.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Test the verification flow manually**
+
+Start dev server. Submit the gate form on a listing page. Check console for the `/api/gate/verify?token=...` link (SMTP not configured in dev prints link to console). Open the link. Verify you're redirected to the listing, `re_verified` cookie is set, and `re_pending` is cleared.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add app/(public)/verify-email/page.tsx
-git commit -m "feat: add email verification landing page with contact upsert and cookie management"
+git add app/api/gate/verify/route.ts
+git commit -m "feat: add email verification Route Handler with contact upsert and cookie management"
 ```
 
 ---
@@ -1193,7 +1192,57 @@ git commit -m "feat: upsert ContactPropertyInterest on listing_view behavior eve
 
 ## Chunk 9: Contact Property Interests API
 
-### Task 11: Property interests API routes
+### Task 11a: Extend listings API with search and pageSize
+
+The `PropertyInterestsPanel` uses `/api/listings?search=...&pageSize=8` to let agents search for a listing to attach. The current listings GET handler ignores both params. Fix this first.
+
+**Files:**
+- Modify: `app/api/listings/route.ts`
+
+- [ ] **Step 1: Add search and pageSize to the listings GET handler**
+
+Replace the `GET` function in `app/api/listings/route.ts` with:
+
+```typescript
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const page     = parseInt(searchParams.get('page')     ?? '1')
+  const pageSize = parseInt(searchParams.get('pageSize') ?? '20')
+  const status   = searchParams.get('status') ?? 'active'
+  const search   = searchParams.get('search') ?? ''
+
+  const where: Record<string, unknown> = { status }
+  if (search) {
+    (where as { OR?: unknown[] }).OR = [
+      { title:   { contains: search } },
+      { address: { contains: search } },
+      { city:    { contains: search } },
+    ]
+  }
+
+  const [total, properties] = await Promise.all([
+    prisma.property.count({ where }),
+    prisma.property.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { listings: { where: { featured: true }, take: 1 } },
+    }),
+  ])
+
+  return NextResponse.json({ data: properties, total, page })
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add app/api/listings/route.ts
+git commit -m "feat: add search and pageSize params to listings GET API"
+```
+
+### Task 11b: Property interests API routes
 
 **Files:**
 - Create: `app/api/contacts/[id]/property-interests/route.ts`
@@ -1284,11 +1333,15 @@ export async function POST(request: Request, { params }: Params) {
 }
 
 function computeBuyerProfile(
-  interestProps: Array<{ propertyType: string; price: number; city: string }>,
+  interestProps: Array<{ id: string; propertyType: string; price: number; city: string }>,
   viewMap: Record<string, { count: number }>,
   viewProps: Array<{ id: string; propertyType: string; price: number; city: string }>
 ) {
-  const allProps = [...interestProps, ...viewProps]
+  // Deduplicate by property ID — a property may appear in both interests and view history
+  const seen = new Map<string, { propertyType: string; price: number; city: string }>()
+  for (const p of [...interestProps, ...viewProps]) seen.set(p.id, p)
+  const allProps = Array.from(seen.values())
+
   if (allProps.length === 0) return null
 
   // Most common property type
@@ -1297,7 +1350,7 @@ function computeBuyerProfile(
   const topType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
 
   // Price range
-  const prices = allProps.map(p => p.price).filter(Boolean)
+  const prices   = allProps.map(p => p.price).filter(Boolean)
   const minPrice = Math.min(...prices)
   const maxPrice = Math.max(...prices)
 
@@ -1716,6 +1769,8 @@ git commit -m "feat: listing interest tracking and lead capture gate — complet
 | `app/api/admin/settings/route.ts` | New: GET + PATCH site settings |
 | `app/api/gate/submit/route.ts` | New: gate form submission |
 | `app/api/gate/resend/route.ts` | New: resend with 60s rate limit |
+| `app/api/gate/verify/route.ts` | New: GET handler — validates token, upserts contact, sets cookies, redirects |
+| `app/api/listings/route.ts` | Modified: add `search` and `pageSize` query params to GET handler |
 | `app/api/contacts/[id]/property-interests/route.ts` | New: GET + POST interests |
 | `app/api/contacts/[id]/property-interests/[propertyId]/route.ts` | New: DELETE interest |
 | `app/api/listings/[id]/assign-contact/route.ts` | New: assign contact from listing |
