@@ -1,17 +1,27 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Input, Button } from '@/components/ui'
 import { APP_NAME } from '@/lib/constants'
 import { Lock } from 'lucide-react'
+import Link from 'next/link'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const params = useSearchParams()
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [resetSuccess, setResetSuccess] = useState(false)
+
+  useEffect(() => {
+    if (params.get('reset') === '1') {
+      setResetSuccess(true)
+      router.replace('/admin/login')
+    }
+  }, [params, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +35,12 @@ export default function LoginPage() {
     })
 
     if (res.ok) {
-      router.push('/admin/dashboard')
+      const data = await res.json()
+      if (data.requires2fa) {
+        router.push('/admin/login/verify')
+      } else {
+        router.push('/admin/dashboard')
+      }
     } else {
       const data = await res.json()
       setError(data.error ?? 'Login failed')
@@ -47,6 +62,12 @@ export default function LoginPage() {
           <h1 className="font-serif text-2xl font-bold text-white">{APP_NAME} CRM</h1>
           <p className="text-charcoal-400 text-sm mt-1">Sign in to your account</p>
         </div>
+
+        {resetSuccess && (
+          <div className="mb-4 rounded-xl bg-green-900/40 border border-green-700 px-4 py-3 text-sm text-green-300">
+            Your password has been reset. Please sign in.
+          </div>
+        )}
 
         <div className="rounded-2xl bg-charcoal-900 border border-charcoal-700 p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -72,7 +93,21 @@ export default function LoginPage() {
             </Button>
           </form>
         </div>
+
+        <p className="text-center mt-4 text-sm">
+          <Link href="/admin/login/forgot-password" className="text-charcoal-500 hover:text-charcoal-300 transition-colors">
+            Forgot your password?
+          </Link>
+        </p>
       </motion.div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-charcoal-950" />}>
+      <LoginForm />
+    </Suspense>
   )
 }
