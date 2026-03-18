@@ -219,3 +219,18 @@ export async function recordEmailClick(trackingId: string) {
     },
   })
 }
+
+/**
+ * Send a transactional system email (no contact record needed).
+ * Used for password reset, 2FA codes, etc.
+ * Throws on SMTP failure — callers that need silent failure (e.g. forgot-password)
+ * must catch the error themselves. This keeps the helper generic.
+ */
+export async function sendTransactionalEmail(opts: {
+  to: string
+  subject: string
+  html: string
+}): Promise<void> {
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@example.com'
+  await sendViaSmtp({ to: opts.to, from, subject: opts.subject, html: opts.html })
+}
