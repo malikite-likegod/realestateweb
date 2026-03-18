@@ -12,18 +12,6 @@ export async function middleware(request: NextRequest) {
   const isLoginFlow = pathname === '/admin/login' || pathname.startsWith('/admin/login/')
 
   if (!isProtected || isLoginFlow) {
-    // Redirect already-authenticated users away from login pages
-    if (isLoginFlow) {
-      const authToken = request.cookies.get('auth_token')?.value
-      if (authToken) {
-        const payload = await verifyJwt(authToken)
-        if (payload) {
-          const url = request.nextUrl.clone()
-          url.pathname = '/admin/dashboard'
-          return NextResponse.redirect(url)
-        }
-      }
-    }
     return NextResponse.next()
   }
 
