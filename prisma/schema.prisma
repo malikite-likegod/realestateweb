@@ -102,6 +102,7 @@ model Contact {
   emailMessages     EmailMessage[]
   campaignEnrollments CampaignEnrollment[]
   optLogs           CommunicationOptLog[]
+  propertyInterests ContactPropertyInterest[]
 
   @@map("contacts")
 }
@@ -288,6 +289,7 @@ model Property {
   deals    Deal[]
   showings Showing[]
   listings Listing[]
+  contactInterests  ContactPropertyInterest[]
 
   @@map("properties")
 }
@@ -792,6 +794,52 @@ model PropertySearchLog {
   occurredAt DateTime @default(now())
 
   @@map("property_search_logs")
+}
+
+// ─── Site Settings ────────────────────────────────────────────────────────────
+
+model SiteSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+// ─── Email Verification Tokens ────────────────────────────────────────────────
+
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  email      String
+  firstName  String
+  lastName   String
+  tokenHash  String    @unique
+  sessionId  String
+  returnUrl  String?
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, sessionId])
+  @@map("email_verification_tokens")
+}
+
+// ─── Contact Property Interests ───────────────────────────────────────────────
+
+model ContactPropertyInterest {
+  id         String   @id @default(cuid())
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  source     String   @default("auto") // manual | auto
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([contactId, propertyId])
+  @@map("contact_property_interests")
 }
 
 // ─── Booking / Availability ───────────────────────────────────────────────────
