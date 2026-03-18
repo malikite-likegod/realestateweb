@@ -29,21 +29,22 @@ export function ChangePasswordCard() {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword }),
       })
       const data = await res.json()
       if (!res.ok) {
         setError(data.error ?? 'Something went wrong')
+        setLoading(false)
       } else {
         setSuccess(true)
         setForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
         // The API clears the auth_token cookie in the response, so the redirect
         // to login will be clean — no error loop from the stale session.
         setTimeout(() => { window.location.href = '/admin/login' }, 1500)
+        // Do not call setLoading(false) — keep the button disabled until the redirect unmounts the component.
       }
     } catch {
       setError('Network error. Please try again.')
-    } finally {
       setLoading(false)
     }
   }

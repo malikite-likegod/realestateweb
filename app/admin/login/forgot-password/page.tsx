@@ -40,9 +40,11 @@ export default function ForgotPasswordPage() {
             <Mail size={20} className="text-gold-400" />
           </div>
           <h1 className="font-serif text-2xl font-bold text-white">Reset Password</h1>
-          <p className="text-charcoal-400 text-sm mt-1">
-            {submitted ? '' : "Enter your email and we'll send you a reset link."}
-          </p>
+          {!submitted && (
+            <p className="text-charcoal-400 text-sm mt-1">
+              Enter your email and we&apos;ll send you a reset link.
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl bg-charcoal-900 border border-charcoal-700 p-6">

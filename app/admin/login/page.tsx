@@ -28,22 +28,25 @@ function LoginForm() {
     setLoading(true)
     setError('')
 
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
 
-    if (res.ok) {
-      const data = await res.json()
-      if (data.requires2fa) {
-        router.push('/admin/login/verify')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.requires2fa) {
+          router.push('/admin/login/verify')
+        } else {
+          router.push('/admin/dashboard')
+        }
       } else {
-        router.push('/admin/dashboard')
+        const data = await res.json()
+        setError(data.error ?? 'Login failed')
       }
-    } else {
-      const data = await res.json()
-      setError(data.error ?? 'Login failed')
+    } finally {
       setLoading(false)
     }
   }
