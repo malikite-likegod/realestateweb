@@ -7,7 +7,6 @@ import { SplitSection } from '@/components/layout'
 import { FeatureGrid } from '@/components/layout'
 import { TestimonialCarousel, PropertyGrid, AgentProfileCard } from '@/components/real-estate'
 import { LeadCaptureForm } from '@/components/forms'
-import { NewsletterSignupForm } from '@/components/forms'
 import { Button } from '@/components/ui'
 import { SearchBar } from '@/components/navigation'
 import { prisma } from '@/lib/prisma'
@@ -47,6 +46,8 @@ const testimonials = [
   { name: 'Shawn & Diana Bennett', location: 'Alliston, Ontario', text: 'Michael Taylor made our home selling and buyer easy, quick and smooth. With the selling process he arranged staging, which resulted in a quick sale of the home. As for the buying he would find what were in our wants list and also give us realistic advice, during this process. He made all the scheduling and was very responsive when we found a home that we wanted to view. Closing was easy and he was about the client, us, and making sure that we don’t over-do it. All in all I can confidently recommend Michael. ', rating: 5 },
   { name: 'Mary & Chuk Law', location: 'Scarborough, Toronto', text: 'Throughout the buying/selling process, he provided invaluable insights, guided me through each step, and ensured that I felt confident in my decisions. Mike’s dedication to client satisfaction is truly commendable, and I couldn’t have asked for a better advocate in my real estate journey.', rating: 5 },
   { name: 'Wayne & Ellen Lo', location: 'North York, Toronto', text: 'I had the pleasure of working with Michael to sell my condo, and I couldn’t be happier with the experience. Michael was incredibly professional, patient, and knowledgeable throughout the entire process. He provided expert guidance, answered all my questions, and made what could have been a stressful situation smooth and manageable. Thanks to his hard work and dedication, my condo sold quickly and for a great price. I highly recommend Michael to anyone looking for a top-notch real estate agent.', rating: 5 },
+  { name: 'Shannon Martin', location: 'Oshawa, Ontario', text: 'I had a great experience working with Michael for the sale of my condo. As a first-time seller, I really appreciated that he was super knowledgeable and helped me to understand the current seller’s market and various factors affecting my listing. Michael was professional, prompt, accessible, and he was able to sell my condo for a great price!', rating: 5 },
+  { name: 'Jonathan Knott & Briana Kirby-Chang', location: 'Church & Wellesley Village, Toronto', text: 'Michael was outstanding in helping us find a tenant for my downtown Toronto condo. He demonstrated deep knowledge of the local market and quickly attracted high-quality prospects within a challenging market. His great personality and commitment made the entire process smooth and stress-free. Within a short time, he secured a fantastic tenant who not only met all our criteria but also exceeded our expectations. I highly recommend Michael for anyone seeking a dedicated and reliable real estate agent. Thank you for your excellent service!', rating: 5 },
 ]
 
 const features = [
@@ -171,18 +172,6 @@ export default async function HomePage() {
         </Container>
       </Section>
 
-      {/* Newsletter */}
-      <Section background="charcoal" padding="md">
-        <Container>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h3 className="font-serif text-2xl font-bold text-white">Stay Ahead of the Market</h3>
-              <p className="text-charcoal-400 mt-1">Weekly insights, new listings, and market reports delivered to your inbox.</p>
-            </div>
-            <NewsletterSignupForm />
-          </div>
-        </Container>
-      </Section>
     </>
   )
 }
