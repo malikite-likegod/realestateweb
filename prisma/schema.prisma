@@ -41,6 +41,7 @@ model User {
   assignedDeals     Deal[]             @relation("AssignedDeals")
   stageHistoryMoves DealStageHistory[] @relation("StageHistoryMover")
   optLogEntries     CommunicationOptLog[]
+  savedSearches     SavedSearch[]
 
   @@map("users")
 }
@@ -103,6 +104,7 @@ model Contact {
   campaignEnrollments CampaignEnrollment[]
   optLogs           CommunicationOptLog[]
   propertyInterests ContactPropertyInterest[]
+  savedSearches     SavedSearch[]
 
   @@map("contacts")
 }
@@ -289,7 +291,6 @@ model Property {
   deals    Deal[]
   showings Showing[]
   listings Listing[]
-  contactInterests  ContactPropertyInterest[]
 
   @@map("properties")
 }
@@ -310,45 +311,71 @@ model Listing {
   @@map("listings")
 }
 
-// ─── IDX ──────────────────────────────────────────────────────────────────────
+// ─── RESO / PropTx ────────────────────────────────────────────────────────────
 
-model IdxProperty {
-  id              String    @id @default(cuid())
-  idxId           String    @unique // IDX provider's ID
-  mlsNumber       String?
-  status          String    @default("active")
-  propertyType    String?
-  listingType     String    @default("sale")
-  price           Float?
-  bedrooms        Int?
-  bathrooms       Float?
-  sqft            Int?
-  address         String?
-  city            String?
-  province        String?
-  postalCode      String?
-  latitude        Float?
-  longitude       Float?
-  description     String?
-  images          String?   // JSON array
-  features        String?   // JSON array
-  listedAt        DateTime?
-  lastSyncedAt    DateTime  @default(now())
-  rawData         String?   // full JSON from IDX feed
+model ResoProperty {
+  id                    String    @id @default(cuid())
+  listingKey            String    @unique
+  listingId             String?
+  standardStatus        String    @default("Active")
+  propertyType          String?
+  propertySubType       String?
+  listPrice             Float?
+  originalListPrice     Float?
+  closePrice            Float?
+  bedroomsTotal         Int?
+  bathroomsTotalInteger Int?
+  livingArea            Float?
+  lotSizeAcres          Float?
+  yearBuilt             Int?
+  streetNumber          String?
+  streetName            String?
+  unitNumber            String?
+  city                  String?
+  stateOrProvince       String?
+  postalCode            String?
+  latitude              Float?
+  longitude             Float?
+  publicRemarks         String?
+  media                 String?   // JSON array of { url: string, order: number }
+  listAgentKey          String?
+  listAgentName         String?
+  listOfficeKey         String?
+  listOfficeName        String?
+  listDate              DateTime?
+  modificationTimestamp DateTime?
+  lastSyncedAt          DateTime  @default(now())
+  rawData               String?
 
-  @@map("idx_properties")
+  contactInterests      ContactPropertyInterest[]
+
+  @@map("reso_properties")
 }
 
-model IdxUpdate {
-  id         String   @id @default(cuid())
-  syncedAt   DateTime @default(now())
-  added      Int      @default(0)
-  updated    Int      @default(0)
-  removed    Int      @default(0)
-  errors     String?
-  duration   Int?     // ms
+model ResoSyncLog {
+  id       String   @id @default(cuid())
+  syncedAt DateTime @default(now())
+  added    Int      @default(0)
+  updated  Int      @default(0)
+  removed  Int      @default(0)
+  errors   String?
+  duration Int?     // ms
 
-  @@map("idx_updates")
+  @@map("reso_sync_logs")
+}
+
+model SavedSearch {
+  id        String    @id @default(cuid())
+  name      String?
+  filters   String                // JSON blob of PropertyFilters
+  contactId String?
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastRunAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("saved_searches")
 }
 
 // ─── Task Types ───────────────────────────────────────────────────────────────
@@ -828,17 +855,17 @@ model EmailVerificationToken {
 // ─── Contact Property Interests ───────────────────────────────────────────────
 
 model ContactPropertyInterest {
-  id         String   @id @default(cuid())
-  contactId  String
-  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  propertyId String
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  source     String   @default("auto") // manual | auto
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String       @id @default(cuid())
+  contactId        String
+  contact          Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  resoPropertyId   String
+  resoProperty     ResoProperty @relation(fields: [resoPropertyId], references: [id], onDelete: Cascade)
+  source           String       @default("auto") // manual | auto
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
-  @@unique([contactId, propertyId])
+  @@unique([contactId, resoPropertyId])
   @@map("contact_property_interests")
 }
 
