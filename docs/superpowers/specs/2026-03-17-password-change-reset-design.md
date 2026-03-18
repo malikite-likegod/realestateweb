@@ -17,16 +17,43 @@ Two related features sharing the same auth infrastructure:
 
 ## Data Model
 
-Add two fields to the existing `User` model in `prisma/schema.prisma`:
+Add three fields to the existing `User` model in `prisma/schema.prisma`:
 
 ```prisma
-resetTokenHash   String?   // bcrypt hash of the raw reset token; cleared after use
-resetTokenExpiry DateTime? // 1 hour from request; cleared after use
+resetTokenHash    String?   // bcrypt hash of the raw reset token; cleared after use
+resetTokenExpiry  DateTime? // 1 hour from request; cleared after use
+passwordChangedAt DateTime? // set whenever password is changed or reset; used to invalidate old JWTs
 ```
 
-The raw token is **never stored** — only its bcrypt hash. The raw token travels in the reset email link only. On submission, the server hashes the input and compares against the stored hash. Both fields are cleared on successful reset or expiry.
+The raw reset token is **never stored** — only its bcrypt hash. The raw token travels in the email link only. On submission, the server hashes the input and compares against the stored hash. All reset fields are cleared on successful reset or expiry.
 
-No schema changes are needed for the change password flow — it operates entirely on the existing `passwordHash` field.
+`passwordChangedAt` is updated on both change-password and reset-password success. The JWT verification layer checks that the token's `iat` (issued-at) is after `passwordChangedAt` — if not, the session is treated as invalid. This invalidates any stolen or pre-existing sessions after a password change without requiring a token blocklist.
+
+No additional schema changes are needed for the change password flow.
+
+---
+
+## Session Invalidation After Password Change
+
+Both the change-password and reset-password flows set `passwordChangedAt = now()` on success.
+
+`lib/auth.ts` — `getSession()` is updated to compare `payload.iat` (seconds) against `passwordChangedAt`:
+
+```
+if (user.passwordChangedAt && payload.iat < user.passwordChangedAt.getTime() / 1000) {
+  return null // token predates password change — treat as invalid
+}
+```
+
+`middleware.ts` does **not** need to change — it already rejects invalid JWTs by redirecting to login. The iat check happens inside `getSession()` / `verifyJwt()` callers.
+
+**Result:** After a password change or reset, any existing `auth_token` JWT that was issued before the change becomes invalid on the next protected request.
+
+---
+
+## Rate Limiting
+
+The public forgot-password endpoint is susceptible to SMTP cost abuse (bulk reset requests) and the validate endpoint is susceptible to brute force. Rate limiting should be enforced at the infrastructure layer — e.g., Vercel's edge rate limiting, a reverse proxy, or a future middleware addition. Within the API routes, bcrypt cost factor (10 for tokens, 12 for passwords) provides time-based protection as defense-in-depth. This is an accepted operational trade-off for a single-admin deployment; IP-based rate limiting is out of scope for this iteration.
 
 ---
 
@@ -51,10 +78,10 @@ A "Save Password" button submits the form. On success, fields are cleared and a 
 3. Bcrypt-compare `currentPassword` against stored `passwordHash`
 4. If wrong → 401 `{ error: 'Current password is incorrect' }`
 5. Bcrypt-hash `newPassword` at cost factor 12
-6. Update `passwordHash` in DB
+6. Update `passwordHash` and set `passwordChangedAt = now()` in a single DB write
 7. Return `{ ok: true }`
 
-**Session behaviour:** The existing `auth_token` remains valid — the authenticated user made the change themselves, no forced re-login.
+The user's own `auth_token` will remain valid for this request but will be invalidated on the next protected route (the `iat` check in `getSession()` will fail). The client should redirect to `/admin/login` after a successful change so the user re-authenticates cleanly.
 
 ---
 
@@ -83,24 +110,25 @@ Standalone page outside `DashboardLayout`, matching the visual style of `/admin/
 
 1. Validate `email` is a valid email format — return 400 if not
 2. Look up User by email
-3. If **no match**: return `{ ok: true }` immediately (silent, no email sent)
+3. If **no match**: return `{ ok: true }` immediately (silent, no email sent — consistent response regardless of email existence)
 4. If **match**:
-   - Generate a 32-byte cryptographically random token using `crypto.randomBytes(32).toString('hex')`
-   - Bcrypt-hash the token at cost factor 10 (lower than passwords for speed — token entropy compensates)
-   - Write `resetTokenHash` and `resetTokenExpiry` (now + 1 hour) to the User record, overwriting any existing reset request
-   - Send reset email to `user.email` containing a link to `/admin/login/reset-password?token=<rawToken>&email=<encodedEmail>`
-   - Return `{ ok: true }`
-5. If SMTP fails → return 500 `{ error: 'Could not send reset email. Please try again.' }`
+   - Generate a 32-byte cryptographically random token: `crypto.randomBytes(32).toString('hex')`
+   - Bcrypt-hash the token at cost factor 10 (acceptable given 256-bit token entropy — bcrypt here is defense-in-depth; the token's randomness is the primary protection)
+   - Write `resetTokenHash` and `resetTokenExpiry` (now + 1 hour), overwriting any existing reset request
+   - Send reset email to `user.email` (see Reset Email section)
+   - If SMTP fails: log error server-side, return `{ ok: true }` — **do not return 500**, as that would confirm the email exists to the caller
+5. Return `{ ok: true }`
 
 ---
 
 ### Reset Email
 
-Plain HTML email containing:
-- Brief intro ("You requested a password reset for your admin account.")
-- A prominent button/link to the reset URL
-- Expiry notice ("This link expires in 1 hour.")
-- Note that if they didn't request this, they can ignore the email
+Plain HTML email sent via the existing `lib/communications/email-service.ts` SMTP mailer, containing:
+
+- Brief intro: "You requested a password reset for your admin account."
+- A prominent link/button to: `/admin/login/reset-password?token=<rawToken>&email=<encodeURIComponent(email)>`
+- Expiry notice: "This link expires in 1 hour."
+- Note: "If you didn't request this, you can safely ignore this email."
 
 ---
 
@@ -112,31 +140,35 @@ Standalone page outside `DashboardLayout`, matching the style of `/admin/login`.
 - Reads `token` and `email` from URL query params
 - If either is missing → show error: "This link is invalid." with link back to forgot-password
 - Calls `POST /api/auth/reset-password/validate { token, email }` to check validity
-- If invalid or expired → show error: "This link is invalid or has expired." with link back to forgot-password
-- If valid → show the reset form
+- If `{ valid: false }` → show: "This link is invalid or has expired." with link back to forgot-password
+- If `{ valid: true }` → show the reset form
 
 **Reset form:**
 - **New password** — required, minimum 8 characters
-- **Confirm new password** — required, client-side match check
+- **Confirm new password** — required, client-side match check before submit
 - "Reset Password" button → `POST /api/auth/reset-password { email, token, newPassword, confirmPassword }`
-- On success → redirect to `/admin/login?message=password-reset`
+- On success → redirect to `/admin/login?reset=1`
 - On error → show inline error
 
-**Login page:** When `?message=password-reset` is present in the URL, show a green success banner: "Your password has been reset. Please sign in."
+**Login page:** When `?reset=1` is present in the URL, show a one-time green banner: "Your password has been reset. Please sign in." The query param is removed from the URL via `router.replace('/admin/login')` immediately after the banner is displayed, preventing replay on refresh or bookmark.
 
 ---
 
 ### API Route — `POST /api/auth/reset-password/validate`
 
-**Auth required:** none (public)
+**Auth required:** none (public, read-only)
+
+Validates a reset token without consuming it.
 
 1. Validate `token` and `email` are present and non-empty — return 400 if not
 2. Look up User by `email`
-3. If no user → return 400 `{ valid: false }`
-4. If `resetTokenExpiry` is null or in the past → clear both reset fields, return `{ valid: false }`
+3. If no user found: perform a dummy bcrypt-compare (`bcrypt.compare(token, '$2b$10$dummyhashfortimingequalisation')`) to equalise response timing, then return `{ valid: false }` — **prevents timing oracle that would reveal whether the email is registered**
+4. If `resetTokenExpiry` is null or in the past: clear both reset fields, return `{ valid: false }`
 5. Bcrypt-compare `token` against `resetTokenHash`
-6. If no match → return `{ valid: false }` (do **not** clear fields — this endpoint is read-only; clearing is done in the actual reset route)
-7. If match → return `{ valid: true }`
+6. If no match: return `{ valid: false }` — **do not clear fields** (this endpoint is read-only; clearing happens only in the actual reset route)
+7. If match: return `{ valid: true }`
+
+> **Email+token tamper note:** If the `email` in the URL is tampered with while a valid token for a different account is supplied, step 2 returns no user (or the wrong user), bcrypt-compare will fail, and the endpoint returns `{ valid: false }`. No special handling is needed — the lookup-by-email-then-compare pattern handles this correctly.
 
 ---
 
@@ -145,17 +177,18 @@ Standalone page outside `DashboardLayout`, matching the style of `/admin/login`.
 **Auth required:** none (public)
 
 1. Validate `token`, `email`, `newPassword`, `confirmPassword` are all present
-2. Validate `newPassword.length >= 8` and `newPassword === confirmPassword` — return 400 with specific error if not
-3. Look up User by `email`
-4. If no user → return 400 `{ error: 'Invalid or expired reset link' }`
-5. If `resetTokenExpiry` is null or in the past → clear both reset fields, return 400 `{ error: 'Invalid or expired reset link' }`
-6. Bcrypt-compare `token` against `resetTokenHash`
-7. If no match → return 400 `{ error: 'Invalid or expired reset link' }` (generic — no enumeration)
-8. Bcrypt-hash `newPassword` at cost factor 12
-9. Update `passwordHash`, clear `resetTokenHash` and `resetTokenExpiry` in a single DB transaction
-10. Return `{ ok: true }` — client redirects to `/admin/login?message=password-reset`
+2. Validate `newPassword.length >= 8` — return 400 `{ error: 'Password must be at least 8 characters' }` if not
+3. Validate `newPassword === confirmPassword` — return 400 `{ error: 'Passwords do not match' }` if not
+4. Look up User by `email`
+5. If no user: return 400 `{ error: 'Invalid or expired reset link' }`
+6. If `resetTokenExpiry` is null or in the past: clear both reset fields, return 400 `{ error: 'Invalid or expired reset link' }`
+7. Bcrypt-compare `token` against `resetTokenHash`
+8. If no match: return 400 `{ error: 'Invalid or expired reset link' }` — **token is not cleared on mismatch** — this is a deliberate decision; clearing on mismatch would allow an attacker to lock out a legitimate reset attempt by submitting a wrong token first. Without IP-level rate limiting, this is the safer choice.
+9. Bcrypt-hash `newPassword` at cost factor 12
+10. In a single DB transaction: update `passwordHash`, set `passwordChangedAt = now()`, clear `resetTokenHash` and `resetTokenExpiry`
+11. Return `{ ok: true }` — client redirects to `/admin/login?reset=1`
 
-**Session behaviour:** Any existing `auth_token` sessions remain valid (single-user admin — no need to force logout).
+**Session invalidation:** Setting `passwordChangedAt` in step 10 automatically invalidates any existing `auth_token` JWTs (via the `iat` check in `getSession()`).
 
 ---
 
@@ -165,10 +198,12 @@ Standalone page outside `DashboardLayout`, matching the style of `/admin/login`.
 |----------|-------|----------|
 | Missing/invalid fields | any | 400 with specific field error |
 | Email not found (forgot) | forgot-password | `{ ok: true }` — silent |
-| SMTP failure | forgot-password | 500: "Could not send reset email" |
-| Token expired (validate) | reset-password/validate | `{ valid: false }` |
-| Token expired (reset) | reset-password | 400: "Invalid or expired reset link" |
-| Token mismatch | reset-password | 400: "Invalid or expired reset link" |
+| SMTP failure | forgot-password | `{ ok: true }` — logged server-side, not surfaced |
+| Token expired (validate) | reset-password/validate | `{ valid: false }`, fields cleared |
+| Token expired (reset) | reset-password | 400: "Invalid or expired reset link", fields cleared |
+| Token mismatch (validate) | reset-password/validate | `{ valid: false }`, fields NOT cleared |
+| Token mismatch (reset) | reset-password | 400: "Invalid or expired reset link", fields NOT cleared |
+| Email not found (validate) | reset-password/validate | `{ valid: false }` after dummy bcrypt |
 | New password < 8 chars | change-password / reset-password | 400: "Password must be at least 8 characters" |
 | Passwords don't match | change-password / reset-password | 400: "Passwords do not match" |
 | Current password wrong | change-password | 401: "Current password is incorrect" |
@@ -186,7 +221,10 @@ Standalone page outside `DashboardLayout`, matching the style of `/admin/login`.
 | `app/api/auth/reset-password/route.ts` | Apply password reset |
 | `app/api/auth/change-password/route.ts` | Change password (authenticated) |
 
-The settings card is added inline to the existing `app/admin/settings/page.tsx` as a new client component.
+Modified files:
+- `app/admin/settings/page.tsx` — add Change Password card (new client component)
+- `lib/auth.ts` — add `passwordChangedAt` iat check to `getSession()`
+- `prisma/schema.prisma` — add three new User fields
 
 ---
 
@@ -202,7 +240,7 @@ No new npm packages required.
 
 ## Out of Scope
 
+- IP-based rate limiting (infrastructure concern, not application-level)
 - Password strength meter UI
 - Forced password expiry / rotation policy
-- Invalidating existing sessions on password reset
 - Admin-initiated password reset for other users
