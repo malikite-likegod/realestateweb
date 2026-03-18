@@ -142,14 +142,22 @@ Cookies used by the gate system:
 
 ### Gate Trigger
 
-**Cookie write constraint:** Next.js 15 Server Components cannot write cookies during render — `cookies()` from `next/headers` is read-only in that context. The gate logic must therefore run in **Next.js Middleware** (`middleware.ts`), which can set response cookies. The middleware reads `re_views` and `re_session`, increments the view array, writes the updated cookie on the response, and sets a request header (`x-gate-triggered: true`) that the Server Component reads to decide whether to render the gate modal.
+**Cookie write constraint:** Next.js 15 Server Components cannot write cookies during render (`cookies()` is read-only in that context). Next.js Middleware CAN write cookies, but runs in the **Edge runtime** and cannot use Prisma or access the database. The gate logic is therefore split between middleware and the Server Component:
 
-On each public listing page request:
+**Middleware responsibilities (cookie manipulation only):**
+1. Read `re_views` cookie (JSON array of property IDs) and `re_session` cookie.
+2. If current `propertyId` is not in the array: add it, write updated `re_views` on the response.
+3. Set a request header `x-view-count: <n>` with the current unique view count.
+4. If `re_verified` cookie is present: set `x-gate-bypass: true` header.
+5. If `re_pending` cookie is present (submitted but not yet verified): set `x-gate-pending: true` header.
 
-1. **Middleware** reads `re_views` cookie (JSON array of property IDs).
-2. If current `propertyId` is not in array: add it, write updated `re_views` on response.
-3. If unique count ≥ `listing_gate_limit` AND `re_verified` cookie absent AND `listing_gate_enabled = true`: set request header `x-gate-triggered: true`.
-4. **Server Component** reads `x-gate-triggered` header. If present, renders page content blurred with gate modal overlay. If absent (or `re_verified` present), renders normally.
+**Server Component responsibilities (gate decision):**
+1. Read `x-view-count`, `x-gate-bypass`, and `x-gate-pending` headers from the incoming request.
+2. Fetch `SiteSettings` from the database using `unstable_cache` with a 60-second revalidation — this is a standard Next.js server-side cached fetch, fully compatible with Server Components.
+3. If `x-gate-bypass` is set: render normally, track BehaviorEvent.
+4. If `x-gate-pending` is set: render "Waiting for verification" overlay.
+5. If `x-view-count ≥ listing_gate_limit` AND `listing_gate_enabled = true`: render gate modal over blurred content.
+6. Otherwise: render normally.
 
 ### Gate Modal
 
