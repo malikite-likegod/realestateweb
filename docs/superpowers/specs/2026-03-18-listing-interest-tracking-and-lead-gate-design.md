@@ -177,7 +177,7 @@ Subtext: *"We'll send you a quick verification link — then you can browse free
 2. Modal transitions to **"Check your inbox"** state:
    - Shows the email address entered.
    - "Resend email" link (rate-limited: once per 60 seconds — enforced server-side by querying the most recent `EmailVerificationToken` for the `(email, sessionId)` pair and rejecting if `createdAt > now - 60s`).
-3. Every listing page now shows a **"Waiting for verification"** overlay with the same "Check your inbox" message until the token is used. Middleware detects `re_pending` cookie (without `re_verified`) and sets `x-gate-triggered: true` regardless of view count.
+3. Every listing page now shows a **"Waiting for verification"** overlay with the same "Check your inbox" message until the token is used. Middleware detects `re_pending` cookie (without `re_verified`) and sets `x-gate-pending: true` regardless of view count.
 
 ### Verification Email
 
