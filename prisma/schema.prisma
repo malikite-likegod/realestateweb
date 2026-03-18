@@ -19,6 +19,9 @@ model User {
   passwordHash String
   role         String   @default("admin") // admin | agent | viewer
   avatarUrl    String?
+  resetTokenHash    String?
+  resetTokenExpiry  DateTime?
+  passwordChangedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
