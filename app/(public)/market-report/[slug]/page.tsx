@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { Container, Section } from '@/components/layout'
 import { formatDate } from '@/lib/utils'
+import { sanitizeContent } from '@/lib/sanitize'
 import { MarketReportLeadForm } from './MarketReportLeadForm'
 import type { Metadata } from 'next'
 
@@ -77,7 +78,7 @@ export default async function MarketReportPage({ params }: Props) {
             {/* Overview content — takes up 2/3 */}
             <div className="lg:col-span-2">
               <div className="prose prose-charcoal max-w-none prose-headings:font-serif prose-a:text-gold-600">
-                <div dangerouslySetInnerHTML={{ __html: report.body.replace(/\n/g, '<br/>') }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeContent(report.body.replace(/\n/g, '<br/>')) }} />
               </div>
             </div>
 

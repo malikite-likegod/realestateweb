@@ -79,7 +79,11 @@ export async function POST(request: Request) {
   try {
     await mkdir(UPLOAD_DIR, { recursive: true })
 
-    const ext      = file.name.includes('.') ? '.' + file.name.split('.').pop() : ''
+    const ext = file.name.includes('.') ? ('.' + file.name.split('.').pop()!.toLowerCase()) : ''
+    if (!Object.prototype.hasOwnProperty.call(MIME, ext)) {
+      return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
+    }
+
     const filename = `${globalThis.crypto.randomUUID()}${ext}`
     const buffer   = Buffer.from(await file.arrayBuffer())
 

@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Mail, Send, ChevronDown, Eye, MousePointerClick, Paperclip, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { sanitizeContent } from '@/lib/sanitize'
 import { Button, useToast } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
 
@@ -241,7 +242,7 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
               <div className="border-t border-charcoal-100 px-4 py-3">
                 <div
                   className="text-sm text-charcoal-700 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: email.body }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeContent(email.body) }}
                 />
               </div>
             )}

@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { Container, Section } from '@/components/layout'
 import { formatDate } from '@/lib/utils'
+import { sanitizeContent } from '@/lib/sanitize'
 import type { Metadata } from 'next'
 
 interface Props { params: Promise<{ slug: string }> }
@@ -46,7 +47,7 @@ export default async function BlogPostPage({ params }: Props) {
       <Section>
         <Container size="md">
           <div className="prose prose-charcoal max-w-none prose-headings:font-serif prose-a:text-gold-600">
-            <div dangerouslySetInnerHTML={{ __html: post.body.replace(/\n/g, '<br/>') }} />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeContent(post.body.replace(/\n/g, '<br/>')) }} />
           </div>
         </Container>
       </Section>

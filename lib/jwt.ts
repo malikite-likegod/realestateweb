@@ -1,5 +1,9 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable must be set in production')
+}
+
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET ?? 'fallback_dev_secret_change_in_production'
 )
