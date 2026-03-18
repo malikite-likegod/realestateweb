@@ -11,6 +11,7 @@ import {
   ContactEditModal, ContactTagEditor, ContactCampaigns,
   CommOptLogPanel,
 } from '@/components/crm'
+import { PropertyInterestsPanel } from '@/components/admin/contacts/PropertyInterestsPanel'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
@@ -322,6 +323,8 @@ export default async function ContactDetailPage({ params }: Props) {
             smsOptOut={contact.smsOptOut}
             optLogs={contact.optLogs}
           />
+
+          <PropertyInterestsPanel contactId={id} />
 
         </div>
 
