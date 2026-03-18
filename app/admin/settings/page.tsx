@@ -5,6 +5,7 @@ import { Card } from '@/components/layout'
 import { Button, Input, Divider } from '@/components/ui'
 import { prisma } from '@/lib/prisma'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import { ChangePasswordCard } from '@/components/admin/ChangePasswordCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
@@ -44,6 +45,8 @@ export default async function SettingsPage() {
             <Button variant="primary" className="self-start">Save Changes</Button>
           </div>
         </Card>
+
+        <ChangePasswordCard />
 
         <Divider />
 
