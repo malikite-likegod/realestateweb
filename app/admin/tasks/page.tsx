@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -8,7 +9,7 @@ export const metadata = { title: 'Tasks' }
 
 export default async function TasksPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   // Fetch pending tasks (all) + completed tasks from the last 90 days
   const ninetyDaysAgo = new Date()

@@ -7,6 +7,7 @@
  *   3. Job Queue — real-time view of pending/failed background jobs + manual trigger
  */
 
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -15,7 +16,7 @@ import { AutomationManager } from '@/components/crm/AutomationManager'
 
 export default async function AutomationPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const [campaigns, specialEvents, rules, jobStats] = await Promise.all([
     prisma.automationSequence.findMany({

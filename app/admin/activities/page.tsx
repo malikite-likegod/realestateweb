@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { getUserActivityFeed } from '@/lib/communications/timeline-service'
 import { DashboardLayout } from '@/components/dashboard'
@@ -6,7 +7,7 @@ import { UnifiedTimeline } from '@/components/crm'
 
 export default async function ActivitiesPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const feed = await getUserActivityFeed(session.id, { limit: 150 })
 

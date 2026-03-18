@@ -10,6 +10,7 @@
  * from the contact detail page.
  */
 
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -22,7 +23,7 @@ import Link from 'next/link'
 
 export default async function CommunicationsPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   // Fetch recent inbound items in parallel
   const [inboundSms, missedCalls, inboundEmails] = await Promise.all([

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession }      from '@/lib/auth'
 import { prisma }          from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -11,7 +12,7 @@ interface Props {
 
 export default async function BulkEmailPage({ searchParams }: Props) {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const { contactIds: rawIds } = await searchParams
   const preSelectedIds = rawIds ? rawIds.split(',').filter(Boolean) : []

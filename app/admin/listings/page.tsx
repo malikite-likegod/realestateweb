@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -10,7 +11,7 @@ import Image from 'next/image'
 
 export default async function ListingsManagerPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const properties = await prisma.property.findMany({
     orderBy: { createdAt: 'desc' },

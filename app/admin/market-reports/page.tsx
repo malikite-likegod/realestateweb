@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -9,7 +10,7 @@ import Link from 'next/link'
 
 export default async function MarketReportsPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const reports = await prisma.marketReport.findMany({ orderBy: { createdAt: 'desc' } })
 

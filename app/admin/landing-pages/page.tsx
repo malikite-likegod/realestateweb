@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
@@ -10,7 +11,7 @@ import { APP_URL } from '@/lib/constants'
 
 export default async function LandingPagesPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const pages = await prisma.landingPage.findMany({ orderBy: { createdAt: 'desc' } })
 

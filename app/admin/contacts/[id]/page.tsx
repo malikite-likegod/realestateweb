@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getContactTimeline } from '@/lib/communications/timeline-service'
@@ -22,7 +22,7 @@ interface Props { params: Promise<{ id: string }> }
 
 export default async function ContactDetailPage({ params }: Props) {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const { id } = await params
 

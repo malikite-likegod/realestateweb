@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
@@ -7,7 +8,7 @@ export const metadata = { title: 'Calendar' }
 
 export default async function CalendarPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   return (
     <DashboardLayout user={session}>

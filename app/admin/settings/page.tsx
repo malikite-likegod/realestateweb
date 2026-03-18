@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
@@ -10,7 +11,7 @@ import { TwoFactorCard } from '@/components/admin/TwoFactorCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const [lastSync, apiKeyCount, commandLogCount, queueStats, tfaUser] = await Promise.all([
     prisma.idxUpdate.findFirst({ orderBy: { syncedAt: 'desc' } }),

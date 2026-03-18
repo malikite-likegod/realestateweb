@@ -5,6 +5,7 @@
  * Server component fetches all data; DealPipeline is the client DnD layer.
  */
 
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getPipelineReport } from '@/lib/pipeline/pipeline-service'
@@ -16,7 +17,7 @@ import type { PipelineColumn, DealWithDetails } from '@/types'
 
 export default async function DealsPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const [stages, deals, report] = await Promise.all([
     prisma.stage.findMany({ orderBy: { order: 'asc' } }),

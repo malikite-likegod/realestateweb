@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getPipelineReport } from '@/lib/pipeline/pipeline-service'
@@ -9,7 +10,7 @@ import { Users, TrendingUp, Eye, DollarSign, MessageSquare, Mail, Phone, Target 
 
 export default async function AnalyticsPage() {
   const session = await getSession()
-  if (!session) return null
+  if (!session) redirect('/admin/login')
 
   const now        = new Date()
   const day7Ago    = new Date(now); day7Ago.setDate(now.getDate() - 6); day7Ago.setHours(0, 0, 0, 0)
