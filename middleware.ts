@@ -9,7 +9,23 @@ export async function middleware(request: NextRequest) {
 
   // Check if path needs protection
   const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p))
-  if (!isProtected || pathname === '/admin/login') return NextResponse.next()
+  const isLoginFlow = pathname === '/admin/login' || pathname.startsWith('/admin/login/')
+
+  if (!isProtected || isLoginFlow) {
+    // Redirect already-authenticated users away from login pages
+    if (isLoginFlow) {
+      const authToken = request.cookies.get('auth_token')?.value
+      if (authToken) {
+        const payload = await verifyJwt(authToken)
+        if (payload) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/admin/dashboard'
+          return NextResponse.redirect(url)
+        }
+      }
+    }
+    return NextResponse.next()
+  }
 
   // AI routes accept Bearer API key OR JWT
   if (pathname.startsWith('/api/ai/')) {
