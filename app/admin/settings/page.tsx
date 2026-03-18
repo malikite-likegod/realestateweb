@@ -8,17 +8,19 @@ import { prisma } from '@/lib/prisma'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { ChangePasswordCard } from '@/components/admin/ChangePasswordCard'
 import { TwoFactorCard } from '@/components/admin/TwoFactorCard'
+import { LeadCaptureSettingsCard } from '@/components/admin/LeadCaptureSettingsCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [lastSync, apiKeyCount, commandLogCount, queueStats, tfaUser] = await Promise.all([
+  const [lastSync, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows] = await Promise.all([
     prisma.idxUpdate.findFirst({ orderBy: { syncedAt: 'desc' } }),
     prisma.apiKey.count({ where: { userId: session.id } }),
     prisma.aiCommandLog.count(),
     prisma.jobQueue.groupBy({ by: ['status'], _count: { id: true } }),
     prisma.user.findUnique({ where: { id: session.id }, select: { totpEnabled: true } }),
+    prisma.siteSettings.findMany({ where: { key: { in: ['listing_gate_limit', 'listing_gate_enabled'] } } }),
   ])
   const totpEnabled = tfaUser?.totpEnabled ?? false
 
@@ -31,6 +33,11 @@ export default async function SettingsPage() {
     failed:    queueStats.find(s => s.status === 'failed')?._count.id   ?? 0,
     completed: queueStats.find(s => s.status === 'completed')?._count.id ?? 0,
   }
+
+  const gateSettingsMap: Record<string, string> = {}
+  for (const r of gateSettingsRows) gateSettingsMap[r.key] = r.value
+  const gateLimit   = parseInt(gateSettingsMap['listing_gate_limit']   ?? '3', 10)
+  const gateEnabled = (gateSettingsMap['listing_gate_enabled'] ?? 'true') === 'true'
 
   return (
     <DashboardLayout user={session}>
@@ -53,6 +60,8 @@ export default async function SettingsPage() {
         <ChangePasswordCard />
 
         <TwoFactorCard initialEnabled={totpEnabled} userEmail={session.email} />
+
+        <LeadCaptureSettingsCard initialLimit={gateLimit} initialEnabled={gateEnabled} />
 
         <Divider />
 
