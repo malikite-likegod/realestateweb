@@ -27,8 +27,17 @@ export async function getSession() {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub as string },
-      select: { id: true, name: true, email: true, role: true, avatarUrl: true },
+      select: { id: true, name: true, email: true, role: true, avatarUrl: true, passwordChangedAt: true },
     })
+    if (!user) return null
+
+    // Invalidate tokens issued before the last password change
+    if (user.passwordChangedAt && typeof payload.iat === 'number') {
+      if (payload.iat < user.passwordChangedAt.getTime() / 1000) {
+        return null
+      }
+    }
+
     return user
   } catch {
     return null
