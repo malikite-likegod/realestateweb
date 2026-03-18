@@ -26,3 +26,21 @@ export async function verifyJwt(token: string): Promise<JWTPayload | null> {
     return null
   }
 }
+
+export async function signPendingJwt(userId: string): Promise<string> {
+  return new SignJWT({ mfaPending: true, sub: userId })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m')
+    .sign(secret)
+}
+
+export async function verifyPendingJwt(token: string): Promise<JWTPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret)
+    if (!payload.mfaPending || !payload.sub) return null
+    return payload
+  } catch {
+    return null
+  }
+}
