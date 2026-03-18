@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Menu, Phone } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -12,12 +13,17 @@ import { MobileMenu } from './MobileMenu'
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const pathname = usePathname()
+  const isHome = pathname === '/'
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
   }, [])
+
+  // On non-home pages the nav is always solid; on the home page it starts transparent
+  const solid = !isHome || scrolled
 
   return (
     <>
@@ -27,7 +33,7 @@ export function Navbar() {
         transition={{ duration: 0.5 }}
         className={cn(
           'fixed top-0 left-0 right-0 z-40 transition-all duration-300',
-          scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent',
+          solid ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent',
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -36,7 +42,7 @@ export function Navbar() {
             <Link href="/" className="flex items-center gap-2">
               <span className={cn(
                 'font-serif text-2xl font-bold tracking-tight transition-colors',
-                scrolled ? 'text-charcoal-900' : 'text-white',
+                solid ? 'text-charcoal-900' : 'text-white',
               )}>
                 {APP_NAME}
               </span>
@@ -50,7 +56,7 @@ export function Navbar() {
                   href={link.href}
                   className={cn(
                     'text-sm font-medium tracking-wide transition-colors hover:text-gold-500',
-                    scrolled ? 'text-charcoal-700' : 'text-white/90',
+                    solid ? 'text-charcoal-700' : 'text-white/90',
                   )}
                 >
                   {link.label}
@@ -64,7 +70,7 @@ export function Navbar() {
                 href="tel:+14168888352"
                 className={cn(
                   'flex items-center gap-1.5 text-sm font-medium transition-colors',
-                  scrolled ? 'text-charcoal-700' : 'text-white/90',
+                  solid ? 'text-charcoal-700' : 'text-white/90',
                 )}
               >
                 <Phone size={15} />
@@ -78,7 +84,7 @@ export function Navbar() {
             {/* Mobile toggle */}
             <button
               onClick={() => setMobileOpen(true)}
-              className={cn('lg:hidden p-2', scrolled ? 'text-charcoal-900' : 'text-white')}
+              className={cn('lg:hidden p-2', solid ? 'text-charcoal-900' : 'text-white')}
             >
               <Menu size={24} />
             </button>
