@@ -44,7 +44,9 @@ export async function POST(request: Request) {
       where: { id: user.id },
       data: { pendingOtpHash: null, pendingOtpExpiry: null, pendingOtpAttempts: 0 },
     })
-    return NextResponse.json({ error: 'Code expired, please log in again' }, { status: 401 })
+    const res = NextResponse.json({ error: 'Code expired, please log in again' }, { status: 401 })
+    res.cookies.set('pending_token', '', { maxAge: 0, path: '/' })
+    return res
   }
 
   // Check attempt limit (pre-check: already locked out from prior attempts)
