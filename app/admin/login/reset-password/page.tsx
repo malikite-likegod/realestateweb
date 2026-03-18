@@ -13,13 +13,13 @@ function ResetPasswordForm() {
   const token = params.get('token') ?? ''
   const email = params.get('email') ?? ''
 
-  const [status, setStatus] = useState<'checking' | 'invalid' | 'ready' | 'success'>('checking')
+  const [status, setStatus] = useState<'checking' | 'missing' | 'invalid' | 'ready'>('checking')
   const [form, setForm] = useState({ newPassword: '', confirmPassword: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!token || !email) { setStatus('invalid'); return }
+    if (!token || !email) { setStatus('missing'); return }
 
     fetch('/api/auth/reset-password/validate', {
       method: 'POST',
@@ -55,8 +55,7 @@ function ResetPasswordForm() {
       if (!res.ok) {
         setError(data.error ?? 'Something went wrong')
       } else {
-        setStatus('success')
-        setTimeout(() => router.push('/admin/login?reset=1'), 1000)
+        router.push('/admin/login?reset=1')
       }
     } catch {
       setError('Network error. Please try again.')
@@ -83,6 +82,14 @@ function ResetPasswordForm() {
           {status === 'checking' && (
             <p className="text-charcoal-400 text-sm text-center">Verifying link…</p>
           )}
+          {status === 'missing' && (
+            <div className="text-center">
+              <p className="text-red-400 text-sm mb-4">This link is invalid.</p>
+              <Link href="/admin/login/forgot-password" className="text-gold-400 hover:text-gold-300 text-sm">
+                Request a new reset link
+              </Link>
+            </div>
+          )}
           {status === 'invalid' && (
             <div className="text-center">
               <p className="text-red-400 text-sm mb-4">This link is invalid or has expired.</p>
@@ -91,7 +98,7 @@ function ResetPasswordForm() {
               </Link>
             </div>
           )}
-          {(status === 'ready' || status === 'success') && (
+          {status === 'ready' && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <Input
                 label="New password"
@@ -110,7 +117,6 @@ function ResetPasswordForm() {
                 className="bg-charcoal-800 border-charcoal-600 text-white"
               />
               {error && <p className="text-sm text-red-400">{error}</p>}
-              {status === 'success' && <p className="text-sm text-green-400">Password reset! Redirecting…</p>}
               <Button type="submit" variant="gold" size="lg" loading={loading} fullWidth>
                 Reset Password
               </Button>
@@ -118,11 +124,6 @@ function ResetPasswordForm() {
           )}
         </div>
 
-        <p className="text-center mt-4 text-sm">
-          <Link href="/admin/login" className="text-charcoal-400 hover:text-white transition-colors">
-            ← Back to login
-          </Link>
-        </p>
       </motion.div>
     </div>
   )

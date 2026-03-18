@@ -51,7 +51,6 @@ export default function ForgotPasswordPage() {
               <p className="text-charcoal-300 text-sm leading-relaxed">
                 If that email is registered, you&apos;ll receive a reset link shortly.
               </p>
-              <p className="text-charcoal-500 text-xs mt-3">Check your spam folder if it doesn&apos;t arrive.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
