@@ -6,17 +6,20 @@ import { Button, Input, Divider } from '@/components/ui'
 import { prisma } from '@/lib/prisma'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { ChangePasswordCard } from '@/components/admin/ChangePasswordCard'
+import { TwoFactorCard } from '@/components/admin/TwoFactorCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) return null
 
-  const [lastSync, apiKeyCount, commandLogCount, queueStats] = await Promise.all([
+  const [lastSync, apiKeyCount, commandLogCount, queueStats, tfaUser] = await Promise.all([
     prisma.idxUpdate.findFirst({ orderBy: { syncedAt: 'desc' } }),
     prisma.apiKey.count({ where: { userId: session.id } }),
     prisma.aiCommandLog.count(),
     prisma.jobQueue.groupBy({ by: ['status'], _count: { id: true } }),
+    prisma.user.findUnique({ where: { id: session.id }, select: { totpEnabled: true } }),
   ])
+  const totpEnabled = tfaUser?.totpEnabled ?? false
 
   const twilioConfigured  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
   const smtpConfigured    = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
@@ -47,6 +50,8 @@ export default async function SettingsPage() {
         </Card>
 
         <ChangePasswordCard />
+
+        <TwoFactorCard initialEnabled={totpEnabled} userEmail={session.email} />
 
         <Divider />
 
