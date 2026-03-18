@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { verifyJwt } from './lib/jwt'
 
 const PROTECTED_PATHS = ['/admin', '/api/contacts', '/api/deals', '/api/tasks',
-  '/api/activities', '/api/listings', '/api/blog', '/api/stages', '/api/api-keys']
+  '/api/activities', '/api/listings', '/api/blog', '/api/stages', '/api/api-keys',
+  '/api/admin']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
