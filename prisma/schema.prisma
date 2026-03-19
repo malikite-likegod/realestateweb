@@ -77,6 +77,16 @@ model Contact {
   birthday     DateTime?
   emailOptOut  Boolean  @default(false) // true = do not send email
   smsOptOut    Boolean  @default(false) // true = do not send SMS
+  emailVerified              Boolean   @default(false)
+  emailVerifiedAt            DateTime?
+  emailVerificationTokenHash String?   @unique
+  emailVerificationSentAt    DateTime?
+  phoneVerified              Boolean   @default(false)
+  phoneVerifiedAt            DateTime?
+  phoneOtpCode               String?
+  phoneOtpExpiresAt          DateTime?
+  phoneOtpAttempts           Int       @default(0)
+  phoneSessionTokenHash      String?   @unique
   notes        String?
   address      String?
   city         String?
