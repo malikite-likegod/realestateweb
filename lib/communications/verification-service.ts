@@ -18,13 +18,6 @@ function sha256(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex')
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  // Pad to equal length before comparison to prevent length leaks
-  const aHash = sha256(a)
-  const bHash = sha256(b) // both are hex strings of equal length
-  return crypto.timingSafeEqual(Buffer.from(aHash), Buffer.from(bHash))
-}
-
 // ─── Email verification ──────────────────────────────────────────────────────
 
 /**
@@ -194,12 +187,8 @@ export async function verifyPhoneOtp(sessionToken: string, code: string): Promis
   const codeHash = sha256(code)
   const storedHash = contact.phoneOtpCode ?? ''
 
-  // Constant-time comparison (compare hashes of equal length)
-  const match = timingSafeEqual(code, storedHash.length > 0 ? storedHash : '__invalid__')
-  // Re-check: timingSafeEqual above hashes both inputs; compare to stored hash directly
-  const actualMatch = codeHash === storedHash
-
-  if (!actualMatch) {
+  // Both are 64-char SHA-256 hex strings — direct comparison is safe
+  if (codeHash !== storedHash) {
     await prisma.contact.update({
       where: { id: contact.id },
       data:  { phoneOtpAttempts: { increment: 1 } },
