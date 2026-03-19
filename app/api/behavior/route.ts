@@ -21,9 +21,9 @@ export async function POST(request: Request) {
     // When a verified contact views a listing, upsert a ContactPropertyInterest record
     if (data.eventType === 'listing_view' && data.contactId && data.entityId) {
       await prisma.contactPropertyInterest.upsert({
-        where:  { contactId_propertyId: { contactId: data.contactId, propertyId: data.entityId } },
+        where:  { contactId_resoPropertyId: { contactId: data.contactId, resoPropertyId: data.entityId } },
         update: { updatedAt: new Date() },
-        create: { contactId: data.contactId, propertyId: data.entityId, source: 'auto' },
+        create: { contactId: data.contactId, resoPropertyId: data.entityId, source: 'auto' },
       })
     }
 
