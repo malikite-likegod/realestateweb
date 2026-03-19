@@ -21,8 +21,10 @@ export async function middleware(request: NextRequest) {
     if (!sessionId) sessionId = crypto.randomUUID()
 
     // Read + update re_views (JSON array of property IDs)
-    const isVerified = !!request.cookies.get('re_verified')?.value
-    const isPending  = !!request.cookies.get('re_pending')?.value
+    const isVerified  = !!request.cookies.get('re_verified')?.value
+    const isPending   = !!request.cookies.get('re_pending')?.value
+    const adminToken  = request.cookies.get('auth_token')?.value
+    const isAdminUser = adminToken ? !!(await verifyJwt(adminToken)) : false
 
     let views: string[] = []
     try {
@@ -38,8 +40,8 @@ export async function middleware(request: NextRequest) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-view-count', String(views.length))
     requestHeaders.set('x-session-id', sessionId)
-    if (isVerified) requestHeaders.set('x-gate-bypass',  'true')
-    if (isPending)  requestHeaders.set('x-gate-pending', 'true')
+    if (isVerified || isAdminUser) requestHeaders.set('x-gate-bypass',  'true')
+    if (isPending)                 requestHeaders.set('x-gate-pending', 'true')
 
     const response = NextResponse.next({ request: { headers: requestHeaders } })
 
