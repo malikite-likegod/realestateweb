@@ -323,20 +323,27 @@ model ResoProperty {
   listPrice             Float?
   originalListPrice     Float?
   closePrice            Float?
+  listingContractDate   DateTime?
+  purchaseContractDate  DateTime?
+  closeDate             DateTime?
   bedroomsTotal         Int?
   bathroomsTotalInteger Int?
+  garageSpaces          Int?
+  poolPrivateYN         Boolean   @default(false)
   livingArea            Float?
-  lotSizeAcres          Float?
+  lotSizeSquareFeet     Float?
   yearBuilt             Int?
   streetNumber          String?
   streetName            String?
   unitNumber            String?
-  city                  String?
-  stateOrProvince       String?
+  city                  String
+  stateOrProvince       String
   postalCode            String?
+  country               String    @default("CA")
   latitude              Float?
   longitude             Float?
   publicRemarks         String?
+  privateRemarks        String?
   media                 String?   // JSON array of { url: string, order: number }
   listAgentKey          String?
   listAgentName         String?
@@ -345,36 +352,48 @@ model ResoProperty {
   listDate              DateTime?
   modificationTimestamp DateTime?
   lastSyncedAt          DateTime  @default(now())
-  rawData               String?
+  rawJson               String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   contactInterests      ContactPropertyInterest[]
 
+  @@index([modificationTimestamp])
+  @@index([standardStatus])
+  @@index([standardStatus, city])
   @@map("reso_properties")
 }
 
 model ResoSyncLog {
-  id       String   @id @default(cuid())
-  syncedAt DateTime @default(now())
-  added    Int      @default(0)
-  updated  Int      @default(0)
-  removed  Int      @default(0)
-  errors   String?
-  duration Int?     // ms
+  id           String   @id @default(cuid())
+  syncedAt     DateTime @default(now())
+  resourceType String   @default("Property")
+  added        Int      @default(0)
+  updated      Int      @default(0)
+  deleted      Int      @default(0)
+  errors       Int      @default(0)
+  durationMs   Int?
+  notes        String?
 
+  @@index([syncedAt])
   @@map("reso_sync_logs")
 }
 
 model SavedSearch {
   id        String    @id @default(cuid())
-  name      String?
+  name      String
   filters   String                // JSON blob of PropertyFilters
-  contactId String?
-  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  // Either contactId or userId must be set (not both, not neither) — enforced in app logic
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
   userId    String?
   user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastRunAt DateTime?
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
+  @@index([contactId])
+  @@index([userId])
   @@map("saved_searches")
 }
 
