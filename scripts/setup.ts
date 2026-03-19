@@ -125,7 +125,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_KEY=
 
   // Dynamically import Prisma client after generate
   const { PrismaClient } = await import('@prisma/client')
-  const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } })
+  const prisma = new PrismaClient({ datasourceUrl: databaseUrl })
 
   try {
     // Seed default stages (skip if any exist)
