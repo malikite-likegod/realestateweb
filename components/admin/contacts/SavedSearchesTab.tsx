@@ -51,8 +51,8 @@ export function SavedSearchesTab({ contactId }: Props) {
   }, [contactId])
 
   async function handleDelete(id: string) {
-    await fetch(`/api/contacts/${contactId}/saved-searches/${id}`, { method: 'DELETE' })
-    setSearches(s => s.filter(x => x.id !== id))
+    const res = await fetch(`/api/contacts/${contactId}/saved-searches/${id}`, { method: 'DELETE' })
+    if (res.ok) setSearches(s => s.filter(x => x.id !== id))
   }
 
   if (loading) return <p className="text-sm text-charcoal-400 py-4">Loading saved searches…</p>
