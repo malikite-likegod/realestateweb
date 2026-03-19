@@ -136,21 +136,11 @@ export async function POST(req: Request) {
 
   try {
     if (dbProvider === 'sqlite') {
-      execSync('npx prisma db push --skip-generate', {
-        cwd: ROOT,
-        env: spawnEnv,
-        stdio: 'pipe',
-        shell: true,
-      })
+      execSync('npx prisma db push --skip-generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as any)
     } else {
-      execSync('npx prisma migrate deploy', {
-        cwd: ROOT,
-        env: spawnEnv,
-        stdio: 'pipe',
-        shell: true,
-      })
+      execSync('npx prisma migrate deploy', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as any)
     }
-    execSync('npx prisma generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true })
+    execSync('npx prisma generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as any)
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer; message?: string }
     return NextResponse.json(
@@ -217,15 +207,10 @@ main().catch(e => { console.error(e); process.exit(1); });
   try {
     execSync('node .setup-admin-temp.cjs', {
       cwd: ROOT,
-      env: {
-        ...spawnEnv,
-        ADMIN_NAME: adminName,
-        ADMIN_EMAIL: adminEmail,
-        ADMIN_PASS: adminPassword,
-      },
+      env: { ...spawnEnv, ADMIN_NAME: adminName, ADMIN_EMAIL: adminEmail, ADMIN_PASS: adminPassword },
       stdio: 'pipe',
       shell: true,
-    })
+    } as any)
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer; message?: string }
     return NextResponse.json(
