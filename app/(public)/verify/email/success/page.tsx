@@ -30,7 +30,12 @@ function EmailVerifiedContent() {
       if (res.ok) {
         setStatus('done')
       } else {
-        setError(data.message ?? 'Something went wrong.')
+        const msg =
+          res.status === 400 ? 'Incorrect code, please try again.' :
+          res.status === 410 ? 'This code has expired.' :
+          res.status === 429 ? 'Too many attempts.' :
+          'Something went wrong.'
+        setError(msg)
         setStatus('error')
       }
     } catch {
@@ -49,12 +54,12 @@ function EmailVerifiedContent() {
         </div>
 
         <h1 className="text-2xl font-bold text-charcoal-900 mb-2">Email address confirmed!</h1>
-        <p className="text-charcoal-500 mb-6">Thank you for confirming your email address.</p>
+        <p className="text-charcoal-500 mb-6">Thank you for confirming your email.</p>
 
         {showOtp && status !== 'done' && (
           <div className="border-t border-charcoal-100 pt-6">
             <p className="text-sm text-charcoal-600 mb-4">
-              We also sent a 6-digit code to your phone number. Enter it below to verify it.
+              We also sent a 6-digit code to your phone. Enter it below to verify your number.
             </p>
             <form onSubmit={handleVerifyPhone} className="flex flex-col gap-3">
               <input
@@ -77,7 +82,7 @@ function EmailVerifiedContent() {
                 className="w-full rounded-xl bg-gold-600 hover:bg-gold-700 disabled:opacity-60 text-white font-semibold py-3 px-6 text-base transition-colors flex items-center justify-center gap-2"
               >
                 {status === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
-                Verify Phone Number
+                Verify Phone
               </button>
             </form>
           </div>

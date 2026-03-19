@@ -9,7 +9,7 @@ export default function EmailVerificationInvalidPage() {
         </div>
         <h1 className="text-2xl font-bold text-charcoal-900 mb-2">Link invalid or already used</h1>
         <p className="text-charcoal-500">
-          This verification link has already been used or has expired. If you need to verify your email, please re-submit the form.
+          This verification link has already been used or has expired.
         </p>
       </div>
     </div>
