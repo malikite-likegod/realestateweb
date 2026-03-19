@@ -12,6 +12,7 @@ import {
   CommOptLogPanel,
 } from '@/components/crm'
 import { PropertyInterestsPanel } from '@/components/admin/contacts/PropertyInterestsPanel'
+import { SavedSearchesTab } from '@/components/admin/contacts/SavedSearchesTab'
 import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
@@ -325,6 +326,11 @@ export default async function ContactDetailPage({ params }: Props) {
           />
 
           <PropertyInterestsPanel contactId={id} />
+
+          <Card>
+            <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-4">Saved Searches</p>
+            <SavedSearchesTab contactId={id} />
+          </Card>
 
         </div>
 

@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: Props) {
   const search = await prisma.savedSearch.create({
     data: {
       contactId,
-      name:    parsed.data.name ?? null,
+      name:    parsed.data.name ?? '',
       filters: JSON.stringify(parsed.data.filters),
     },
   })
