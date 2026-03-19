@@ -9,6 +9,7 @@ import { Button, Select, Input } from '@/components/ui'
 import { PROPERTY_TYPES, LISTING_TYPES } from '@/lib/constants'
 import { Map, List, SlidersHorizontal } from 'lucide-react'
 import type { SearchResult } from '@/services/search/types'
+import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 
 function ListingsContent() {
   const router = useRouter()
@@ -45,7 +46,7 @@ function ListingsContent() {
   useEffect(() => { fetchResults(activeFilters) }, [fetchResults, activeFilters])
 
   const properties = results.map(r => ({
-    id: r.id,
+    id: r.listingKey ?? r.id,
     title: r.title,
     price: r.price ?? 0,
     bedrooms: r.bedrooms,
@@ -96,6 +97,11 @@ function ListingsContent() {
         {/* Results header */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-charcoal-600"><strong className="text-charcoal-900">{total}</strong> properties found</p>
+          <SaveSearchButton
+            filters={Object.fromEntries(
+              Object.entries(activeFilters).filter(([, v]) => v !== '')
+            )}
+          />
           <div className="flex gap-2">
             <button onClick={() => setView('grid')} className={`p-2 rounded-lg ${view === 'grid' ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-500'}`}><List size={18} /></button>
             <button onClick={() => setView('map')} className={`p-2 rounded-lg ${view === 'map' ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-500'}`}><Map size={18} /></button>
