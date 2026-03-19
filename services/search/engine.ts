@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { parseJsonSafe } from '@/lib/utils'
-import { buildPropertyWhere, buildIdxWhere, buildOrderBy } from './filters'
+import { buildPropertyWhere, buildOrderBy } from './filters'
 import type { SearchFilters, SearchResult, SearchResponse } from './types'
 
 export async function searchProperties(filters: SearchFilters, sessionId?: string, contactId?: string): Promise<SearchResponse> {
@@ -42,37 +42,50 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
     total += manualTotal
   }
 
-  if (source === 'idx' || source === 'all') {
-    const idxWhere = buildIdxWhere(filters)
+  if (source === 'reso' || source === 'all') {
+    const { PropertyService } = await import('@/lib/property-service')
+    const resoResult = await PropertyService.getProperties({
+      city:         filters.city,
+      minPrice:     filters.minPrice,
+      maxPrice:     filters.maxPrice,
+      minBeds:      filters.minBeds,
+      minBaths:     filters.minBaths,
+      propertyType: filters.propertyType,
+      page:         source === 'all' ? 1    : page,
+      pageSize:     source === 'all' ? 9999 : pageSize,
+    })
 
-    const [idxTotal, idxListings] = await Promise.all([
-      prisma.idxProperty.count({ where: idxWhere }),
-      prisma.idxProperty.findMany({ where: idxWhere, skip: source === 'all' ? 0 : skip, take: source === 'all' ? 9999 : pageSize }),
-    ])
-
-    const idxResults: SearchResult[] = idxListings.map(p => ({
-      id: p.id,
-      source: 'idx',
-      title: `${p.address ?? ''}, ${p.city ?? ''}`,
-      price: p.price,
-      bedrooms: p.bedrooms,
-      bathrooms: p.bathrooms,
-      sqft: p.sqft,
-      address: p.address,
-      city: p.city,
-      propertyType: p.propertyType,
-      listingType: p.listingType,
-      images: parseJsonSafe<string[]>(p.images, []),
-      latitude: p.latitude,
-      longitude: p.longitude,
+    const resoResults: SearchResult[] = resoResult.listings.map(p => ({
+      id:          p.id,
+      listingKey:  p.listingKey,
+      source:      'reso' as const,
+      title:       [p.streetNumber, p.streetName, p.unitNumber].filter(Boolean).join(' ') || p.listingKey,
+      price:       p.listPrice,
+      bedrooms:    p.bedroomsTotal,
+      bathrooms:   p.bathroomsTotalInteger,
+      sqft:        p.livingArea ? Math.round(p.livingArea) : null,
+      address:     [p.streetNumber, p.streetName].filter(Boolean).join(' '),
+      city:        p.city,
+      propertyType: p.propertySubType,
+      listingType:  'sale',
+      images:       p.media ? (JSON.parse(p.media) as { url: string }[]).map(m => m.url) : [],
+      latitude:     p.latitude,
+      longitude:    p.longitude,
     }))
 
-    results = [...results, ...idxResults]
-    total += idxTotal
+    results = [...results, ...resoResults]
+    total  += resoResult.total
   }
 
-  // If combined, sort and paginate in memory
+  // If combined: deduplicate by address, then paginate in memory
   if (source === 'all') {
+    const seen = new Set<string>()
+    results = results.filter(r => {
+      const key = `${r.city ?? ''}:${r.address ?? ''}`.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     total = results.length
     results = results.slice(skip, skip + pageSize)
   }

@@ -1,4 +1,4 @@
-export type SearchSource = 'manual' | 'idx' | 'all'
+export type SearchSource = 'manual' | 'reso' | 'all'
 
 export type SearchFilters = {
   source?: SearchSource
@@ -25,7 +25,8 @@ export type SearchFilters = {
 
 export type SearchResult = {
   id: string
-  source: 'manual' | 'idx'
+  listingKey?: string
+  source: 'manual' | 'reso'
   title: string
   price: number | null
   bedrooms: number | null
