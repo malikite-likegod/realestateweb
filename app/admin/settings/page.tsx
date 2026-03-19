@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   if (!session) redirect('/admin/login')
 
   const [lastSync, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows] = await Promise.all([
-    prisma.idxUpdate.findFirst({ orderBy: { syncedAt: 'desc' } }),
+    prisma.resoSyncLog.findFirst({ orderBy: { syncedAt: 'desc' } }),
     prisma.apiKey.count({ where: { userId: session.id } }),
     prisma.aiCommandLog.count(),
     prisma.jobQueue.groupBy({ by: ['status'], _count: { id: true } }),
@@ -65,14 +65,14 @@ export default async function SettingsPage() {
 
         <Divider />
 
-        {/* IDX */}
+        {/* RESO / IDX Sync */}
         <Card>
-          <h3 className="font-semibold text-charcoal-900 mb-2">IDX Integration</h3>
+          <h3 className="font-semibold text-charcoal-900 mb-2">RESO / IDX Sync</h3>
           <p className="text-sm text-charcoal-400 mb-4">
             {lastSync ? `Last synced: ${lastSync.syncedAt.toLocaleString()} — ${lastSync.added} added, ${lastSync.updated} updated` : 'Never synced'}
           </p>
-          <form action="/api/idx/sync" method="POST">
-            <Button variant="outline" type="submit">Sync IDX Listings Now</Button>
+          <form action="/api/reso/sync" method="POST">
+            <Button variant="outline" type="submit">Sync RESO Listings Now</Button>
           </form>
         </Card>
 
