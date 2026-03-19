@@ -11,6 +11,7 @@ interface Props {
 export function LeadForm({ slug, ctaTitle, ctaSubtitle }: Props) {
   const [form, setForm]   = useState({ firstName: '', lastName: '', email: '', phone: '', message: '' })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [error, setError] = useState<string>('')
 
   const set = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [f]: e.target.value }))
@@ -24,9 +25,19 @@ export function LeadForm({ slug, ctaTitle, ctaSubtitle }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(form),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        if (body?.error?.includes('valid email')) {
+          setError(body.error)
+        } else {
+          setError('Something went wrong — please try again.')
+        }
+        setStatus('error')
+        return
+      }
       setStatus('success')
     } catch {
+      setError('Something went wrong — please try again.')
       setStatus('error')
     }
   }
@@ -79,8 +90,8 @@ export function LeadForm({ slug, ctaTitle, ctaSubtitle }: Props) {
           <textarea rows={3} value={form.message} onChange={set('message')} placeholder="Tell me a bit about what you're looking for…" className={`${inputCls} resize-none`} />
         </div>
 
-        {status === 'error' && (
-          <p className="text-sm text-red-600">Something went wrong — please try again.</p>
+        {status === 'error' && error && (
+          <p className="text-sm text-red-600">{error}</p>
         )}
 
         <button

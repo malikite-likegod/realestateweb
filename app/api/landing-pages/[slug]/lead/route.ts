@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendWebhook } from '@/services/ai/webhooks'
 import { enqueueJob } from '@/lib/automation/job-queue'
+import { validateEmail } from '@/lib/services/zerobounce'
+import { sendEmailVerification } from '@/lib/communications/verification-service'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -15,6 +17,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!firstName || !email) {
     return NextResponse.json({ error: 'firstName and email are required' }, { status: 400 })
+  }
+
+  // ZeroBounce email validation (skipped if ZEROBOUNCE_API_KEY not set)
+  const emailStatus = await validateEmail(email)
+  if (emailStatus === 'invalid') {
+    return NextResponse.json(
+      { error: 'Please enter a valid email address.' },
+      { status: 400 }
+    )
   }
 
   const noteEntry = `Landing page enquiry: "${page.title}"${message ? `\nMessage: ${message}` : ''}`
@@ -52,6 +63,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   await sendWebhook('new_lead', { contactId: contact.id, source: 'landing_page' })
   await enqueueJob('evaluate_rules', { trigger: 'new_lead', contactId: contact.id })
+
+  // Send email verification (fire-and-forget; errors are logged inside the service)
+  sendEmailVerification(contact.id).catch(() => {})
 
   return NextResponse.json({ ok: true }, { status: 201 })
 }
