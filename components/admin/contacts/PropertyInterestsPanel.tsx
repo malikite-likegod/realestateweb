@@ -4,27 +4,29 @@ import { useState, useEffect, useCallback } from 'react'
 import { formatPrice } from '@/lib/utils'
 import { Home, X, Plus, Eye, Link as LinkIcon } from 'lucide-react'
 
-interface Property {
+interface ResoPropertyInfo {
   id:           string
-  title:        string
-  address:      string
+  listingKey:   string
+  streetNumber: string | null
+  streetName:   string | null
+  unitNumber:   string | null
   city:         string
-  price:        number
-  propertyType: string
-  images:       string | null
+  listPrice:    number | null
+  propertySubType: string | null
+  media:        string | null
 }
 
 interface Interest {
-  id:         string
-  propertyId: string
-  source:     string
-  notes:      string | null
-  updatedAt:  string
-  property:   Property
+  id:             string
+  resoPropertyId: string
+  source:         string
+  notes:          string | null
+  updatedAt:      string
+  resoProperty:   ResoPropertyInfo
 }
 
 interface ViewRecord {
-  property:  Property
+  property:  ResoPropertyInfo
   count:     number
   firstSeen: string
   lastSeen:  string
@@ -39,6 +41,10 @@ interface Summary {
 
 interface Props { contactId: string }
 
+function getAddress(p: ResoPropertyInfo): string {
+  return [p.streetNumber, p.streetName].filter(Boolean).join(' ') || p.listingKey
+}
+
 export function PropertyInterestsPanel({ contactId }: Props) {
   const [tab,         setTab]         = useState<'interests' | 'history'>('interests')
   const [interests,   setInterests]   = useState<Interest[]>([])
@@ -47,7 +53,7 @@ export function PropertyInterestsPanel({ contactId }: Props) {
   const [loading,     setLoading]     = useState(true)
   const [showAdd,     setShowAdd]     = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Property[]>([])
+  const [searchResults, setSearchResults] = useState<ResoPropertyInfo[]>([])
   const [searching,   setSearching]   = useState(false)
 
   const loadData = useCallback(async () => {
@@ -65,17 +71,27 @@ export function PropertyInterestsPanel({ contactId }: Props) {
   async function searchListings(q: string) {
     if (!q.trim()) { setSearchResults([]); return }
     setSearching(true)
-    const res  = await fetch(`/api/listings?search=${encodeURIComponent(q)}&pageSize=8`)
+    const res  = await fetch(`/api/search?city=${encodeURIComponent(q)}&source=reso&pageSize=8`)
     const data = await res.json()
-    setSearchResults((data.data ?? []).map((l: { property: Property }) => l.property))
+    setSearchResults((data.results ?? []).map((r: { id: string; listingKey?: string; address: string | null; city: string | null; price: number | null; propertyType: string | null; images: string[] }) => ({
+      id:           r.id,
+      listingKey:   r.listingKey ?? r.id,
+      streetNumber: null,
+      streetName:   r.address,
+      unitNumber:   null,
+      city:         r.city ?? '',
+      listPrice:    r.price,
+      propertySubType: r.propertyType,
+      media:        r.images.length ? JSON.stringify(r.images.map((url, i) => ({ url, order: i + 1 }))) : null,
+    })))
     setSearching(false)
   }
 
-  async function addInterest(propertyId: string) {
+  async function addInterest(id: string) {
     await fetch(`/api/contacts/${contactId}/property-interests`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ propertyId }),
+      body:    JSON.stringify({ resoPropertyId: id }),
     })
     setShowAdd(false)
     setSearchQuery('')
@@ -83,8 +99,8 @@ export function PropertyInterestsPanel({ contactId }: Props) {
     loadData()
   }
 
-  async function removeInterest(propertyId: string) {
-    await fetch(`/api/contacts/${contactId}/property-interests/${propertyId}`, { method: 'DELETE' })
+  async function removeInterest(resoPropertyId: string) {
+    await fetch(`/api/contacts/${contactId}/property-interests/${resoPropertyId}`, { method: 'DELETE' })
     loadData()
   }
 
@@ -92,8 +108,11 @@ export function PropertyInterestsPanel({ contactId }: Props) {
     return new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
-  const getFirstImage = (images: string | null): string => {
-    try { return (JSON.parse(images ?? '[]') as string[])[0] ?? '/placeholder-property.jpg' }
+  const getFirstImage = (media: string | null): string => {
+    try {
+      const items = JSON.parse(media ?? '[]') as { url: string }[]
+      return items[0]?.url ?? '/placeholder-property.jpg'
+    }
     catch { return '/placeholder-property.jpg' }
   }
 
@@ -163,8 +182,8 @@ export function PropertyInterestsPanel({ contactId }: Props) {
                   >
                     <Home size={14} className="shrink-0 text-charcoal-400 mt-0.5" />
                     <div>
-                      <p className="text-charcoal-800 font-medium leading-tight">{p.address}, {p.city}</p>
-                      <p className="text-charcoal-400 text-xs">{formatPrice(p.price)} · {p.propertyType}</p>
+                      <p className="text-charcoal-800 font-medium leading-tight">{getAddress(p)}, {p.city}</p>
+                      <p className="text-charcoal-400 text-xs">{formatPrice(p.listPrice ?? 0)} · {p.propertySubType}</p>
                     </div>
                   </button>
                 ))}
@@ -178,13 +197,13 @@ export function PropertyInterestsPanel({ contactId }: Props) {
                 {interests.map(i => (
                   <div key={i.id} className="flex items-start gap-3 rounded-lg bg-charcoal-50 px-3 py-2.5">
                     <img
-                      src={getFirstImage(i.property.images)}
-                      alt={i.property.title}
+                      src={getFirstImage(i.resoProperty.media)}
+                      alt={getAddress(i.resoProperty)}
                       className="h-12 w-16 rounded-md object-cover shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-charcoal-900 truncate">{i.property.address}, {i.property.city}</p>
-                      <p className="text-xs text-charcoal-500">{formatPrice(i.property.price)} · <span className="capitalize">{i.property.propertyType}</span></p>
+                      <p className="text-sm font-medium text-charcoal-900 truncate">{getAddress(i.resoProperty)}, {i.resoProperty.city}</p>
+                      <p className="text-xs text-charcoal-500">{formatPrice(i.resoProperty.listPrice ?? 0)} · <span className="capitalize">{i.resoProperty.propertySubType}</span></p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium ${
                           i.source === 'auto'
@@ -198,7 +217,7 @@ export function PropertyInterestsPanel({ contactId }: Props) {
                       </div>
                     </div>
                     <button
-                      onClick={() => removeInterest(i.propertyId)}
+                      onClick={() => removeInterest(i.resoPropertyId)}
                       className="shrink-0 text-charcoal-300 hover:text-red-500 transition-colors mt-0.5"
                     >
                       <X size={14} />
@@ -217,8 +236,8 @@ export function PropertyInterestsPanel({ contactId }: Props) {
               {viewHistory.map(v => (
                 <div key={v.property.id} className="flex items-start gap-3 rounded-lg bg-charcoal-50 px-3 py-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-charcoal-900 truncate">{v.property.address}, {v.property.city}</p>
-                    <p className="text-xs text-charcoal-500">{formatPrice(v.property.price)} · <span className="capitalize">{v.property.propertyType}</span></p>
+                    <p className="text-sm font-medium text-charcoal-900 truncate">{getAddress(v.property)}, {v.property.city}</p>
+                    <p className="text-xs text-charcoal-500">{formatPrice(v.property.listPrice ?? 0)} · <span className="capitalize">{v.property.propertySubType}</span></p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs font-semibold text-charcoal-700">{v.count} view{v.count !== 1 ? 's' : ''}</p>

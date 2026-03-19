@@ -11,16 +11,22 @@ export async function POST(request: Request, { params }: Params) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id: propertyId } = await params
+  const { id } = await params
 
   try {
     const body = await request.json()
     const { contactId, notes } = schema.parse(body)
 
+    // Support both listingKey and cuid id lookups
+    const resoProperty = await prisma.resoProperty.findUnique({ where: { listingKey: id } })
+      ?? await prisma.resoProperty.findUnique({ where: { id } })
+
+    if (!resoProperty) return NextResponse.json({ error: 'Property not found' }, { status: 404 })
+
     const interest = await prisma.contactPropertyInterest.upsert({
-      where:  { contactId_propertyId: { contactId, propertyId } },
+      where:  { contactId_resoPropertyId: { contactId, resoPropertyId: resoProperty.id } },
       update: { source: 'manual', notes: notes ?? undefined },
-      create: { contactId, propertyId, source: 'manual', notes },
+      create: { contactId, resoPropertyId: resoProperty.id, source: 'manual', notes },
     })
     return NextResponse.json(interest, { status: 201 })
   } catch {
