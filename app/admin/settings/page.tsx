@@ -26,6 +26,7 @@ export default async function SettingsPage() {
 
   const twilioConfigured  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
   const smtpConfigured    = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+  const zeroBounceConfigured = !!process.env.ZEROBOUNCE_API_KEY
 
   const jobStats = {
     pending:   queueStats.find(s => s.status === 'pending')?._count.id  ?? 0,
@@ -111,6 +112,15 @@ export default async function SettingsPage() {
                 <p className="text-xs text-charcoal-400">Set SMTP_HOST, SMTP_USER, SMTP_PASS</p>
               </div>
               {smtpConfigured
+                ? <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+                : <XCircle      size={18} className="text-charcoal-300 shrink-0" />}
+            </div>
+            <div className="flex items-center justify-between py-2.5 border-t border-charcoal-100">
+              <div>
+                <p className="text-sm font-medium text-charcoal-900">ZeroBounce</p>
+                <p className="text-xs text-charcoal-400">Email validation — set ZEROBOUNCE_API_KEY</p>
+              </div>
+              {zeroBounceConfigured
                 ? <CheckCircle2 size={18} className="text-green-500 shrink-0" />
                 : <XCircle      size={18} className="text-charcoal-300 shrink-0" />}
             </div>
