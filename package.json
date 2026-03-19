@@ -28,6 +28,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^11.11.0",
     "jose": "^5.9.3",
+    "lru-cache": "^11.2.7",
     "lucide-react": "^0.460.0",
     "next": "15.0.3",
     "nodemailer": "^8.0.2",
