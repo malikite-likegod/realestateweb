@@ -1,6 +1,6 @@
 import { headers, cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
+import { PropertyService } from '@/lib/property-service'
 import { getGateSettings } from '@/lib/site-settings'
 import { Container } from '@/components/layout'
 import { PropertyGallery } from '@/components/real-estate'
@@ -8,26 +8,25 @@ import { PropertyInquiryForm } from '@/components/forms'
 import { ListingGateModal } from '@/components/public/ListingGateModal'
 import { Badge } from '@/components/ui'
 import { formatPrice, parseJsonSafe } from '@/lib/utils'
-import { Bed, Bath, Square, MapPin, Calendar, Car } from 'lucide-react'
+import { Bed, Bath, Square, MapPin, Calendar } from 'lucide-react'
 import type { Metadata } from 'next'
 
-interface Props {
-  params: Promise<{ id: string }>
-}
+interface Props { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const property = await prisma.property.findUnique({ where: { id } })
+  const property = await PropertyService.getProperty(id)
   if (!property) return {}
-  return { title: property.title, description: property.description ?? undefined }
+  const address = [property.streetNumber, property.streetName, property.city].filter(Boolean).join(' ')
+  return {
+    title: address || property.listingKey,
+    description: property.publicRemarks ?? undefined,
+  }
 }
 
 export default async function ListingDetailPage({ params }: Props) {
   const { id } = await params
-  const property = await prisma.property.findUnique({
-    where: { id },
-    include: { listings: true },
-  })
+  const property = await PropertyService.getProperty(id)
   if (!property) notFound()
 
   // ── Gate decision ──────────────────────────────────────────────────────────
@@ -40,31 +39,29 @@ export default async function ListingDetailPage({ params }: Props) {
   const showPending = enabled && !isBypass && isPending
 
   // ── Track view for verified contacts ──────────────────────────────────────
-  // The re_verified cookie stores the contactId string set during email verification.
-  // We call the server-side tracking function directly (no internal HTTP fetch).
   if (isBypass) {
     const cookieStore = await cookies()
-    const contactId   = cookieStore.get('re_verified')?.value // e.g. "clxyz123..."
+    const contactId   = cookieStore.get('re_verified')?.value
     const sessionId   = reqHeaders.get('x-session-id') ?? undefined
     if (contactId) {
       const { trackBehaviorEvent } = await import('@/services/ai/lead-scoring')
-      void trackBehaviorEvent('listing_view', id, contactId, sessionId, undefined).catch(() => null)
-      // Also upsert ContactPropertyInterest directly
+      void trackBehaviorEvent('listing_view', property.id, contactId, sessionId, undefined).catch(() => null)
+      const { prisma } = await import('@/lib/prisma')
       void prisma.contactPropertyInterest.upsert({
-        where:  { contactId_propertyId: { contactId, propertyId: id } },
+        where:  { contactId_resoPropertyId: { contactId, resoPropertyId: property.id } },
         update: { updatedAt: new Date() },
-        create: { contactId, propertyId: id, source: 'auto' },
+        create: { contactId, resoPropertyId: property.id, source: 'auto' },
       }).catch(() => null)
     }
   }
 
-  const images   = parseJsonSafe<string[]>(property.images, ['/placeholder-property.jpg'])
-  const features = parseJsonSafe<string[]>(property.features, [])
-  const returnUrl = `/listings/${id}`
+  const mediaItems = parseJsonSafe<{ url: string; order: number }[]>(property.media, [])
+  const images     = mediaItems.length > 0 ? mediaItems.map(m => m.url) : ['/placeholder-property.jpg']
+  const address    = [property.streetNumber, property.streetName, property.unitNumber ? `#${property.unitNumber}` : null].filter(Boolean).join(' ')
+  const returnUrl  = `/listings/${id}`
 
   return (
     <div className="pt-20">
-      {/* Gate overlays */}
       {(showGate || showPending) && (
         <ListingGateModal
           initialState={showPending ? 'pending' : 'gate'}
@@ -72,66 +69,52 @@ export default async function ListingDetailPage({ params }: Props) {
         />
       )}
 
-      {/* Blurred content wrapper when gated */}
       <div className={showGate || showPending ? 'blur-sm pointer-events-none select-none' : ''}>
         <Container className="py-8">
-          {/* Gallery */}
-          <PropertyGallery images={images} title={property.title} />
+          <PropertyGallery images={images} title={address} />
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main info */}
             <div className="lg:col-span-2">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="font-serif text-4xl font-bold text-charcoal-900">{formatPrice(property.price)}</p>
-                  <h1 className="text-xl font-semibold text-charcoal-700 mt-1">{property.title}</h1>
-                  <p className="flex items-center gap-1.5 text-charcoal-500 mt-1"><MapPin size={15} /> {property.address}, {property.city}, {property.province}</p>
+                  <p className="font-serif text-4xl font-bold text-charcoal-900">
+                    {formatPrice(property.listPrice ?? 0)}
+                  </p>
+                  <h1 className="text-xl font-semibold text-charcoal-700 mt-1">{address}</h1>
+                  <p className="flex items-center gap-1.5 text-charcoal-500 mt-1">
+                    <MapPin size={15} /> {property.city}, {property.stateOrProvince} {property.postalCode}
+                  </p>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
-                  <Badge variant={property.status === 'active' ? 'success' : 'warning'} className="capitalize">{property.status}</Badge>
-                  <Badge variant="default" className="capitalize">{property.listingType}</Badge>
+                  <Badge variant={property.standardStatus === 'Active' ? 'success' : 'warning'} className="capitalize">
+                    {property.standardStatus}
+                  </Badge>
+                  {property.propertySubType && (
+                    <Badge variant="default" className="capitalize">{property.propertySubType}</Badge>
+                  )}
                 </div>
               </div>
 
-              {/* Stats */}
               <div className="flex flex-wrap gap-6 py-5 border-y border-charcoal-100 mb-6">
-                {property.bedrooms != null && <span className="flex items-center gap-2 text-charcoal-700"><Bed size={18} /> <strong>{property.bedrooms}</strong> Bedrooms</span>}
-                {property.bathrooms != null && <span className="flex items-center gap-2 text-charcoal-700"><Bath size={18} /> <strong>{property.bathrooms}</strong> Bathrooms</span>}
-                {property.sqft != null && <span className="flex items-center gap-2 text-charcoal-700"><Square size={18} /> <strong>{property.sqft.toLocaleString()}</strong> sqft</span>}
-                {property.parkingSpaces != null && <span className="flex items-center gap-2 text-charcoal-700"><Car size={18} /> <strong>{property.parkingSpaces}</strong> Parking</span>}
-                {property.yearBuilt != null && <span className="flex items-center gap-2 text-charcoal-700"><Calendar size={18} /> Built <strong>{property.yearBuilt}</strong></span>}
+                {property.bedroomsTotal         != null && <span className="flex items-center gap-2 text-charcoal-700"><Bed    size={18} /> <strong>{property.bedroomsTotal}</strong> Bedrooms</span>}
+                {property.bathroomsTotalInteger != null && <span className="flex items-center gap-2 text-charcoal-700"><Bath   size={18} /> <strong>{property.bathroomsTotalInteger}</strong> Bathrooms</span>}
+                {property.livingArea            != null && <span className="flex items-center gap-2 text-charcoal-700"><Square size={18} /> <strong>{Math.round(property.livingArea).toLocaleString()}</strong> sqft</span>}
+                {property.yearBuilt             != null && <span className="flex items-center gap-2 text-charcoal-700"><Calendar size={18} /> Built <strong>{property.yearBuilt}</strong></span>}
               </div>
 
-              {/* Description */}
-              {property.description && (
+              {property.publicRemarks && (
                 <div className="mb-8">
                   <h2 className="font-serif text-2xl font-bold text-charcoal-900 mb-3">About This Property</h2>
-                  <p className="text-charcoal-600 leading-relaxed whitespace-pre-wrap">{property.description}</p>
-                </div>
-              )}
-
-              {/* Features */}
-              {features.length > 0 && (
-                <div>
-                  <h2 className="font-serif text-2xl font-bold text-charcoal-900 mb-4">Features & Amenities</h2>
-                  <div className="grid grid-cols-2 gap-2">
-                    {features.map((f, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm text-charcoal-600">
-                        <span className="h-1.5 w-1.5 rounded-full bg-gold-500" />
-                        {f}
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-charcoal-600 leading-relaxed whitespace-pre-wrap">{property.publicRemarks}</p>
                 </div>
               )}
             </div>
 
-            {/* Sidebar — inquiry form */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 rounded-2xl border border-charcoal-100 shadow-sm p-6">
-                <h3 className="font-serif text-xl font-bold text-charcoal-900 mb-4">Request Information</h3>
-                <PropertyInquiryForm propertyTitle={property.title} propertyId={property.id} />
-              </div>
+            <div>
+              <PropertyInquiryForm
+                propertyId={property.id}
+                propertyTitle={address}
+              />
             </div>
           </div>
         </Container>
