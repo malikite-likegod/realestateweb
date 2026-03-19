@@ -17,7 +17,7 @@ import { Avatar, Badge, Tabs } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
   Phone, Mail, MapPin, TrendingUp, Cake, Briefcase,
-  Building2, Star, MessageSquare,
+  Building2, Star, MessageSquare, CheckCircle,
 } from 'lucide-react'
 
 interface Props { params: Promise<{ id: string }> }
@@ -199,6 +199,14 @@ export default async function ContactDetailPage({ params }: Props) {
                 >
                   <Phone size={13} className="shrink-0 text-charcoal-400 group-hover:text-gold-500" />
                   <span className="flex-1 truncate">{p.number}</span>
+                  {contact.phoneVerified && (i === 0) && (
+                    <span
+                      title={contact.phoneVerifiedAt ? `Verified on ${contact.phoneVerifiedAt.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Verified'}
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shrink-0"
+                    >
+                      <CheckCircle size={9} /> Verified
+                    </span>
+                  )}
                   {displayPhones.length > 1 && (
                     <span className="text-xs text-charcoal-400 capitalize shrink-0">
                       {p.isPrimary ? <Star size={10} className="text-gold-400" fill="currentColor" /> : p.label}
@@ -214,7 +222,15 @@ export default async function ContactDetailPage({ params }: Props) {
                   className="flex items-center gap-2 text-charcoal-600 hover:text-gold-600 transition-colors"
                 >
                   <Mail size={13} className="shrink-0 text-charcoal-400" />
-                  <span className="truncate">{contact.email}</span>
+                  <span className="truncate flex-1">{contact.email}</span>
+                  {contact.emailVerified && (
+                    <span
+                      title={contact.emailVerifiedAt ? `Verified on ${contact.emailVerifiedAt.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Verified'}
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shrink-0"
+                    >
+                      <CheckCircle size={9} /> Verified
+                    </span>
+                  )}
                 </a>
               )}
 
