@@ -70,13 +70,20 @@ export async function enrollContact(sequenceId: string, contactId: string, start
   if (entryStep.type === 'create_task') {
     const taskConfig  = JSON.parse(entryStep.config) as Record<string, unknown>
     const taskDesc    = taskConfig.description as string | undefined
-    const seq         = sequence // already loaded above
-    const campaignTag = `Campaign: ${seq.name}`
+    const campaignTag = `Campaign: ${sequence.name}`
+    const contactRec  = await prisma.contact.findUnique({
+      where:  { id: contactId },
+      select: { firstName: true, lastName: true },
+    })
+    const contactName = contactRec
+      ? `${contactRec.firstName} ${contactRec.lastName}`.trim()
+      : null
     await prisma.task.create({
       data: {
-        title:       (taskConfig.title as string) ?? 'Follow-up call',
+        title:       contactName ? `Call ${contactName}` : 'Call',
         description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
         priority:    (taskConfig.priority as string) ?? 'normal',
+        taskTypeId:  'tasktype_call',
         contactId,
         dueAt:       nextRunAt,
       },
@@ -222,17 +229,14 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
       case 'create_task': {
         const taskDesc    = config.description as string | undefined
         const campaignTag = `Campaign: ${enrollment.sequence.name}`
-        const description = taskDesc
-          ? `${taskDesc} · ${campaignTag}`
-          : campaignTag
+        const contactName = `${enrollment.contact.firstName} ${enrollment.contact.lastName}`.trim()
         await prisma.task.create({
           data: {
-            title:       (config.title as string) ?? 'Follow-up call',
-            description,
+            title:       `Call ${contactName}`,
+            description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (config.priority as string) ?? 'normal',
+            taskTypeId:  'tasktype_call',
             contactId:   enrollment.contactId,
-            // Anchor the task to when this campaign step was scheduled so it
-            // appears on the correct calendar day and sorts correctly in Tasks.
             dueAt:       enrollment.nextRunAt ?? new Date(),
           },
         })
@@ -316,11 +320,13 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
         const taskConfig  = JSON.parse(nextStep.config) as Record<string, unknown>
         const taskDesc    = taskConfig.description as string | undefined
         const campaignTag = `Campaign: ${enrollment.sequence.name}`
+        const contactName = `${enrollment.contact.firstName} ${enrollment.contact.lastName}`.trim()
         await prisma.task.create({
           data: {
-            title:       (taskConfig.title as string) ?? 'Follow-up call',
+            title:       `Call ${contactName}`,
             description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (taskConfig.priority as string) ?? 'normal',
+            taskTypeId:  'tasktype_call',
             contactId:   enrollment.contactId,
             dueAt:       nextRunAt,
           },
