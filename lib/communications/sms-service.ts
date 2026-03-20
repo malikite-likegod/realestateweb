@@ -11,6 +11,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { createNotification } from '@/lib/notifications'
 
 // ─── Provider stub ──────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export async function parseTwilioWebhook(form: URLSearchParams) {
     ? await prisma.contact.findFirst({ where: { phone: from } })
     : null
 
-  return prisma.smsMessage.create({
+  const message = await prisma.smsMessage.create({
     data: {
       contactId:  contact?.id ?? null,
       direction:  'inbound',
@@ -148,6 +149,18 @@ export async function parseTwilioWebhook(form: URLSearchParams) {
       groupId:    null,
     },
   })
+
+  const contactName = contact
+    ? `${contact.firstName} ${contact.lastName}`.trim()
+    : from || 'Unknown'
+  await createNotification({
+    type:      'inbound_sms',
+    title:     `New SMS from ${contactName}`,
+    body:      body.length > 100 ? body.slice(0, 97) + '…' : body,
+    contactId: contact?.id ?? null,
+  })
+
+  return message
 }
 
 /** Extract Twilio MMS media URLs from webhook form data */

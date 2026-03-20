@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { sendWebhook } from '@/services/ai/webhooks'
 import { enqueueJob } from '@/lib/automation/job-queue'
+import { createNotification } from '@/lib/notifications'
 
 const createContactSchema = z.object({
   firstName:  z.string().optional(),
@@ -85,6 +86,14 @@ export async function POST(request: Request) {
     // Webhook + automation rules
     await sendWebhook('new_lead', { contactId: contact.id, source: parsed.source })
     await enqueueJob('evaluate_rules', { trigger: 'new_lead', contactId: contact.id })
+
+    const name = [firstName, lastName].filter(Boolean).join(' ') || parsed.email || 'Unknown'
+    await createNotification({
+      type:      'new_contact',
+      title:     `New contact: ${name}`,
+      body:      parsed.source ? `Source: ${parsed.source}` : undefined,
+      contactId: contact.id,
+    })
 
     return NextResponse.json({ data: contact }, { status: 201 })
   } catch (error) {

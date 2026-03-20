@@ -115,6 +115,7 @@ model Contact {
   optLogs           CommunicationOptLog[]
   propertyInterests ContactPropertyInterest[]
   savedSearches     SavedSearch[]
+  notifications     Notification[]
 
   @@map("contacts")
 }
@@ -974,6 +975,22 @@ model AiResult {
   createdAt DateTime @default(now())
 
   @@map("ai_results")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // 'inbound_sms' | 'inbound_email' | 'new_contact' | 'sms_unsubscribe' | 'email_unsubscribe'
+  title     String
+  body      String?
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead, createdAt])
+  @@map("notifications")
 }
 
 model AiCommandLog {

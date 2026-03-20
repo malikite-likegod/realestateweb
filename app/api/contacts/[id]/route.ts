@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { createNotification } from '@/lib/notifications'
 
 const phoneSchema = z.object({
   id:        z.string().optional(),
@@ -160,6 +161,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
       return updated
     })
+
+    // Fire opt-out notifications outside the transaction (non-critical)
+    if (current) {
+      const contactName = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || id
+      if (emailOptOut !== undefined && emailOptOut !== current.emailOptOut && emailOptOut) {
+        await createNotification({
+          type:      'email_unsubscribe',
+          title:     `${contactName} unsubscribed from email`,
+          contactId: id,
+        })
+      }
+      if (smsOptOut !== undefined && smsOptOut !== current.smsOptOut && smsOptOut) {
+        await createNotification({
+          type:      'sms_unsubscribe',
+          title:     `${contactName} unsubscribed from SMS`,
+          contactId: id,
+        })
+      }
+    }
 
     return NextResponse.json({ data: contact })
   } catch (error) {
