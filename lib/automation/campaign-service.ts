@@ -172,16 +172,25 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
         }
         break
 
-      case 'create_task':
+      case 'create_task': {
+        const taskDesc    = config.description as string | undefined
+        const campaignTag = `Campaign: ${enrollment.sequence.name}`
+        const description = taskDesc
+          ? `${taskDesc} · ${campaignTag}`
+          : campaignTag
         await prisma.task.create({
           data: {
-            title:       (config.title as string) ?? 'Follow-up task',
-            description: (config.description as string) ?? null,
-            priority:    (config.priority  as string) ?? 'normal',
+            title:       (config.title as string) ?? 'Follow-up call',
+            description,
+            priority:    (config.priority as string) ?? 'normal',
             contactId:   enrollment.contactId,
+            // Anchor the task to when this campaign step was scheduled so it
+            // appears on the correct calendar day and sorts correctly in Tasks.
+            dueAt:       enrollment.nextRunAt ?? new Date(),
           },
         })
         break
+      }
 
       case 'update_lead_score': {
         const delta = (config.delta as number) ?? 0
