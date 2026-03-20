@@ -65,6 +65,53 @@ export async function enrollContact(sequenceId: string, contactId: string, start
         data: { sequenceId, contactId, currentStep: clampedStep, nextRunAt },
       })
 
+  // If the entry step is a create_task (call reminder), create it immediately
+  // so the agent sees it on their calendar right away with dueAt = nextRunAt.
+  if (entryStep.type === 'create_task') {
+    const taskConfig  = JSON.parse(entryStep.config) as Record<string, unknown>
+    const taskDesc    = taskConfig.description as string | undefined
+    const seq         = sequence // already loaded above
+    const campaignTag = `Campaign: ${seq.name}`
+    await prisma.task.create({
+      data: {
+        title:       (taskConfig.title as string) ?? 'Follow-up call',
+        description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
+        priority:    (taskConfig.priority as string) ?? 'normal',
+        contactId,
+        dueAt:       nextRunAt,
+      },
+    })
+    await prisma.campaignStepExecution.create({
+      data: {
+        enrollmentId: enrollment.id,
+        stepId:       entryStep.id,
+        status:       'completed',
+        ranAt:        new Date(),
+        result:       JSON.stringify({ type: 'create_task', scheduledFor: nextRunAt }),
+      },
+    })
+    // Advance past the create_task step; the next step will be queued below
+    // via a normal executeNextStep job if there is one, otherwise complete.
+    const nextStepAfterEntry = sequence.steps[clampedStep + 1]
+    if (nextStepAfterEntry) {
+      const afterRunAt = sequence.trigger === 'special_event'
+        ? null // special_event dates are computed per-step in executeNextStep
+        : addMinutes(nextRunAt, nextStepAfterEntry.delayMinutes)
+      const runAt = afterRunAt ?? nextRunAt
+      await prisma.campaignEnrollment.update({
+        where: { id: enrollment.id },
+        data:  { currentStep: clampedStep + 1, nextRunAt: runAt },
+      })
+      await enqueueJob('execute_campaign_step', { enrollmentId: enrollment.id }, runAt)
+    } else {
+      await prisma.campaignEnrollment.update({
+        where: { id: enrollment.id },
+        data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+      })
+    }
+    return enrollment
+  }
+
   // Queue the entry step
   await enqueueJob('execute_campaign_step', { enrollmentId: enrollment.id }, nextRunAt)
   return enrollment
@@ -261,6 +308,69 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
       } else {
         nextRunAt = addMinutes(new Date(), nextStep.delayMinutes)
       }
+
+      // create_task steps are user-facing reminders, not system actions.
+      // Create the task immediately so the agent sees it on their calendar
+      // and task list right away; dueAt tells them when the call is due.
+      if (nextStep.type === 'create_task') {
+        const taskConfig  = JSON.parse(nextStep.config) as Record<string, unknown>
+        const taskDesc    = taskConfig.description as string | undefined
+        const campaignTag = `Campaign: ${enrollment.sequence.name}`
+        await prisma.task.create({
+          data: {
+            title:       (taskConfig.title as string) ?? 'Follow-up call',
+            description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
+            priority:    (taskConfig.priority as string) ?? 'normal',
+            contactId:   enrollment.contactId,
+            dueAt:       nextRunAt,
+          },
+        })
+        // Log this step as completed immediately
+        await prisma.campaignStepExecution.create({
+          data: {
+            enrollmentId,
+            stepId: nextStep.id,
+            status: 'completed',
+            ranAt:  new Date(),
+            result: JSON.stringify({ type: 'create_task', scheduledFor: nextRunAt }),
+          },
+        })
+
+        // Skip past the create_task step to the one after it
+        const afterIndex = nextStepIndex + 1
+        const afterStep  = steps[afterIndex]
+        if (afterStep) {
+          // For chained delays: the step after the call is timed from when
+          // the call itself was scheduled, preserving the campaign timeline.
+          const afterRunAt = enrollment.sequence.trigger === 'special_event'
+            ? (() => {
+                const afterConfig = JSON.parse(afterStep.config) as Record<string, unknown>
+                return computeSpecialEventDate(afterConfig, enrollment.contact.birthday, null)
+              })()
+            : addMinutes(nextRunAt, afterStep.delayMinutes)
+
+          if (!afterRunAt) {
+            await prisma.campaignEnrollment.update({
+              where: { id: enrollmentId },
+              data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+            })
+          } else {
+            await prisma.campaignEnrollment.update({
+              where: { id: enrollmentId },
+              data:  { currentStep: afterIndex, nextRunAt: afterRunAt },
+            })
+            await enqueueJob('execute_campaign_step', { enrollmentId }, afterRunAt)
+          }
+        } else {
+          // create_task was the last step — complete the enrollment
+          await prisma.campaignEnrollment.update({
+            where: { id: enrollmentId },
+            data:  { status: 'completed', completedAt: new Date(), nextRunAt: null },
+          })
+        }
+        return
+      }
+
       await prisma.campaignEnrollment.update({
         where: { id: enrollmentId },
         data:  { currentStep: nextStepIndex, nextRunAt },
