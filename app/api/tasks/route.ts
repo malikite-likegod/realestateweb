@@ -5,17 +5,17 @@ import { getSession } from '@/lib/auth'
 
 const taskSchema = z.object({
   title:         z.string().min(1),
-  description:   z.string().optional(),
+  description:   z.string().nullable().optional(),
   status:        z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(),
   priority:      z.enum(['low', 'normal', 'high', 'urgent']).optional(),
-  dueAt:         z.string().optional(),
-  startDatetime: z.string().optional(),
-  endDatetime:   z.string().optional(),
+  dueAt:         z.string().nullable().optional(),
+  startDatetime: z.string().nullable().optional(),
+  endDatetime:   z.string().nullable().optional(),
   allDay:        z.boolean().optional(),
-  taskTypeId:    z.string().optional(),
-  assigneeId:    z.string().optional(),
-  contactId:     z.string().optional(),
-  dealId:        z.string().optional(),
+  taskTypeId:    z.string().nullable().optional(),
+  assigneeId:    z.string().nullable().optional(),
+  contactId:     z.string().nullable().optional(),
+  dealId:        z.string().nullable().optional(),
 })
 
 export async function GET(request: Request) {
