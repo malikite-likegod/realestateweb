@@ -14,11 +14,17 @@ export function formatPrice(amount: number, currency = 'CAD'): string {
 }
 
 export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
+  // Date-only fields are stored as UTC midnight. When no time component is
+  // being displayed, format in UTC so the date doesn't shift for users west
+  // of UTC. If the caller explicitly requests a timeZone, honour it.
+  const hasTime = options && ('hour' in options || 'minute' in options || 'second' in options)
+  const timeZone = options?.timeZone ?? (hasTime ? undefined : 'UTC')
   return new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     ...options,
+    ...(timeZone ? { timeZone } : {}),
   }).format(new Date(date))
 }
 
