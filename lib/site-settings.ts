@@ -1,6 +1,15 @@
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
+export const getBlurModeEnabled = unstable_cache(
+  async () => {
+    const row = await prisma.siteSettings.findUnique({ where: { key: 'blur_mode_enabled' } })
+    return (row?.value ?? 'false') === 'true'
+  },
+  ['blur-mode-enabled'],
+  { revalidate: 60, tags: ['blur_mode'] }
+)
+
 export const getGateSettings = unstable_cache(
   async () => {
     const rows = await prisma.siteSettings.findMany({

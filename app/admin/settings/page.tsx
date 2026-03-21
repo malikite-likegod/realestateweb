@@ -9,6 +9,7 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 import { ChangePasswordCard } from '@/components/admin/ChangePasswordCard'
 import { TwoFactorCard } from '@/components/admin/TwoFactorCard'
 import { LeadCaptureSettingsCard } from '@/components/admin/LeadCaptureSettingsCard'
+import { BlurModeSettingsCard } from '@/components/admin/BlurModeSettingsCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
@@ -63,6 +64,8 @@ export default async function SettingsPage() {
         <TwoFactorCard initialEnabled={totpEnabled} userEmail={session.email} />
 
         <LeadCaptureSettingsCard initialLimit={gateLimit} initialEnabled={gateEnabled} />
+
+        <BlurModeSettingsCard />
 
         <Divider />
 

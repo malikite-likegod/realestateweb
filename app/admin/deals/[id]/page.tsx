@@ -14,7 +14,7 @@ import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
 import { ActivityTimeline, TaskList } from '@/components/crm'
 import { DealEditModal } from '@/components/crm/DealEditModal'
-import { Avatar, Badge, Tabs } from '@/components/ui'
+import { Avatar, Badge, Tabs, BlurredField } from '@/components/ui'
 import { formatDate, formatPrice } from '@/lib/utils'
 import {
   Briefcase, DollarSign, TrendingUp, Calendar, User,
@@ -180,7 +180,7 @@ export default async function DealDetailPage({ params }: Props) {
                         {p.contact.firstName} {p.contact.lastName}
                       </p>
                       {p.contact.email && (
-                        <p className="text-xs text-charcoal-400 truncate">{p.contact.email}</p>
+                        <BlurredField className="text-xs text-charcoal-400 truncate">{p.contact.email}</BlurredField>
                       )}
                     </div>
                     <Badge variant="default" className="text-xs ml-auto shrink-0 capitalize">{p.role}</Badge>
@@ -248,7 +248,7 @@ export default async function DealDetailPage({ params }: Props) {
               content: (
                 <div className="rounded-xl border border-charcoal-100 bg-charcoal-50 p-4">
                   <p className="font-semibold text-charcoal-900 mb-1">{deal.property.title}</p>
-                  <p className="text-sm text-charcoal-500">{deal.property.address}, {deal.property.city}</p>
+                  <BlurredField className="text-sm text-charcoal-500">{deal.property.address}, {deal.property.city}</BlurredField>
                   <p className="text-sm font-bold text-charcoal-800 mt-2">
                     {formatPrice(deal.property.price)}
                   </p>

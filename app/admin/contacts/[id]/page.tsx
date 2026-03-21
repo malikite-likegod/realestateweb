@@ -13,7 +13,7 @@ import {
 } from '@/components/crm'
 import { PropertyInterestsPanel } from '@/components/admin/contacts/PropertyInterestsPanel'
 import { SavedSearchesTab } from '@/components/admin/contacts/SavedSearchesTab'
-import { Avatar, Badge, Tabs } from '@/components/ui'
+import { Avatar, Badge, Tabs, BlurredField } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
   Phone, Mail, MapPin, TrendingUp, Cake, Briefcase,
@@ -198,7 +198,7 @@ export default async function ContactDetailPage({ params }: Props) {
                   className="flex items-center gap-2 text-charcoal-600 hover:text-gold-600 transition-colors group"
                 >
                   <Phone size={13} className="shrink-0 text-charcoal-400 group-hover:text-gold-500" />
-                  <span className="flex-1 truncate">{p.number}</span>
+                  <BlurredField className="flex-1 truncate">{p.number}</BlurredField>
                   {contact.phoneVerified && (i === 0) && (
                     <span
                       title={contact.phoneVerifiedAt ? `Verified on ${contact.phoneVerifiedAt.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Verified'}
@@ -222,7 +222,7 @@ export default async function ContactDetailPage({ params }: Props) {
                   className="flex items-center gap-2 text-charcoal-600 hover:text-gold-600 transition-colors"
                 >
                   <Mail size={13} className="shrink-0 text-charcoal-400" />
-                  <span className="truncate flex-1">{contact.email}</span>
+                  <BlurredField className="truncate flex-1">{contact.email}</BlurredField>
                   {contact.emailVerified && (
                     <span
                       title={contact.emailVerifiedAt ? `Verified on ${contact.emailVerifiedAt.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Verified'}
@@ -267,12 +267,12 @@ export default async function ContactDetailPage({ params }: Props) {
                       <span className="text-xs font-medium text-charcoal-400 capitalize block mb-0.5">
                         {addr.label}{addr.isPrimary && displayAddresses.length > 1 ? ' · primary' : ''}
                       </span>
-                      {addr.street  && <span className="block">{addr.street}</span>}
+                      {addr.street  && <BlurredField className="block">{addr.street}</BlurredField>}
                       {(addr.city || addr.province) && (
-                        <span className="block">
+                        <BlurredField className="block">
                           {[addr.city, addr.province].filter(Boolean).join(', ')}
                           {addr.postalCode && ` ${addr.postalCode}`}
-                        </span>
+                        </BlurredField>
                       )}
                       {addr.country && addr.country !== 'CA' && (
                         <span className="block text-charcoal-400">{addr.country}</span>
