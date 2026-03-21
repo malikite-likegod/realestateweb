@@ -39,9 +39,13 @@ Blur Mode is a privacy toggle for the admin section that blurs sensitive contact
 ```ts
 export async function getBlurModeEnabled(): Promise<boolean>
 ```
-Uses `unstable_cache` with a `blur_mode` cache tag and 60-second revalidation — consistent with the existing `getGateSettings()` pattern.
+Uses `unstable_cache` with a cache key and a `tags` array so `revalidateTag` works:
+```ts
+unstable_cache(fn, ['blur-mode-enabled'], { revalidate: 60, tags: ['blur_mode'] })
+```
+The `tags: ['blur_mode']` entry is required — without it, `revalidateTag('blur_mode')` has no effect and cached values will not bust on save.
 
-**`/app/api/admin/settings/route.ts`** — extend the existing endpoint to handle `blur_mode_enabled` reads and writes. Accepts `{ blurMode: boolean }` in the PATCH body. After any successful write, call `revalidateTag('blur_mode')` unconditionally — this is safe and consistent with how other cached settings tags would be invalidated. The existing GET handler returns all settings as a flat object; no query-parameter filtering is needed or added.
+**`/app/api/admin/settings/route.ts`** — extend the existing endpoint to handle `blur_mode_enabled`. The existing PATCH handler accepts `Record<string, string>` and upserts each key-value pair directly. `BlurModeContext.toggle()` must therefore send `{ blur_mode_enabled: "true" }` or `{ blur_mode_enabled: "false" }` (string values, snake_case key) — not `{ blurMode: boolean }`. After any successful write, call `revalidateTag('blur_mode')` unconditionally. The existing GET handler returns all settings as a flat object; no query-parameter filtering is needed or added.
 
 ---
 
@@ -51,7 +55,7 @@ Uses `unstable_cache` with a `blur_mode` cache tag and 60-second revalidation �
 - Exports `BlurModeProvider` and `useBlurMode` hook
 - On mount, fetches via `GET /api/admin/settings` and reads `data.blur_mode_enabled` from the full settings payload — this avoids threading an `initialEnabled` prop through every admin server page
 - State: `isBlurred: boolean` (initially `false` until fetch resolves)
-- `toggle()`: optimistically flips local state, fires `PATCH /api/admin/settings` with `{ blurMode: !isBlurred }`, rolls back and shows a toast error if the request fails
+- `toggle()`: optimistically flips local state, fires `PATCH /api/admin/settings` with `{ blur_mode_enabled: isBlurred ? "false" : "true" }`, rolls back and shows a toast error if the request fails
 
 **`/components/dashboard/DashboardLayout.tsx`** — updated:
 - Wraps children with `<BlurModeProvider>` (no prop needed — provider self-fetches)
@@ -136,7 +140,7 @@ BlurModeProvider (mounts in DashboardLayout)
 
 toggle() called from Topbar or Settings card
   └─ optimistic flip of isBlurred
-       └─ PATCH /api/admin/settings { blurMode: boolean }
+       └─ PATCH /api/admin/settings { blur_mode_enabled: "true" | "false" }
             ├─ success → revalidateTag('blur_mode') on server
             └─ failure → rollback isBlurred, show toast error
 
@@ -183,7 +187,6 @@ toggle() called from Topbar or Settings card
 - [ ] Both toggles stay in sync (same context)
 - [ ] ContactTable blurs email and phone columns
 - [ ] Contact detail page blurs all phones, email, and addresses
-- [ ] ContactEditModal blurs display fields but not input fields
 - [ ] Deal detail page blurs contact email and property address
 - [ ] API failure rolls back optimistic state and shows toast
 - [ ] Blur mode defaults to off on fresh install
