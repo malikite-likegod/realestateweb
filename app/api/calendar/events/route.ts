@@ -52,28 +52,33 @@ export async function GET(request: Request) {
       return d.toISOString()
     }
 
+    const taskTypeName = task.taskType?.name ?? null
+    const title = taskTypeName ? `${taskTypeName} - ${task.title}` : task.title
+
     return {
       id:              `task_${task.id}`,
-      title:           task.title,
+      title,
       start:           toFC(start),
       end:             toFC(end),
       allDay:          task.allDay,
       backgroundColor: task.taskType?.color ?? '#6366f1',
       borderColor:     task.taskType?.color ?? '#6366f1',
+      textColor:       task.taskType?.textColor ?? undefined,
       classNames:      task.status === 'done' ? ['fc-event-done'] : [],
       extendedProps: {
-        recordType:   'task',
-        taskId:       task.id,
-        status:       task.status,
-        priority:     task.priority,
-        description:  task.description,
-        taskType:     task.taskType?.name ?? null,
-        taskTypeId:   task.taskTypeId     ?? null,
-        contactId:    task.contact?.id    ?? null,
-        contactName:  task.contact ? `${task.contact.firstName} ${task.contact.lastName}` : null,
-        dealId:       task.deal?.id       ?? null,
-        dealTitle:    task.deal?.title    ?? null,
-        assignee:     task.assignee?.name ?? null,
+        recordType:     'task',
+        taskId:         task.id,
+        status:         task.status,
+        priority:       task.priority,
+        description:    task.description,
+        taskType:       task.taskType?.name        ?? null,
+        taskTypeId:     task.taskTypeId            ?? null,
+        highlightColor: task.taskType?.highlightColor ?? null,
+        contactId:      task.contact?.id           ?? null,
+        contactName:    task.contact ? `${task.contact.firstName} ${task.contact.lastName}` : null,
+        dealId:         task.deal?.id              ?? null,
+        dealTitle:      task.deal?.title           ?? null,
+        assignee:       task.assignee?.name        ?? null,
       },
     }
   })
