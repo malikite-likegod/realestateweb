@@ -3,9 +3,13 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+
 const schema = z.object({
-  name:  z.string().min(1).max(50),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  name:           z.string().min(1).max(50),
+  color:          hexColor.optional(),
+  textColor:      hexColor.nullable().optional(),
+  highlightColor: hexColor.nullable().optional(),
 })
 
 export async function GET() {
