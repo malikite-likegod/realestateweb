@@ -3,11 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams, useParams } from 'next/navigation'
 
-interface Prefill {
-  phone:   string
-  address: { street: string; city: string; province: string; postalCode: string }
-}
-
 export default function InviteSetupPage() {
   const router      = useRouter()
   const params      = useParams()
@@ -17,7 +12,6 @@ export default function InviteSetupPage() {
 
   const [valid,      setValid]      = useState<boolean | null>(null)
   const [firstName,  setFirstName]  = useState('')
-  const [prefill,    setPrefill]    = useState<Prefill | null>(null)
 
   const [password,   setPassword]   = useState('')
   const [confirm,    setConfirm]    = useState('')
@@ -37,7 +31,6 @@ export default function InviteSetupPage() {
         setValid(j.valid)
         if (j.valid) {
           setFirstName(j.firstName ?? '')
-          setPrefill(j.prefill)
           setPhone(j.prefill?.phone ?? '')
           setStreet(j.prefill?.address?.street ?? '')
           setCity(j.prefill?.address?.city ?? '')
