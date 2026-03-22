@@ -18,6 +18,7 @@ export default async function TasksPage() {
   const include = {
     assignee: { select: { name: true } },
     contact:  { select: { firstName: true, lastName: true } },
+    taskType: { select: { name: true, textColor: true, highlightColor: true } },
   } as const
 
   const [pending, completed] = await Promise.all([
