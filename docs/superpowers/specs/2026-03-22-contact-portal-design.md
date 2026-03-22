@@ -116,7 +116,7 @@ Button label changes to **"Resend Invitation"** when `accountStatus === 'invited
 **API endpoint:** `POST /api/contacts/[id]/invite`
 
 1. Generates a cryptographically random 32-byte token
-2. Hashes it with bcrypt (rounds = 10)
+2. Hashes it with SHA-256 (consistent with existing verification-service.ts token pattern)
 3. Stores hash + 72-hour expiry on the contact
 4. Sets `accountStatus = 'invited'`
 5. Sends invitation email via existing Nodemailer infrastructure
@@ -193,7 +193,7 @@ All portal pages share a minimal layout (`app/portal/layout.tsx`):
 |---|---|---|
 | `/portal/login` | No | Email + password login |
 | `/portal/invite/[token]` | No | Account setup form |
-| `/portal/verify-phone` | No | SMS OTP entry |
+| `/portal/verify-phone` | `contact_pending_token` cookie | SMS OTP entry |
 | `/portal` | Yes | All listings browse |
 | `/portal/listings/[id]` | Yes | Single listing detail |
 | `/portal/saved` | Yes | Contact's saved listings |
@@ -225,7 +225,6 @@ All portal pages share a minimal layout (`app/portal/layout.tsx`):
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/contacts/[id]/invite` | Admin sends invitation (requires admin session) |
-| GET | `/api/portal/invite/validate` | Validates invite token (params: contactId, token) |
 | GET | `/api/portal/invite/validate` | Validates invite token (public); params: `contactId`, `token`; returns `{ valid: bool, firstName? }` |
 | POST | `/api/portal/setup` | Completes account setup (password + phone + address); requires valid invite token in body |
 | POST | `/api/portal/verify-phone` | Validates SMS OTP, activates account; requires `contact_pending_token` cookie |
