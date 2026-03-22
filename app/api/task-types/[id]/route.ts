@@ -3,9 +3,13 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+
 const patchSchema = z.object({
-  name:  z.string().min(1).max(50).optional(),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  name:           z.string().min(1).max(50).optional(),
+  color:          hexColor.optional(),
+  textColor:      hexColor.nullable().optional(),
+  highlightColor: hexColor.nullable().optional(),
 })
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
