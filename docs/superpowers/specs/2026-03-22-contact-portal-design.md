@@ -68,21 +68,38 @@ Add `savedListings ContactSavedListing[]` relation to `Contact` and `Listing` mo
 
 Contact auth is completely separate from admin auth.
 
-### New cookie: `contact_token`
+### Cookies
 
+**`contact_token`** (full session):
 - HttpOnly, Secure, SameSite=Lax
-- JWT signed with the same `JWT_SECRET`
-- Payload: `{ contactId, email, type: 'contact' }`
-- Expiry: 7 days
-- Separate from the admin `auth_token` cookie — no conflicts
+- JWT signed with `JWT_SECRET`, payload: `{ sub: contactId, email, type: 'contact' }`
+- Expiry: configurable via `CONTACT_JWT_EXPIRES_IN` env var (default `'7d'`) — separate from admin's `JWT_EXPIRES_IN` to avoid collision
+- Issued only after `accountStatus === 'active'` (phone verified)
+
+**`contact_pending_token`** (short-lived, post-setup only):
+- HttpOnly, Secure, SameSite=Lax
+- JWT signed with `JWT_SECRET`, payload: `{ sub: contactId, type: 'contact_pending' }`
+- Expiry: 15 minutes
+- Issued after account setup form is submitted, before phone is verified
+- Used by `/portal/verify-phone` to identify the contact without exposing contactId in the URL
+- Cleared on successful phone verification (replaced by `contact_token`)
 
 ### New function: `getContactSession()`
 
-Added to `lib/auth.ts`. Mirrors the existing `getSession()` but reads `contact_token` and validates `payload.type === 'contact'`. Returns the full `Contact` record or `null`.
+Added to `lib/auth.ts`. Mirrors `getSession()` but:
+- Reads `contact_token` cookie
+- Validates `payload.type === 'contact'` explicitly (prevents admin token reuse)
+- Returns the full `Contact` record or `null`
+
+### Token hashing
+
+Invitation tokens are hashed with **SHA-256** (consistent with the existing `phoneSessionTokenHash` pattern in `verification-service.ts`). Passwords are hashed with **bcrypt (rounds = 12)**, consistent with the admin password pattern.
 
 ### Route protection
 
-All `/portal/*` routes except `/portal/login` and `/portal/invite/[token]` call `getContactSession()` and redirect to `/portal/login` if it returns null.
+- `/portal/login`, `/portal/invite/[token]` — fully public
+- `/portal/verify-phone` — requires valid `contact_pending_token` cookie (not `contact_token`)
+- All other `/portal/*` routes — require valid `contact_token` cookie; redirect to `/portal/login` if absent
 
 ---
 
@@ -126,20 +143,23 @@ Button label changes to **"Resend Invitation"** when `accountStatus === 'invited
    - Saves bcrypt-hashed password to `passwordHash`
    - Saves phone and address fields to contact record
    - Sets `accountStatus = 'invited'` (stays invited until phone verified)
-   - Clears `invitationTokenHash` and `invitationExpiresAt`
+   - Clears `invitationTokenHash` and `invitationExpiresAt` (token is single-use)
    - Sends SMS OTP via Twilio (existing `phoneOtpCode` / `phoneOtpExpiresAt` fields)
-   - Redirects to `/portal/verify-phone?contactId={id}`
+   - Issues `contact_pending_token` HttpOnly cookie (15-minute JWT)
+   - Redirects to `/portal/verify-phone`
 
-### `/portal/verify-phone` (public, post-setup only)
+### `/portal/verify-phone` (requires `contact_pending_token` cookie)
 
-1. Shows 6-digit OTP input
-2. On submit: validates OTP against `phoneOtpCode` and `phoneOtpExpiresAt`
+1. Reads contactId from `contact_pending_token` cookie — no contactId in URL
+2. Shows 6-digit OTP input
+3. On submit: validates OTP against `phoneOtpCode` and `phoneOtpExpiresAt`
 3. On success:
    - Sets `phoneVerified = true`
    - Sets `accountStatus = 'active'`
+   - Clears `contact_pending_token` cookie
    - Issues `contact_token` JWT cookie
    - Redirects to `/portal`
-4. "Resend code" button re-triggers the SMS
+4. "Resend code" button re-triggers the SMS (requires valid `contact_pending_token`)
 
 ---
 
@@ -206,8 +226,9 @@ All portal pages share a minimal layout (`app/portal/layout.tsx`):
 |---|---|---|
 | POST | `/api/contacts/[id]/invite` | Admin sends invitation (requires admin session) |
 | GET | `/api/portal/invite/validate` | Validates invite token (params: contactId, token) |
-| POST | `/api/portal/setup` | Completes account setup (password + phone + address) |
-| POST | `/api/portal/verify-phone` | Validates SMS OTP, activates account |
+| GET | `/api/portal/invite/validate` | Validates invite token (public); params: `contactId`, `token`; returns `{ valid: bool, firstName? }` |
+| POST | `/api/portal/setup` | Completes account setup (password + phone + address); requires valid invite token in body |
+| POST | `/api/portal/verify-phone` | Validates SMS OTP, activates account; requires `contact_pending_token` cookie |
 | POST | `/api/portal/login` | Issues contact_token JWT |
 | POST | `/api/portal/logout` | Clears contact_token cookie |
 
@@ -267,6 +288,7 @@ Returning contact → /portal/login
 - `app/portal/(protected)/saved/page.tsx` — saved listings
 - `app/api/portal/login/route.ts`
 - `app/api/portal/logout/route.ts`
+- `app/api/portal/invite/validate/route.ts`
 - `app/api/portal/setup/route.ts`
 - `app/api/portal/verify-phone/route.ts`
 - `app/api/portal/listings/route.ts`
