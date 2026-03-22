@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getPendingContactId } from '@/lib/auth'
@@ -25,10 +26,7 @@ export async function POST(request: Request) {
     if (!contact) return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
 
     // Manual OTP check (bypasses verifyPhoneOtp to use contactId from pending cookie instead of phone_session token)
-    const sha256 = (v: string) => {
-      const crypto = require('crypto')
-      return crypto.createHash('sha256').update(v).digest('hex')
-    }
+    const sha256 = (v: string) => crypto.createHash('sha256').update(v).digest('hex')
 
     if ((contact.phoneOtpAttempts ?? 0) >= 5) {
       return NextResponse.json({ error: 'Too many attempts — please contact your agent' }, { status: 429 })
