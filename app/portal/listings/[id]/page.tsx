@@ -17,12 +17,20 @@ export default async function ListingDetailPage({
   const listing = await prisma.listing.findUnique({
     where:   { id },
     include: {
-      property:        true,
+      property: {
+        select: {
+          id: true, title: true, status: true, price: true,
+          bedrooms: true, bathrooms: true, sqft: true,
+          address: true, city: true, province: true, postalCode: true,
+          images: true, listedAt: true, soldAt: true,
+        },
+      },
       savedByContacts: { where: { contactId: contact.id }, select: { id: true } },
     },
   })
 
   if (!listing) notFound()
+  if (listing.property.status === 'draft') notFound()
 
   const p = listing.property
   const images = Array.isArray(p.images) ? p.images as string[] : []

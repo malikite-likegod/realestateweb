@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const parsedMaxPrice = maxPrice ? Number(maxPrice) : null
   const parsedMinBeds  = minBeds  ? Number(minBeds)  : null
 
-  if (status && ['active','sold','expired','draft'].includes(status)) {
+  if (status && ['active','sold','expired'].includes(status)) {
     propertyWhere.status = status
   }
   if (parsedMinPrice !== null && !isNaN(parsedMinPrice)) {
