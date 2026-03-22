@@ -13,6 +13,7 @@ import {
 } from '@/components/crm'
 import { PropertyInterestsPanel } from '@/components/admin/contacts/PropertyInterestsPanel'
 import { SavedSearchesTab } from '@/components/admin/contacts/SavedSearchesTab'
+import { PortalInviteButton } from '@/components/admin/contacts/PortalInviteButton'
 import { Avatar, Badge, Tabs, BlurredField } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
@@ -127,7 +128,17 @@ export default async function ContactDetailPage({ params }: Props) {
           { label: 'Contacts',  href: '/admin/contacts' },
           { label: `${contact.firstName} ${contact.lastName}` },
         ]}
-        actions={<ContactEditModal contact={contact} />}
+        actions={
+          <div className="flex items-center gap-3">
+            {contact.email && (
+              <PortalInviteButton
+                contactId={contact.id}
+                accountStatus={contact.accountStatus ?? null}
+              />
+            )}
+            <ContactEditModal contact={contact} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
