@@ -39,7 +39,7 @@ Add four nullable fields to the existing `Contact` model in `prisma/schema.prism
 ```prisma
 passwordHash        String?   // bcrypt hash of contact's portal password
 accountStatus       String?   // null = no account | 'invited' | 'active'
-invitationTokenHash String?   // bcrypt hash of one-time invite token
+invitationTokenHash String?   // SHA-256 hash of one-time invite token
 invitationExpiresAt DateTime? // 72 hours after invitation sent
 ```
 
@@ -133,7 +133,7 @@ Button label changes to **"Resend Invitation"** when `accountStatus === 'invited
 ### `/portal/invite/[token]` (public)
 
 1. Reads `contactId` from query param, loads contact from DB
-2. Validates: token not expired, bcrypt compares raw token against `invitationTokenHash`
+2. Validates: token not expired, SHA-256 hashes raw token and compares against `invitationTokenHash`
 3. If invalid/expired → shows error page with "Contact your agent for a new invitation"
 4. If valid → shows account setup form with fields:
    - **Password** (min 8 chars) + **Confirm Password**
