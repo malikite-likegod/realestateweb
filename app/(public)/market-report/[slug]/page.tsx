@@ -86,7 +86,6 @@ export default async function MarketReportPage({ params }: Props) {
             <div className="lg:col-span-1">
               <div className="sticky top-24 rounded-2xl border border-charcoal-100 bg-white shadow-sm p-6">
                 <MarketReportLeadForm
-                  reportTitle={report.title}
                   reportSlug={slug}
                   ctaTitle={ctaTitle}
                   ctaSubtitle={ctaSubtitle}
@@ -106,7 +105,6 @@ export default async function MarketReportPage({ params }: Props) {
           </div>
           <div className="bg-white rounded-2xl p-6 shadow-xl">
             <MarketReportLeadForm
-              reportTitle={report.title}
               reportSlug={slug}
               ctaTitle=""
               ctaSubtitle=""

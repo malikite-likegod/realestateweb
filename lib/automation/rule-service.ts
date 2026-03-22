@@ -23,13 +23,13 @@ import { enqueueJob } from './job-queue'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Condition = {
+export type Condition = {
   field: string
   op:    'gte' | 'lte' | 'eq' | 'neq' | 'contains'
   value: unknown
 }
 
-type Action =
+export type Action =
   | { type: 'send_email';       templateId: string; subject?: string; body?: string }
   | { type: 'send_sms';         body: string }
   | { type: 'assign_task';      title: string; description?: string; priority?: string; assigneeId?: string }

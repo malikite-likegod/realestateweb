@@ -114,10 +114,9 @@ function emptyStep(order: number): EventStep {
 // ── Step action config inputs (same style as CampaignBuilder) ──────────────────
 
 function StepActionConfig({
-  step, onChange, onConfigChange,
+  step, onConfigChange,
 }: {
   step:           EventStep
-  onChange:       (patch: Partial<EventStep>) => void
   onConfigChange: (key: string, value: string | number) => void
 }) {
   const [uploading, setUploading]     = useState(false)
@@ -282,7 +281,7 @@ export function SpecialEventBuilder({ onCreated, onUpdated, campaignId, initialD
         throw new Error(message)
       }
 
-      isEdit ? onUpdated?.() : onCreated?.()
+      if (isEdit) { onUpdated?.() } else { onCreated?.() }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -402,7 +401,6 @@ export function SpecialEventBuilder({ onCreated, onUpdated, campaignId, initialD
               {/* Row 3: action content */}
               <StepActionConfig
                 step={step}
-                onChange={patch => updateStep(i, patch)}
                 onConfigChange={(k, v) => updateConfig(i, k, v)}
               />
             </div>

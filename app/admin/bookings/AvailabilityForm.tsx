@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button, Input, Select } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { Plus, Trash2, Copy } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
 
 type Window = { dayOfWeek: number; startTime: string; endTime: string }
 

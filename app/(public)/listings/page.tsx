@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Container } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
 import { ListingMap } from '@/components/real-estate'
@@ -12,7 +12,6 @@ import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 
 function ListingsContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [results, setResults] = useState<SearchResult[]>([])
   const [total, setTotal] = useState(0)

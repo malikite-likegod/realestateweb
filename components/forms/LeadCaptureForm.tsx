@@ -10,10 +10,9 @@ interface LeadCaptureFormProps {
   subtitle?: string
   source?: string
   onSuccess?: () => void
-  variant?: 'light' | 'dark'
 }
 
-export function LeadCaptureForm({ title = 'Get in Touch', subtitle, source = 'website', onSuccess, variant = 'light' }: LeadCaptureFormProps) {
+export function LeadCaptureForm({ title = 'Get in Touch', subtitle, source = 'website', onSuccess }: LeadCaptureFormProps) {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', interest: '', message: '' })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)

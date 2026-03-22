@@ -17,8 +17,7 @@ import { DealEditModal } from '@/components/crm/DealEditModal'
 import { Avatar, Badge, Tabs, BlurredField } from '@/components/ui'
 import { formatDate, formatPrice } from '@/lib/utils'
 import {
-  Briefcase, DollarSign, TrendingUp, Calendar, User,
-  ArrowRight, Clock, CheckCircle,
+  Briefcase, DollarSign, TrendingUp, Calendar, User, Clock,
 } from 'lucide-react'
 import type { ActivityFeedItem } from '@/types'
 

@@ -15,7 +15,7 @@ export default async function AnalyticsPage() {
   const now        = new Date()
   const day7Ago    = new Date(now); day7Ago.setDate(now.getDate() - 6); day7Ago.setHours(0, 0, 0, 0)
   const month6Ago  = new Date(now); month6Ago.setMonth(now.getMonth() - 5); month6Ago.setDate(1); month6Ago.setHours(0, 0, 0, 0)
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
 
   const [
     contactCount,
@@ -31,7 +31,6 @@ export default async function AnalyticsPage() {
     activeEnrollments,
     visitorsByDay,
     newLeadsByDay,
-    conversionByMonth,
   ] = await Promise.all([
     prisma.contact.count(),
     prisma.deal.count(),
@@ -53,11 +52,6 @@ export default async function AnalyticsPage() {
     prisma.contact.findMany({
       where: { createdAt: { gte: day7Ago } },
       select: { createdAt: true },
-    }),
-    // Deals closed by month for last 6 months (for conversion trend)
-    prisma.deal.findMany({
-      where: { closedAt: { gte: month6Ago } },
-      select: { closedAt: true, value: true },
     }),
   ])
 

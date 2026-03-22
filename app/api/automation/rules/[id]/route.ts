@@ -37,7 +37,7 @@ export async function PATCH(request: Request, { params }: Props) {
     const { id } = await params
     const body   = await request.json()
     const parsed = patchSchema.parse(body)
-    const rule   = await updateRule(id, parsed as any)
+    const rule   = await updateRule(id, parsed as Parameters<typeof updateRule>[1])
     return NextResponse.json({ data: rule })
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })

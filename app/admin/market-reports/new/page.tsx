@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
-import { Input, Textarea, Select, Button } from '@/components/ui'
+import { Input, Textarea, Button } from '@/components/ui'
 import { useToast } from '@/components/ui'
 
 const defaultForm = {

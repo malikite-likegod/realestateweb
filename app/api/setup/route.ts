@@ -136,11 +136,11 @@ export async function POST(req: Request) {
 
   try {
     if (dbProvider === 'sqlite') {
-      execSync('npx prisma db push --skip-generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as any)
+      execSync('npx prisma db push --skip-generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as unknown as Parameters<typeof execSync>[1])
     } else {
-      execSync('npx prisma migrate deploy', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as any)
+      execSync('npx prisma migrate deploy', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as unknown as Parameters<typeof execSync>[1])
     }
-    execSync('npx prisma generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as any)
+    execSync('npx prisma generate', { cwd: ROOT, env: spawnEnv, stdio: 'pipe', shell: true } as unknown as Parameters<typeof execSync>[1])
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer; message?: string }
     return NextResponse.json(
@@ -210,7 +210,7 @@ main().catch(e => { console.error(e); process.exit(1); });
       env: { ...spawnEnv, ADMIN_NAME: adminName, ADMIN_EMAIL: adminEmail, ADMIN_PASS: adminPassword },
       stdio: 'pipe',
       shell: true,
-    } as any)
+    } as unknown as Parameters<typeof execSync>[1])
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer; message?: string }
     return NextResponse.json(

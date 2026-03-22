@@ -3,13 +3,12 @@
 import { useState } from 'react'
 
 interface Props {
-  reportTitle: string
   reportSlug: string
   ctaTitle: string
   ctaSubtitle: string
 }
 
-export function MarketReportLeadForm({ reportTitle, reportSlug, ctaTitle, ctaSubtitle }: Props) {
+export function MarketReportLeadForm({ reportSlug, ctaTitle, ctaSubtitle }: Props) {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', areaOfInterest: '' })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 

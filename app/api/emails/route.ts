@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const contentType = request.headers.get('content-type') ?? ''
 
     let fields: Record<string, string> = {}
-    let attachments: Array<{ filename: string; content: Buffer }> = []
+    const attachments: Array<{ filename: string; content: Buffer }> = []
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()

@@ -8,6 +8,7 @@ import * as readline from 'readline'
 import * as fs from 'fs'
 import * as path from 'path'
 import { execSync } from 'child_process'
+import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -21,30 +22,7 @@ function ask(question: string, defaultVal = ''): Promise<string> {
   })
 }
 
-function askHidden(question: string): Promise<string> {
-  return new Promise(resolve => {
-    process.stdout.write(question + ': ')
-    process.stdin.setRawMode?.(true)
-    process.stdin.resume()
-    let password = ''
-    process.stdin.on('data', (char: Buffer) => {
-      const c = char.toString()
-      if (c === '\r' || c === '\n') {
-        process.stdin.setRawMode?.(false)
-        process.stdout.write('\n')
-        resolve(password)
-      } else if (c === '\u0003') {
-        process.exit()
-      } else if (c === '\u007f') {
-        password = password.slice(0, -1)
-        process.stdout.write('\b \b')
-      } else {
-        password += c
-        process.stdout.write('*')
-      }
-    })
-  })
-}
+
 
 async function main() {
   console.log('\n╔═══════════════════════════════════════╗')
@@ -76,7 +54,7 @@ async function main() {
 
   // 2. JWT secret
   const jwtSecret = await ask('\nJWT Secret (leave blank to auto-generate)', '')
-  const resolvedSecret = jwtSecret || require('crypto').randomBytes(48).toString('hex')
+  const resolvedSecret = jwtSecret || crypto.randomBytes(48).toString('hex')
 
   // 3. Write .env
   const envPath = path.join(process.cwd(), '.env')
@@ -111,7 +89,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_KEY=
     }
     execSync('npx prisma generate', { stdio: 'inherit' })
     console.log('✓ Database initialized')
-  } catch (e) {
+  } catch {
     console.error('✗ Database initialization failed. Check your connection string.')
     process.exit(1)
   }
@@ -146,7 +124,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_KEY=
       })
       console.log('✓ Admin account created')
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('✗ Failed to create admin user:', e)
   } finally {
     await prisma.$disconnect()

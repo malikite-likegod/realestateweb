@@ -1,0 +1,83 @@
+
+C:\Users\miket\Documents\realestateweb\app\(public)\contact\page.tsx
+  5:10  error  'SplitSection' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\(public)\listings\page.tsx
+  15:9  error  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\(public)\market-report\[slug]\MarketReportLeadForm.tsx
+  12:40  error  'reportTitle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\(public)\verify\email\success\page.tsx
+  29:13  error  'data' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\admin\analytics\page.tsx
+  18:9  error  'monthStart' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  34:5  error  'conversionByMonth' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\admin\bookings\AvailabilityForm.tsx
+  7:10  error  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\admin\deals\[id]\page.tsx
+  21:3   error  'ArrowRight' is defined but never used   @typescript-eslint/no-unused-vars
+  21:22  error  'CheckCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\admin\layout.tsx
+  1:10  error  'redirect' is defined but never used    @typescript-eslint/no-unused-vars
+  2:10  error  'getSession' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\admin\market-reports\new\page.tsx
+  8:27  error  'Select' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\app\api\emails\route.ts
+  41:9  error  'attachments' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\miket\Documents\realestateweb\app\api\setup\route.ts
+  139:114  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  141:105  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  143:97   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:10   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\miket\Documents\realestateweb\components\admin\contacts\PropertyInterestsPanel.tsx
+  199:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\miket\Documents\realestateweb\components\analytics\StatsCard.tsx
+  3:10  error  'motion' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\components\crm\CampaignBuilder.tsx
+  174:48  error  '_u' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\components\crm\CampaignEnrollmentsModal.tsx
+  61:6  warning  React Hook useEffect has a missing dependency: 'fetchPage'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\miket\Documents\realestateweb\components\crm\SpecialEventBuilder.tsx
+  117:9  error  'onChange' is defined but never used                                   @typescript-eslint/no-unused-vars
+  285:7  error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+C:\Users\miket\Documents\realestateweb\components\crm\UnifiedTimeline.tsx
+  17:30  error  'TimelineEntryType' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\components\forms\LeadCaptureForm.tsx
+  16:100  error  'variant' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\components\real-estate\ListingCard.tsx
+  6:21  error  'Square' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\components\ui\Toast.tsx
+  6:10  error  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\miket\Documents\realestateweb\lint.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\miket\Documents\realestateweb\parse-eslint.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\miket\Documents\realestateweb\scripts\setup.ts
+   24:10  error  'askHidden' is defined but never used    @typescript-eslint/no-unused-vars
+   79:39  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  114:12  error  'e' is defined but never used            @typescript-eslint/no-unused-vars
+
+✖ 33 problems (31 errors, 2 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

@@ -45,8 +45,8 @@ export async function POST(request: Request) {
 
   try {
     const body   = await request.json()
-    const parsed = createSchema.parse(body) as any
-    const rule   = await createRule(parsed)
+    const parsed = createSchema.parse(body)
+    const rule   = await createRule(parsed as Parameters<typeof createRule>[0])
     return NextResponse.json({ data: rule }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors }, { status: 400 })

@@ -171,7 +171,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
     setError('')
     try {
       // Strip delayUnit (UI-only) before sending to API
-      const apiSteps = steps.map(({ delayUnit: _u, ...s }) => s)
+      const apiSteps = steps.map(s => ({ order: s.order, type: s.type, delayMinutes: s.delayMinutes, config: s.config }))
 
       const url    = isEditMode ? `/api/campaigns/${campaignId}` : '/api/campaigns'
       const method = isEditMode ? 'PATCH' : 'POST'

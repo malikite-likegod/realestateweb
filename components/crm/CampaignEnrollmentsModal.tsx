@@ -58,6 +58,7 @@ export function CampaignEnrollmentsModal({ open, onClose, campaignId, campaignNa
     if (!open) return
     setPage(1)
     fetchPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, campaignId])
 
   async function fetchPage(p: number) {

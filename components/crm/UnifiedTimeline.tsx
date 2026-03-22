@@ -14,7 +14,7 @@ import {
   Mic, ArrowDownLeft, ArrowUpRight, Zap, Users,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import type { TimelineEntry, TimelineEntryType } from '@/lib/communications/timeline-service'
+import type { TimelineEntry } from '@/lib/communications/timeline-service'
 
 interface UnifiedTimelineProps {
   entries: TimelineEntry[]

@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Container } from '@/components/layout'
 import { Section } from '@/components/layout'
 import { ContentBlock } from '@/components/layout'
-import { SplitSection } from '@/components/layout'
 import { ContactForm } from '@/components/forms'
 import { Phone, Mail, MapPin, Clock } from 'lucide-react'
 

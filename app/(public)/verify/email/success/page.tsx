@@ -26,7 +26,7 @@ function EmailVerifiedContent() {
         credentials: 'same-origin', // ensures cookies are sent
         body:        JSON.stringify({ code }),
       })
-      const data = await res.json()
+      await res.json()
       if (res.ok) {
         setStatus('done')
       } else {

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Bed, Bath, Square, MapPin } from 'lucide-react'
+import { Bed, Bath, MapPin } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import type { IdxPropertySummary } from '@/types'
 
