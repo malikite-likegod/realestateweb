@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
-import { signJwt, verifyJwt } from './jwt'
+import { signJwt, verifyJwt, verifyContactJwt, verifyPendingContactJwt } from './jwt'
 import { prisma } from './prisma'
 
 export async function hashPassword(password: string): Promise<string> {
@@ -64,4 +64,43 @@ export async function validateApiKey(key: string) {
   // update lastUsedAt
   await prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
   return apiKey.user
+}
+
+export async function getContactSession() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('contact_token')?.value
+  if (!token) return null
+
+  try {
+    const payload = await verifyContactJwt(token)
+    if (!payload) return null
+
+    const contact = await prisma.contact.findUnique({
+      where:  { id: payload.contactId },
+      select: {
+        id:            true,
+        firstName:     true,
+        lastName:      true,
+        email:         true,
+        accountStatus: true,
+      },
+    })
+    if (!contact || contact.accountStatus !== 'active') return null
+    return contact
+  } catch {
+    return null
+  }
+}
+
+export async function getPendingContactId(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('contact_pending_token')?.value
+  if (!token) return null
+
+  try {
+    const payload = await verifyPendingContactJwt(token)
+    return payload?.contactId ?? null
+  } catch {
+    return null
+  }
 }
