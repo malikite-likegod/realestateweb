@@ -29,6 +29,7 @@ type Task = {
   dueAt:       Date | string | null
   completedAt: Date | string | null
   taskTypeId:  string | null
+  taskType:    { name: string; textColor: string | null; highlightColor: string | null } | null
   assignee:    { name: string } | null
   contact:     { firstName: string; lastName: string } | null
 }
@@ -121,8 +122,19 @@ function TaskRow({
 
       {/* Body */}
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm font-medium text-charcoal-900', done && 'line-through text-charcoal-400')}>
-          {task.title}
+        <p
+          className={cn('text-sm font-medium text-charcoal-900', done && 'line-through text-charcoal-400')}
+          style={
+            !done && task.taskType
+              ? {
+                  ...(task.taskType.highlightColor ? { background: task.taskType.highlightColor } : {}),
+                  ...(task.taskType.textColor      ? { color:      task.taskType.textColor }      : {}),
+                  ...(task.taskType.highlightColor ? { borderRadius: '3px', padding: '0 3px' }   : {}),
+                }
+              : undefined
+          }
+        >
+          {task.taskType ? `${task.taskType.name} - ${task.title}` : task.title}
         </p>
         {task.description && (
           <p className="text-xs text-charcoal-400 mt-0.5 truncate">{task.description}</p>
