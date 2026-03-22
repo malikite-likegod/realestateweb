@@ -411,11 +411,13 @@ model SavedSearch {
 // ─── Task Types ───────────────────────────────────────────────────────────────
 
 model TaskType {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("#6366f1")
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String   @unique
+  color          String   @default("#6366f1")
+  textColor      String?
+  highlightColor String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
   tasks Task[]
 
