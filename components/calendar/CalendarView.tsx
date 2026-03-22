@@ -40,6 +40,7 @@ interface CalendarEvent {
     priority?: string
     description?: string
     taskType?: string
+    highlightColor?: string | null
     contactName?: string
     dealTitle?: string
     assignee?: string
@@ -199,6 +200,20 @@ export function CalendarView() {
           eventResizableFromStart={true}
           eventResize={handleEventResize}
           eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
+          eventContent={(arg) => {
+            const highlight = arg.event.extendedProps.highlightColor as string | null | undefined
+            return (
+              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 2px' }}>
+                {highlight ? (
+                  <mark style={{ background: highlight, color: 'inherit', borderRadius: '2px', padding: '0 2px' }}>
+                    {arg.event.title}
+                  </mark>
+                ) : (
+                  <span>{arg.event.title}</span>
+                )}
+              </div>
+            )
+          }}
           dayMaxEvents={4}
           nowIndicator={true}
           fixedWeekCount={false}
