@@ -33,14 +33,25 @@ export async function POST(request: Request) {
   const contact = await getContactSession()
   if (!contact) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body      = await request.json()
-  const { listingId } = z.object({ listingId: z.string() }).parse(body)
+  try {
+    const body = await request.json()
+    const { listingId } = z.object({ listingId: z.string().min(1) }).parse(body)
 
-  await prisma.contactSavedListing.upsert({
-    where:  { contactId_listingId: { contactId: contact.id, listingId } },
-    create: { contactId: contact.id, listingId },
-    update: {},
-  })
+    // Verify the listing exists before upserting
+    const listing = await prisma.listing.findUnique({ where: { id: listingId }, select: { id: true } })
+    if (!listing) return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
 
-  return NextResponse.json({ message: 'Saved' })
+    await prisma.contactSavedListing.upsert({
+      where:  { contactId_listingId: { contactId: contact.id, listingId } },
+      create: { contactId: contact.id, listingId },
+      update: {},
+    })
+
+    return NextResponse.json({ message: 'Saved' })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

@@ -14,12 +14,22 @@ export async function GET(request: Request) {
 
   // Build property filter
   const propertyWhere: Record<string, unknown> = {}
+  const parsedMinPrice = minPrice ? Number(minPrice) : null
+  const parsedMaxPrice = maxPrice ? Number(maxPrice) : null
+  const parsedMinBeds  = minBeds  ? Number(minBeds)  : null
+
   if (status && ['active','sold','expired','draft'].includes(status)) {
     propertyWhere.status = status
   }
-  if (minPrice) propertyWhere.price = { ...(propertyWhere.price as object ?? {}), gte: Number(minPrice) }
-  if (maxPrice) propertyWhere.price = { ...(propertyWhere.price as object ?? {}), lte: Number(maxPrice) }
-  if (minBeds)  propertyWhere.bedrooms = { gte: Number(minBeds) }
+  if (parsedMinPrice !== null && !isNaN(parsedMinPrice)) {
+    propertyWhere.price = { ...(propertyWhere.price as object ?? {}), gte: parsedMinPrice }
+  }
+  if (parsedMaxPrice !== null && !isNaN(parsedMaxPrice)) {
+    propertyWhere.price = { ...(propertyWhere.price as object ?? {}), lte: parsedMaxPrice }
+  }
+  if (parsedMinBeds !== null && !isNaN(parsedMinBeds)) {
+    propertyWhere.bedrooms = { gte: parsedMinBeds }
+  }
 
   const listings = await prisma.listing.findMany({
     where:   { property: propertyWhere },
