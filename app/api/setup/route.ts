@@ -64,7 +64,6 @@ export async function POST(req: Request) {
     : 'file:./dev.db'
 
   const jwtSecret = randomBytes(48).toString('hex')
-  const resoTokenSecret = randomBytes(32).toString('hex')
   const resoSyncSecret = randomBytes(32).toString('hex')
   const automationSecret = randomBytes(32).toString('hex')
 
@@ -85,10 +84,10 @@ export async function POST(req: Request) {
     `NEXT_PUBLIC_APP_URL=${appUrl || 'http://localhost:3000'}`,
     `NEXT_PUBLIC_GOOGLE_MAPS_KEY=`,
     '',
-    `RESO_API_BASE_URL=${isProduction ? '' : 'http://localhost:3000/api/mock-reso'}`,
-    `RESO_CLIENT_ID=${isProduction ? '' : 'mock-client'}`,
-    `RESO_CLIENT_SECRET=${isProduction ? '' : 'mock-secret'}`,
-    `RESO_TOKEN_SECRET=${resoTokenSecret}`,
+    `AMPRE_IDX_TOKEN=${isProduction ? '' : 'mock-idx-token'}`,
+    `AMPRE_DLA_TOKEN=${isProduction ? '' : 'mock-dla-token'}`,
+    `AMPRE_VOX_TOKEN=${isProduction ? '' : 'mock-vox-token'}`,
+    ...(isProduction ? [] : [`AMPRE_API_BASE_URL=http://localhost:3000/api/mock-reso`]),
     `RESO_SYNC_SECRET=${resoSyncSecret}`,
     '',
     `AUTOMATION_PROCESS_SECRET=${automationSecret}`,
