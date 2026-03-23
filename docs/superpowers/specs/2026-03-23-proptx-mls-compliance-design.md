@@ -309,9 +309,10 @@ Mock RESO routes are accessible in production. The AI analyze endpoint exposes M
 
 #### `lib/mock-guard.ts`
 ```typescript
-export function assertNotProduction(): void
-// Returns a NextResponse 404 if NODE_ENV === 'production'
-// Called at the top of every mock route handler
+export function mockGuard(): NextResponse | null
+// Returns a NextResponse 404 if NODE_ENV === 'production'; returns null otherwise.
+// Callers return early when a non-null value is received:
+//   const guard = mockGuard(); if (guard) return guard;
 // Rationale: belt-and-suspenders runtime guard in addition to any
 // build-time exclusions — ensures mock routes are unreachable even
 // if a deployment misconfiguration leaves them in the build.
