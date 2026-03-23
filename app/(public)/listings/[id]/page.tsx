@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui'
 import { formatPrice, parseJsonSafe } from '@/lib/utils'
 import { Bed, Bath, Square, MapPin, Calendar } from 'lucide-react'
 import type { Metadata } from 'next'
+import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
+import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -84,6 +86,10 @@ export default async function ListingDetailPage({ params }: Props) {
                   <p className="flex items-center gap-1.5 text-charcoal-500 mt-1">
                     <MapPin size={15} /> {property.city}, {property.stateOrProvince} {property.postalCode}
                   </p>
+                  <BrokerageAttribution
+                    listAgentFullName={property.listAgentFullName}
+                    listOfficeName={property.listOfficeName}
+                  />
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <Badge variant={property.standardStatus === 'Active' ? 'success' : 'warning'} className="capitalize">
@@ -117,6 +123,7 @@ export default async function ListingDetailPage({ params }: Props) {
               />
             </div>
           </div>
+          <MlsDisclaimer variant="idx" />
         </Container>
       </div>
     </div>
