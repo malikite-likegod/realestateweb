@@ -24,6 +24,7 @@ export async function GET(request: Request) {
   }
 
   if (type === 'popular_listings') {
+    // Manual listings only — ResoProperty data is never included here
     const topListings = await prisma.listing.findMany({
       orderBy: { views: 'desc' },
       take: 20,
