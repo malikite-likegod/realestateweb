@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { verifyJwt } from './lib/jwt'
+import { publicSearchLimit, portalLimit, loginLimit } from '@/lib/rate-limit'
 
 const PROTECTED_PATHS = ['/admin', '/api/contacts', '/api/deals', '/api/tasks',
   '/api/activities', '/api/listings', '/api/blog', '/api/stages', '/api/api-keys',
@@ -10,6 +11,42 @@ const LISTING_PATH_RE = /^\/listings\/([^/]+)$/
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ── Rate limiting ───────────────────────────────────────────────────────────
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+          ?? request.headers.get('x-real-ip')
+          ?? 'unknown'
+
+  if (pathname.startsWith('/api/search') || (pathname.startsWith('/api/listings') && request.method === 'GET')) {
+    const { allowed, retryAfterMs } = publicSearchLimit.check(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
+
+  if (pathname.startsWith('/api/portal/listings')) {
+    const sessionId = request.cookies.get('contact_token')?.value ?? ip
+    const { allowed, retryAfterMs } = portalLimit.check(sessionId)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
+
+  if (pathname === '/api/portal/login') {
+    const { allowed, retryAfterMs } = loginLimit.check(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
 
   // ── Gate cookie logic (public listing pages only) ──────────────────────────
   const listingMatch = pathname.match(LISTING_PATH_RE)
