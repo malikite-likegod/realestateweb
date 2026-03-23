@@ -368,8 +368,15 @@ model ResoProperty {
   listOfficeKey         String?
   listOfficeName        String?
   listDate              DateTime?
-  modificationTimestamp DateTime?
-  lastSyncedAt          DateTime  @default(now())
+  modificationTimestamp         DateTime?
+  mlsStatus                     String?
+  contractStatus                String?
+  photosChangeTimestamp         DateTime?
+  documentsChangeTimestamp      DateTime?
+  mediaChangeTimestamp          DateTime?
+  listAgentFullName             String?
+  majorChangeTimestamp          DateTime?
+  lastSyncedAt                  DateTime  @default(now())
   rawJson               String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -385,7 +392,7 @@ model ResoProperty {
 model ResoSyncLog {
   id           String   @id @default(cuid())
   syncedAt     DateTime @default(now())
-  resourceType String   @default("Property")
+  syncType     String   @default("idx_property")
   added        Int      @default(0)
   updated      Int      @default(0)
   deleted      Int      @default(0)
@@ -395,6 +402,46 @@ model ResoSyncLog {
 
   @@index([syncedAt])
   @@map("reso_sync_logs")
+}
+
+model AmpreSyncCheckpoint {
+  syncType      String    @id   // 'idx_property' | 'dla_property' | 'vox_member' | 'vox_office'
+  lastTimestamp DateTime?
+  lastKey       String    @default("0")
+  updatedAt     DateTime  @updatedAt
+
+  @@map("ampre_sync_checkpoints")
+}
+
+model ResoMember {
+  id                    String    @id @default(cuid())
+  memberKey             String    @unique
+  memberFullName        String?
+  memberEmail           String?
+  memberMobilePhone     String?
+  memberStatus          String?
+  officeKey             String?
+  officeName            String?
+  modificationTimestamp DateTime?
+  photosChangeTimestamp DateTime?
+  lastSyncedAt          DateTime
+  rawJson               String?
+
+  @@map("reso_members")
+}
+
+model ResoOffice {
+  id                    String    @id @default(cuid())
+  officeKey             String    @unique
+  officeName            String?
+  officeEmail           String?
+  officePhone           String?
+  modificationTimestamp DateTime?
+  photosChangeTimestamp DateTime?
+  lastSyncedAt          DateTime
+  rawJson               String?
+
+  @@map("reso_offices")
 }
 
 model SavedSearch {
