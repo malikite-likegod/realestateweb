@@ -97,10 +97,6 @@ export class MlsDataError extends Error {}
 export async function isMlsListing(listingId: string): Promise<boolean>
 // Returns true if listingId maps to a ResoProperty record
 // Checks by listingKey match against ResoProperty table
-
-export async function assertNotExternalAi(listingId: string): Promise<void>
-// Throws MlsDataError if listing is MLS-sourced
-// Callers catch MlsDataError to route to local model instead
 ```
 
 #### `services/ai/local-client.ts`
@@ -110,10 +106,12 @@ Thin wrapper around Ollama REST API (`POST /api/generate`).
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
 
 export async function localComplete(prompt: string, model = 'llama3'): Promise<string>
-// If Ollama is unreachable, throws with message:
+// If Ollama is unreachable, throws OllamaUnavailableError with message:
 // "Local AI unavailable. MLS listing descriptions cannot be generated via external AI."
 // Never silently falls back to external API.
 ```
+
+When `localComplete` throws, `commands.ts` catches `OllamaUnavailableError` and returns a structured error result (same shape as a failed AI command): `{ status: 'error', message: 'MLS listing descriptions require a locally-running AI model. See OLLAMA_BASE_URL in .env.' }`. The error is recorded in `AiCommandLog` with `status = 'error'`. The external AI client is never called as a fallback.
 
 #### `services/ai/commands.ts` — `generate_listing_description` refactor
 ```typescript
@@ -134,12 +132,16 @@ The `popular_listings` analysis type currently returns `title`, `price`, `city` 
 - RESO-sourced listings are excluded entirely from the response
 - The response shape remains the same; RESO rows simply do not appear
 
+> **Note:** This file is also modified in Sub-project 5 (auth tightening). Sub-project 2 applies the data filter; Sub-project 5 adds the admin session requirement. Implement Sub-project 2 first; Sub-project 5 adds on top.
+
 ### Environment Variables Added
 ```
 # Local AI (Ollama) — required if using MLS listing descriptions
 # Install Ollama: https://ollama.ai and run: ollama pull llama3
 OLLAMA_BASE_URL=http://localhost:11434
 ```
+
+> **Note:** `.env.example` is also modified in Sub-project 4 (cron note). Both changes are additive — append each block without overwriting the other.
 
 ### Files
 
@@ -215,7 +217,7 @@ Disallow: /admin/
 | Action | Path |
 |---|---|
 | Create | `lib/rate-limit.ts` |
-| Create or modify | `middleware.ts` |
+| Modify | `middleware.ts` |
 | Create | `public/robots.txt` |
 
 ---
@@ -257,12 +259,17 @@ export async function purgeMlsData(): Promise<{ deleted: Record<string, number> 
 ```
 
 #### `app/api/admin/purge/route.ts`
-Admin session required for all operations.
+Authentication rules per operation type:
+
+| Operation | Accepted auth |
+|---|---|
+| `type=retention` | Admin session **or** `x-cron-secret` header (same secret as RESO sync cron) |
+| `type=contact` | Admin session only |
+| `type=mls-termination` | Admin session only |
 
 ```
 POST /api/admin/purge?type=retention
   → runs purgeOldBehaviorEvents() + purgeOldSearchLogs()
-  → safe for cron use (same RESO_SYNC_SECRET header auth pattern)
   → returns { behaviorEvents: N, searchLogs: N }
 
 POST /api/admin/purge?type=contact&contactId=<id>
@@ -303,8 +310,11 @@ Mock RESO routes are accessible in production. The AI analyze endpoint exposes M
 #### `lib/mock-guard.ts`
 ```typescript
 export function assertNotProduction(): void
-// Throws with 404-equivalent response if NODE_ENV === 'production'
+// Returns a NextResponse 404 if NODE_ENV === 'production'
 // Called at the top of every mock route handler
+// Rationale: belt-and-suspenders runtime guard in addition to any
+// build-time exclusions — ensures mock routes are unreachable even
+// if a deployment misconfiguration leaves them in the build.
 ```
 
 Applied to:
@@ -315,17 +325,31 @@ Applied to:
 
 #### `app/api/ai/analyze/route.ts` — access tightening
 Two changes:
-1. Require **admin session** (not just API key) — this is internal tooling
-2. `buyer_intent` response is paginated: default 20, max 50 per request (no unbounded export)
+1. Require **admin session** (not just API key) — this is internal tooling. Remove the Bearer API key path from this route entirely.
+2. `buyer_intent` response is paginated. Query params: `?type=buyer_intent&page=1&limit=20` (default `limit=20`, max `limit=50`). Response shape:
+```json
+{
+  "data": [ /* search log entries */ ],
+  "total": 842,
+  "page": 1,
+  "limit": 20
+}
+```
+
+> **Note:** This file is also modified in Sub-project 2 (RESO data filter). Sub-project 2 must be implemented first. This sub-project adds the admin session requirement and pagination on top of those changes.
 
 #### `lib/auth.ts` — IP address logging
-`validateApiKey()` accepts the request object and populates `ipAddress` in `AiCommandLog` rows from `x-forwarded-for`. Field already exists in schema — just needs to be populated.
+`validateApiKey()` gains a second parameter: `request: NextRequest`. Signature after change:
+```typescript
+export async function validateApiKey(
+  authHeader: string | null,
+  request: NextRequest
+): Promise<ApiKey | null>
+```
+The IP address is extracted from `request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? request.ip` and written to `AiCommandLog.ipAddress`. Field already exists in schema — just needs to be populated. All existing callers of `validateApiKey` must pass the request object.
 
 #### `app/api/portal/login/route.ts` — brute-force protection
-Uses `loginLimit` from Sub-project 3's `lib/rate-limit.ts`:
-- Max 5 login attempts per IP per 15 minutes
-- Returns `429` with `Retry-After: 900` on breach
-- Failed attempt tracking uses the same in-process store as the rate limiter (no schema change needed)
+`loginLimit` is applied in `middleware.ts` (Sub-project 3) for all requests to `/api/portal/login`. No additional rate-limit call is needed inside the route handler itself — the middleware handles it centrally. Sub-project 5's only change to this file is confirming the existing generic error message is in place (no enumeration risk). No new code is added to the route handler.
 
 ### Files
 
@@ -338,7 +362,6 @@ Uses `loginLimit` from Sub-project 3's `lib/rate-limit.ts`:
 | Modify | `app/api/mock-reso/Property/[ListingKey]/route.ts` |
 | Modify | `app/api/ai/analyze/route.ts` |
 | Modify | `lib/auth.ts` |
-| Modify | `app/api/portal/login/route.ts` |
 
 ---
 
