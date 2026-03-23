@@ -10,19 +10,28 @@ import { ChangePasswordCard } from '@/components/admin/ChangePasswordCard'
 import { TwoFactorCard } from '@/components/admin/TwoFactorCard'
 import { LeadCaptureSettingsCard } from '@/components/admin/LeadCaptureSettingsCard'
 import { BlurModeSettingsCard } from '@/components/admin/BlurModeSettingsCard'
+import { MlsSyncSettingsCard } from '@/components/admin/MlsSyncSettingsCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [lastSync, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows] = await Promise.all([
-    prisma.resoSyncLog.findFirst({ orderBy: { syncedAt: 'desc' } }),
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow] = await Promise.all([
+    Promise.all([
+      prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
+      prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
+      prisma.resoSyncLog.findFirst({ where: { syncType: 'vox_member'   }, orderBy: { syncedAt: 'desc' } }),
+      prisma.resoSyncLog.findFirst({ where: { syncType: 'vox_office'   }, orderBy: { syncedAt: 'desc' } }),
+    ]),
     prisma.apiKey.count({ where: { userId: session.id } }),
     prisma.aiCommandLog.count(),
     prisma.jobQueue.groupBy({ by: ['status'], _count: { id: true } }),
     prisma.user.findUnique({ where: { id: session.id }, select: { totpEnabled: true } }),
     prisma.siteSettings.findMany({ where: { key: { in: ['listing_gate_limit', 'listing_gate_enabled'] } } }),
+    prisma.resoProperty.count({ where: { standardStatus: 'Active' } }),
+    prisma.siteSettings.findUnique({ where: { key: 'mls_sync_interval_minutes' } }),
   ])
+  const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
   const totpEnabled = tfaUser?.totpEnabled ?? false
 
   const twilioConfigured  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
@@ -40,6 +49,17 @@ export default async function SettingsPage() {
   for (const r of gateSettingsRows) gateSettingsMap[r.key] = r.value
   const gateLimit   = parseInt(gateSettingsMap['listing_gate_limit']   ?? '3', 10)
   const gateEnabled = (gateSettingsMap['listing_gate_enabled'] ?? 'true') === 'true'
+
+  const mlsSyncInterval = parseInt(mlsSyncIntervalRow?.value ?? '60', 10)
+
+  function toSyncInfo(log: typeof idxSync) {
+    return log ? {
+      syncedAt: log.syncedAt.toISOString(),
+      added:    log.added,
+      updated:  log.updated,
+      deleted:  log.deleted,
+    } : null
+  }
 
   return (
     <DashboardLayout user={session}>
@@ -69,16 +89,14 @@ export default async function SettingsPage() {
 
         <Divider />
 
-        {/* RESO / IDX Sync */}
-        <Card>
-          <h3 className="font-semibold text-charcoal-900 mb-2">RESO / IDX Sync</h3>
-          <p className="text-sm text-charcoal-400 mb-4">
-            {lastSync ? `Last synced: ${lastSync.syncedAt.toLocaleString()} — ${lastSync.added} added, ${lastSync.updated} updated` : 'Never synced'}
-          </p>
-          <form action="/api/reso/sync" method="POST">
-            <Button variant="outline" type="submit">Sync RESO Listings Now</Button>
-          </form>
-        </Card>
+        <MlsSyncSettingsCard
+          initialIntervalMinutes={mlsSyncInterval}
+          activeListings={activeListings}
+          idxSync={toSyncInfo(idxSync)}
+          dlaSync={toSyncInfo(dlaSync)}
+          voxMemberSync={toSyncInfo(voxMemberSync)}
+          voxOfficeSync={toSyncInfo(voxOfficeSync)}
+        />
 
         {/* AI */}
         <Card>
