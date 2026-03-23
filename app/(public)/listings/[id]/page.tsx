@@ -123,9 +123,10 @@ export default async function ListingDetailPage({ params }: Props) {
               />
             </div>
           </div>
-          <MlsDisclaimer variant="idx" />
         </Container>
+        <MlsDisclaimer variant="idx" />
       </div>
     </div>
+
   )
 }
