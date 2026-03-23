@@ -48,6 +48,7 @@ export async function GET(request: Request) {
       },
     },
     orderBy: [{ property: { status: 'asc' } }, { property: { listedAt: 'desc' } }],
+    take: 100,
   })
 
   const data = listings.map(l => ({

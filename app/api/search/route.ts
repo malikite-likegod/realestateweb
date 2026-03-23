@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     lng:          searchParams.get('lng') ? Number(searchParams.get('lng')) : undefined,
     radiusKm:     searchParams.get('radiusKm') ? Number(searchParams.get('radiusKm')) : undefined,
     page:         searchParams.get('page') ? Number(searchParams.get('page')) : 1,
-    pageSize:     searchParams.get('pageSize') ? Number(searchParams.get('pageSize')) : 12,
+    pageSize:     Math.min(searchParams.get('pageSize') ? Number(searchParams.get('pageSize')) : 12, 100),
     sortBy:       (searchParams.get('sortBy') ?? undefined) as SearchFilters['sortBy'],
     sortDir:      (searchParams.get('sortDir') ?? undefined) as SearchFilters['sortDir'],
   }
