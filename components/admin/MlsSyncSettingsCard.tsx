@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, dlaSync, voxMemberSync, voxOfficeSync }: Props) {
-  const [interval, setInterval] = useState(String(initialIntervalMinutes))
+  const [syncInterval, setSyncInterval] = useState(String(initialIntervalMinutes))
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
   const [syncing,  setSyncing]  = useState(false)
@@ -24,23 +24,33 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
 
   async function handleSave() {
     setSaving(true)
-    await fetch('/api/admin/settings', {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ mls_sync_interval_minutes: interval }),
-    })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ mls_sync_interval_minutes: syncInterval }),
+      })
+      if (!res.ok) {
+        setSyncMsg('Failed to save interval — check server logs')
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch {
+      setSyncMsg('Failed to save interval — check server logs')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleSyncNow() {
     setSyncing(true)
     setSyncMsg(null)
     try {
-      const res = await fetch('/api/reso/sync', { method: 'POST' })
-      const r   = await res.json()
-      setSyncMsg(`IDX sync complete — ${r.added} added, ${r.updated} updated, ${r.removed} removed`)
+      const res  = await fetch('/api/reso/sync', { method: 'POST' })
+      const data = await res.json()
+      const r    = data.result
+      setSyncMsg(`IDX sync complete — ${r.added} added, ${r.updated} updated, ${r.deleted} deleted`)
     } catch {
       setSyncMsg('Sync failed — check server logs')
     } finally {
@@ -83,8 +93,8 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
           label="Sync interval (minutes)"
           type="number"
           min={1}
-          value={interval}
-          onChange={e => setInterval(e.target.value)}
+          value={syncInterval}
+          onChange={e => setSyncInterval(e.target.value)}
         />
 
         <div className="flex gap-3 items-center">
