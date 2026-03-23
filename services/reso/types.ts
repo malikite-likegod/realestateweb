@@ -28,26 +28,45 @@ export interface ResoPropertyRaw {
   ListOfficeName?:       string
   ListingContractDate?:  string
   ModificationTimestamp?: string
+  // DLA-enriched fields
+  MlsStatus?:                string
+  ContractStatus?:           string
+  PhotosChangeTimestamp?:    string
+  DocumentsChangeTimestamp?: string
+  MediaChangeTimestamp?:     string
+  MajorChangeTimestamp?:     string
 }
 
 export interface ResoMemberRaw {
-  MemberKey:      string
-  MemberFullName: string
-  MemberEmail?:   string
-  OfficeKey?:     string
+  MemberKey:             string
+  MemberFullName?:       string
+  MemberEmail?:          string
+  MemberMobilePhone?:    string
+  MemberStatus?:         string
+  OfficeKey?:            string
+  OfficeName?:           string
+  ModificationTimestamp?:  string
+  PhotosChangeTimestamp?:  string
 }
 
 export interface ResoOfficeRaw {
-  OfficeKey:   string
-  OfficeName:  string
-  OfficeEmail?: string
+  OfficeKey:             string
+  OfficeName?:           string
+  OfficeEmail?:          string
+  OfficePhone?:          string
+  ModificationTimestamp?:  string
+  PhotosChangeTimestamp?:  string
 }
 
-export interface ResoODataResponse<T> {
-  '@odata.context'?: string
-  '@odata.count'?:   number
-  value:             T[]
+export interface AmpreODataResponse<T> {
+  '@odata.context'?:  string
+  '@odata.count'?:    number
+  '@odata.nextLink'?: string
+  value:              T[]
 }
+
+/** @deprecated Use AmpreODataResponse */
+export type ResoODataResponse<T> = AmpreODataResponse<T>
 
 export interface ResoSyncResult {
   added:      number
