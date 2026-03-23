@@ -25,3 +25,12 @@ export const getGateSettings = unstable_cache(
   ['gate-settings'],
   { revalidate: 60 }
 )
+
+export const getMlsSyncInterval = unstable_cache(
+  async () => {
+    const row = await prisma.siteSettings.findUnique({ where: { key: 'mls_sync_interval_minutes' } })
+    return parseInt(row?.value ?? '60', 10)
+  },
+  ['mls-sync-interval'],
+  { revalidate: 60 }
+)
