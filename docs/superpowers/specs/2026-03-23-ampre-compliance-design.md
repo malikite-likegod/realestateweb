@@ -101,7 +101,7 @@ export async function ampreGet<T>(
 **Base URL:** `process.env.AMPRE_API_BASE_URL ?? 'https://query.ampre.ca/odata'`
 (Only set in `.env` for local dev; production has no override.)
 
-**Rate limiting:** On `429` response, read `X-Rate-Limit-Retry-After-Seconds` header, `await sleep(seconds * 1000)`, retry once. If still `429`, throw.
+**Rate limiting:** On `429` response, read `X-Rate-Limit-Retry-After-Seconds` header, `await sleep(seconds * 1000)`, retry once. If still `429`, throw — the calling sync function catches this, writes a failed `ResoSyncLog` entry (with the error in `notes`), and returns early. The checkpoint is preserved so the next run resumes from the same position.
 
 **`@odata.nextLink`:** Returned in response — callers may follow it for ad-hoc queries. The replication loop uses timestamp+key instead.
 
@@ -124,6 +124,9 @@ GET /odata/Property
 ### Termination
 When `records.length < batchSize`, the sync is complete.
 
+### NULL Timestamp Handling
+If a record has a `NULL` `ModificationTimestamp`, skip it (log a warning) — do not update the checkpoint from it. This prevents the cursor from getting stuck at epoch.
+
 ### Checkpoint Persistence
 After each successful batch, the last record's `ModificationTimestamp` and `ListingKey` are persisted to `AmpreSyncCheckpoint`:
 
@@ -143,7 +146,7 @@ Per Amplify docs, records modified during a sync run may appear in multiple batc
 model AmpreSyncCheckpoint {
   syncType      String    @id   // 'idx_property' | 'dla_property' | 'vox_member' | 'vox_office'
   lastTimestamp DateTime?
-  lastKey       String    @default("0")
+  lastKey       String    @default("0")  // stores whatever key field the resource uses (ListingKey, MemberKey, OfficeKey)
   updatedAt     DateTime  @updatedAt
 
   @@map("ampre_sync_checkpoints")
@@ -187,10 +190,12 @@ model ResoOffice {
 }
 ```
 
-### Modified: `ResoSyncLog` — add `syncType`
+### Modified: `ResoSyncLog` — rename `resourceType` → `syncType`
+The existing `resourceType String @default("Property")` column is renamed to `syncType` with a new default:
 ```prisma
 syncType  String  @default("idx_property")
 ```
+Migration renames the column and sets existing rows to `"idx_property"`.
 
 ### Modified: `ResoProperty` — add DLA-enriched fields
 | Field | Type | Source | Notes |
@@ -215,22 +220,22 @@ All existing `ResoProperty` fields remain unchanged.
 2. Batch-fetch `Property` with IDX token using timestamp+key cursor; `$select` = public fields only
 3. For each record: upsert `ResoProperty` by `listingKey` — write IDX fields
 4. Persist checkpoint after each batch
-5. On completion (batch < batchSize): mark Active listings absent from this run as `Closed`
+5. On completion (batch < batchSize, meaning full dataset traversed): mark Active listings absent from this run as `Closed`. This step is skipped if the sync was interrupted (e.g., rate-limited) — partial runs do not trigger removals.
 6. Write `ResoSyncLog` with `syncType = 'idx_property'`
 
 ### DLA Property Sync (`syncType = 'dla_property'`)
 1. Same cursor loop with DLA token + separate checkpoint (`dla_property`)
-2. Upsert `ResoProperty` — write only DLA-enriched fields; do not touch IDX-only fields
+2. Upsert `ResoProperty` — write only the DLA-enriched fields listed in the data model section (Prisma `update` with an explicit object containing only those fields; IDX-only fields are never included in the DLA update object)
 3. Does **not** trigger removed-listing logic (DLA enriches, IDX owns status)
 4. Write `ResoSyncLog` with `syncType = 'dla_property'`
 
 ### VOX Member Sync (`syncType = 'vox_member'`)
-1. Cursor loop on `Member` resource with VOX token; key field = `MemberKey`
+1. Cursor loop on `Member` resource with VOX token; timestamp field = `ModificationTimestamp`, key field = `MemberKey`
 2. Upsert `ResoMember` by `memberKey`
 3. Write `ResoSyncLog` with `syncType = 'vox_member'`
 
 ### VOX Office Sync (`syncType = 'vox_office'`)
-1. Cursor loop on `Office` resource with VOX token; key field = `OfficeKey`
+1. Cursor loop on `Office` resource with VOX token; timestamp field = `ModificationTimestamp`, key field = `OfficeKey`
 2. Upsert `ResoOffice` by `officeKey`
 3. Write `ResoSyncLog` with `syncType = 'vox_office'`
 
@@ -247,13 +252,19 @@ All existing `ResoProperty` fields remain unchanged.
 | `POST /api/reso/sync?type=vox` | `vox_member` + `vox_office` |
 | `POST /api/reso/sync?type=all` | All four in sequence |
 
-`GET /api/reso/sync` returns last sync log per type + active listing count. Response shape:
+`GET /api/reso/sync` returns the most recent `ResoSyncLog` row per `syncType` + active listing count. Response shape:
 ```json
 {
-  "lastSync": { "idx_property": {...}, "dla_property": {...}, "vox_member": {...}, "vox_office": {...} },
+  "lastSync": {
+    "idx_property":  { "syncedAt": "...", "added": 0, "updated": 0, "deleted": 0, "errors": 0 },
+    "dla_property":  { "syncedAt": "...", "added": 0, "updated": 0, "deleted": 0, "errors": 0 },
+    "vox_member":    { "syncedAt": "...", "added": 0, "updated": 0, "deleted": 0, "errors": 0 },
+    "vox_office":    { "syncedAt": "...", "added": 0, "updated": 0, "deleted": 0, "errors": 0 }
+  },
   "activeListings": 1234
 }
 ```
+Any `syncType` with no log entries returns `null` for its key.
 
 ---
 
