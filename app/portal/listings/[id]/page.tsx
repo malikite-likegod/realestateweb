@@ -4,6 +4,8 @@ import { getContactSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PortalHeader } from '@/components/portal/PortalHeader'
 import { SaveButton } from '@/components/portal/SaveButton'
+import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
+import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
 
 export default async function ListingDetailPage({
   params,
@@ -55,6 +57,7 @@ export default async function ListingDetailPage({
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">{p.title || p.address}</h1>
             <p className="text-sm text-gray-500">{[p.address, p.city, p.province, p.postalCode].filter(Boolean).join(', ')}</p>
+            <BrokerageAttribution />
           </div>
           <SaveButton listingId={listing.id} initialSaved={isSaved} />
         </div>
@@ -71,6 +74,8 @@ export default async function ListingDetailPage({
             {p.sqft      && <span>{p.sqft.toLocaleString()} sqft</span>}
           </div>
         )}
+
+        <MlsDisclaimer variant="vow" />
       </main>
     </>
   )

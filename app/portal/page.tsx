@@ -3,6 +3,7 @@ import { getContactSession } from '@/lib/auth'
 import { PortalHeader } from '@/components/portal/PortalHeader'
 import { ListingCard } from '@/components/portal/ListingCard'
 import { prisma } from '@/lib/prisma'
+import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 
 export default async function PortalPage({
   searchParams,
@@ -63,6 +64,8 @@ export default async function PortalPage({
             ))}
           </div>
         )}
+
+        <MlsDisclaimer variant="vow" />
       </main>
     </>
   )
