@@ -96,12 +96,33 @@ async function executeCommand(command: AiCommand, data: Record<string, unknown>)
     }
 
     case 'generate_listing_description': {
+      const propertyDetails = data.propertyDetails ? String(data.propertyDetails) : 'a luxury property'
+      const listingId       = data.listingId ? String(data.listingId) : null
+      const prompt = `Write a compelling luxury real estate listing description for: ${propertyDetails}. Keep it under 200 words. Focus on lifestyle and premium features.`
+      const systemPrompt = 'You are an expert luxury real estate copywriter.'
+
+      // If a listingId is provided and it maps to a RESO/MLS property, use local AI only
+      if (listingId) {
+        const { isMlsListing } = await import('@/lib/mls-guard')
+        const isMls = await isMlsListing(listingId)
+        if (isMls) {
+          try {
+            const { localComplete } = await import('./local-client')
+            const description = await localComplete(prompt)
+            return { success: true, data: { description, tokensUsed: 0 } }
+          } catch (err) {
+            const { OllamaUnavailableError } = await import('./local-client')
+            if (err instanceof OllamaUnavailableError) {
+              return { success: false, error: 'MLS listing descriptions require a locally-running AI model. See OLLAMA_BASE_URL in .env.' }
+            }
+            throw err
+          }
+        }
+      }
+
+      // Non-MLS or no listingId — external AI permitted
       const { callAI } = await import('./client')
-      const property = data.propertyDetails ? String(data.propertyDetails) : 'a luxury property'
-      const response = await callAI(
-        `Write a compelling luxury real estate listing description for: ${property}. Keep it under 200 words. Focus on lifestyle and premium features.`,
-        { systemPrompt: 'You are an expert luxury real estate copywriter.' }
-      )
+      const response = await callAI(prompt, { systemPrompt })
       return { success: true, data: { description: response.content, tokensUsed: response.tokensUsed } }
     }
 
