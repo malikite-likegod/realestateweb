@@ -179,7 +179,7 @@ export function createRateLimit(options: RateLimitOptions): {
 
 LRU map capped at 10,000 entries (bounds memory to ~2 MB). Entries expire after `windowMs`.
 
-**Two tiers defined in `lib/rate-limit.ts`:**
+**Three tiers defined in `lib/rate-limit.ts`:**
 ```typescript
 export const publicSearchLimit  = createRateLimit({ windowMs: 60_000, max: 30,  keyPrefix: 'pub' })
 export const portalLimit        = createRateLimit({ windowMs: 60_000, max: 60,  keyPrefix: 'vow' })
@@ -347,7 +347,7 @@ export async function validateApiKey(
   request: NextRequest
 ): Promise<ApiKey | null>
 ```
-The IP address is extracted from `request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? request.ip` and written to `AiCommandLog.ipAddress`. Field already exists in schema — just needs to be populated. All existing callers of `validateApiKey` must pass the request object.
+The IP address is extracted from `request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? request.ip` and written to `AiCommandLog.ipAddress`. Field already exists in schema — just needs to be populated. All existing callers of `validateApiKey` must pass the request object: `app/api/ai/analyze/route.ts` and `app/api/ai/command/route.ts`.
 
 #### `app/api/portal/login/route.ts` — brute-force protection
 `loginLimit` is applied in `middleware.ts` (Sub-project 3) for all requests to `/api/portal/login`. No additional rate-limit call is needed inside the route handler itself — the middleware handles it centrally. Sub-project 5's only change to this file is confirming the existing generic error message is in place (no enumeration risk). No new code is added to the route handler.
@@ -363,6 +363,7 @@ The IP address is extracted from `request.headers.get('x-forwarded-for')?.split(
 | Modify | `app/api/mock-reso/Property/[ListingKey]/route.ts` |
 | Modify | `app/api/ai/analyze/route.ts` |
 | Modify | `lib/auth.ts` |
+| Modify | `app/api/ai/command/route.ts` |
 
 ---
 
