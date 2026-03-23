@@ -114,26 +114,74 @@ import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
 
 ---
 
-### Task 4: Public listings browse page — add disclaimer
+### Task 4: Public listings browse page — add brokerage attribution to cards and disclaimer
 
 **Files:**
+- Modify `services/search/types.ts`
+- Modify `types/real-estate.ts`
+- Modify `services/search/engine.ts`
+- Modify `components/real-estate/PropertyCard.tsx`
 - Modify `app/(public)/listings/page.tsx`
 
-- [ ] Read `app/(public)/listings/page.tsx` to locate the exact structure
-- [ ] Add import at the top of the file (after existing imports):
+- [ ] In `services/search/types.ts`, add two optional fields to `SearchResult` (after the `listingType` field):
+
+```typescript
+  listAgentFullName?: string | null
+  listOfficeName?: string | null
+```
+
+- [ ] In `types/real-estate.ts`, add the same two fields to `PropertySummary` (after the `listedAt` field):
+
+```typescript
+  listAgentFullName?: string | null
+  listOfficeName?: string | null
+```
+
+- [ ] In `services/search/engine.ts`, in the `resoResults` mapping (the `.map(p => ({...}))` block around line 58), add these fields after `longitude`:
+
+```typescript
+      listAgentFullName: p.listAgentFullName ?? null,
+      listOfficeName:    p.listOfficeName ?? null,
+```
+
+- [ ] Read `components/real-estate/PropertyCard.tsx` to locate the stats row (beds/baths/sqft area)
+- [ ] Add import at the top of `components/real-estate/PropertyCard.tsx` (after existing imports):
+
+```tsx
+import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
+```
+
+- [ ] In `PropertyCard.tsx`, add `<BrokerageAttribution>` immediately after the stats row div (the div containing beds/baths/sqft):
+
+```tsx
+<BrokerageAttribution
+  listAgentFullName={property.listAgentFullName}
+  listOfficeName={property.listOfficeName}
+/>
+```
+
+- [ ] Read `app/(public)/listings/page.tsx` to locate the structure and the mapping from search results to `PropertySummary`
+- [ ] In `app/(public)/listings/page.tsx`, add import (after existing imports):
 
 ```tsx
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 ```
 
-- [ ] Locate the outer `<div className="pt-20">` wrapper. Inside it, after the closing `</Container>` of `<Container className="py-8">` (the results container), add:
+- [ ] In the properties mapping in `app/(public)/listings/page.tsx`, add `listAgentFullName` and `listOfficeName` to each mapped object (alongside existing fields):
+
+```tsx
+listAgentFullName: r.listAgentFullName ?? null,
+listOfficeName:    r.listOfficeName ?? null,
+```
+
+- [ ] In `app/(public)/listings/page.tsx`, locate the outer `<div className="pt-20">` wrapper. Inside it, after the closing `</Container>` of `<Container className="py-8">` (the results container), add:
 
 ```tsx
 <MlsDisclaimer variant="idx" />
 ```
 
 - [ ] Run TypeScript check: `cd C:/Users/miket/Documents/realestateweb && npx tsc --noEmit`
-- [ ] Commit: `git add "app/(public)/listings/page.tsx" && git commit -m "feat(compliance): add MLS disclaimer to public listings browse page"`
+- [ ] Commit: `git add services/search/types.ts types/real-estate.ts services/search/engine.ts components/real-estate/PropertyCard.tsx "app/(public)/listings/page.tsx" && git commit -m "feat(compliance): add brokerage attribution to public browse listing cards and MLS disclaimer"`
 
 ---
 
@@ -229,6 +277,8 @@ const listings = await prisma.listing.findMany({
 
 ```typescript
 import { prisma } from './prisma'
+
+export class MlsDataError extends Error {}
 
 export async function isMlsListing(listingId: string): Promise<boolean> {
   const count = await prisma.resoProperty.count({
@@ -587,6 +637,7 @@ export async function purgeMlsData(): Promise<{ deleted: Record<string, number> 
 ```typescript
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import {
   purgeOldBehaviorEvents,
   purgeOldSearchLogs,
@@ -633,6 +684,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Confirmation required: { "confirm": "TERMINATE_MLS_DATA" }' }, { status: 400 })
     }
     const result = await purgeMlsData()
+    await prisma.activity.create({
+      data: {
+        type:    'note',
+        subject: 'MLS Data Termination',
+        body:    `Full MLS data purge executed. Deleted: ${JSON.stringify(result.deleted)}`,
+      },
+    })
     return NextResponse.json(result)
   }
 
@@ -794,33 +852,61 @@ export async function GET(request: Request) {
 
 ---
 
-### Task 19: Update lib/auth.ts and app/api/ai/command/route.ts — forward-compat request parameter
+### Task 19: Update lib/auth.ts and app/api/ai/command/route.ts — IP-logging request parameter
 
 **Files:**
 - Modify `lib/auth.ts`
 - Modify `app/api/ai/command/route.ts`
 
-- [ ] Read `lib/auth.ts` to locate the `validateApiKey` function signature
-- [ ] Update the `validateApiKey` function signature in `lib/auth.ts` to accept an optional `request` parameter for forward-compatibility. Change the signature from:
+- [ ] In `lib/auth.ts`, add the `NextRequest` import at the top (after existing imports):
 
 ```typescript
-export async function validateApiKey(key: string): Promise<User | null>
+import type { NextRequest } from 'next/server'
 ```
 
-to:
+- [ ] In `lib/auth.ts`, replace the entire `validateApiKey` function with:
 
 ```typescript
-export async function validateApiKey(key: string, request?: { headers: { get(name: string): string | null } }): Promise<User | null>
+export async function validateApiKey(authHeader: string | null, request: NextRequest) {
+  if (!authHeader?.startsWith('Bearer ')) return null
+  const key = authHeader.slice(7)
+  const prefix = key.slice(0, 8)
+  const apiKey = await prisma.apiKey.findFirst({
+    where: { prefix },
+    include: { user: { select: { id: true, role: true } } },
+  })
+  if (!apiKey) return null
+  const valid = await bcrypt.compare(key, apiKey.keyHash)
+  if (!valid) return null
+  await prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
+  return apiKey
+}
 ```
 
-The body of the function remains unchanged. The `request` parameter is accepted for forward-compatibility — IP is already captured directly in `command/route.ts` and passed to `dispatchCommand`. No behavioral change.
+Note: The function now takes the full `Authorization` header string (e.g. `"Bearer abc123"`) instead of the pre-extracted key. It returns the `apiKey` record (which includes `.user`) instead of just the user, matching the spec's `ApiKey | null` return type.
 
-- [ ] Read `app/api/ai/command/route.ts` to locate the `validateApiKey` call (known: `const user = await validateApiKey(apiKey)` where `apiKey = authHeader.slice(7)`)
-- [ ] Update the `validateApiKey` call in `app/api/ai/command/route.ts` to pass `request` as the second argument:
+- [ ] In `app/api/ai/command/route.ts`, add `NextRequest` import: change `import { NextResponse } from 'next/server'` to:
 
 ```typescript
-const user = await validateApiKey(apiKey, request)
+import { NextResponse, NextRequest } from 'next/server'
+```
+
+- [ ] In `app/api/ai/command/route.ts`, change the handler signature from `(request: Request)` to `(request: NextRequest)`
+
+- [ ] In `app/api/ai/command/route.ts`, replace:
+
+```typescript
+  const apiKey = authHeader.slice(7)
+  const user = await validateApiKey(apiKey)
+  if (!user) return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+```
+
+with:
+
+```typescript
+  const apiKeyRecord = await validateApiKey(authHeader, request)
+  if (!apiKeyRecord) return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
 ```
 
 - [ ] Run TypeScript check: `cd C:/Users/miket/Documents/realestateweb && npx tsc --noEmit`
-- [ ] Commit: `git add lib/auth.ts app/api/ai/command/route.ts && git commit -m "feat(compliance): add forward-compat request param to validateApiKey for IP logging"`
+- [ ] Commit: `git add lib/auth.ts app/api/ai/command/route.ts && git commit -m "feat(compliance): update validateApiKey to accept full auth header and NextRequest for IP logging"`
