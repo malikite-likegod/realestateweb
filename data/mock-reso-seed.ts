@@ -97,17 +97,17 @@ export const MOCK_RESO_LISTINGS: ResoPropertySeed[] = [
 ]
 
 export const MOCK_RESO_MEMBERS = [
-  { MemberKey: 'AGT-001', MemberFullName: 'Sarah Mitchell', MemberEmail: 'sarah@royallepage.ca', OfficeKey: 'OFF-001' },
-  { MemberKey: 'AGT-002', MemberFullName: 'James Okafor',   MemberEmail: 'james@remax.ca',       OfficeKey: 'OFF-002' },
-  { MemberKey: 'AGT-003', MemberFullName: 'Priya Sharma',   MemberEmail: 'priya@sothebys.ca',    OfficeKey: 'OFF-003' },
-  { MemberKey: 'AGT-004', MemberFullName: 'Marcus Chen',    MemberEmail: 'marcus@kw.ca',         OfficeKey: 'OFF-004' },
-  { MemberKey: 'AGT-005', MemberFullName: 'Linda Kowalski', MemberEmail: 'linda@c21.ca',         OfficeKey: 'OFF-005' },
+  { MemberKey: 'AGT-001', MemberFullName: 'Sarah Mitchell', MemberEmail: 'sarah@royallepage.ca', MemberMobilePhone: '416-555-0101', MemberStatus: 'Active', OfficeKey: 'OFF-001', OfficeName: 'Royal LePage Urban Realty',      ModificationTimestamp: '2024-01-15T10:00:00Z', PhotosChangeTimestamp: '2024-01-15T10:00:00Z' },
+  { MemberKey: 'AGT-002', MemberFullName: 'James Okafor',   MemberEmail: 'james@remax.ca',       MemberMobilePhone: '416-555-0102', MemberStatus: 'Active', OfficeKey: 'OFF-002', OfficeName: 'RE/MAX Hallmark Realty',         ModificationTimestamp: '2024-01-16T10:00:00Z', PhotosChangeTimestamp: '2024-01-16T10:00:00Z' },
+  { MemberKey: 'AGT-003', MemberFullName: 'Priya Sharma',   MemberEmail: 'priya@sothebys.ca',    MemberMobilePhone: '416-555-0103', MemberStatus: 'Active', OfficeKey: 'OFF-003', OfficeName: "Sotheby's International Realty", ModificationTimestamp: '2024-01-17T10:00:00Z', PhotosChangeTimestamp: '2024-01-17T10:00:00Z' },
+  { MemberKey: 'AGT-004', MemberFullName: 'Marcus Chen',    MemberEmail: 'marcus@kw.ca',         MemberMobilePhone: '416-555-0104', MemberStatus: 'Active', OfficeKey: 'OFF-004', OfficeName: 'Keller Williams Referred Urban', ModificationTimestamp: '2024-01-18T10:00:00Z', PhotosChangeTimestamp: '2024-01-18T10:00:00Z' },
+  { MemberKey: 'AGT-005', MemberFullName: 'Linda Kowalski', MemberEmail: 'linda@c21.ca',         MemberMobilePhone: '416-555-0105', MemberStatus: 'Active', OfficeKey: 'OFF-005', OfficeName: 'Century 21 Leading Edge',        ModificationTimestamp: '2024-01-19T10:00:00Z', PhotosChangeTimestamp: '2024-01-19T10:00:00Z' },
 ]
 
 export const MOCK_RESO_OFFICES = [
-  { OfficeKey: 'OFF-001', OfficeName: 'Royal LePage Urban Realty',      OfficeEmail: 'info@royallepage.ca' },
-  { OfficeKey: 'OFF-002', OfficeName: 'RE/MAX Hallmark Realty',         OfficeEmail: 'info@remax.ca'       },
-  { OfficeKey: 'OFF-003', OfficeName: "Sotheby's International Realty", OfficeEmail: 'info@sothebys.ca'    },
-  { OfficeKey: 'OFF-004', OfficeName: 'Keller Williams Referred Urban', OfficeEmail: 'info@kw.ca'          },
-  { OfficeKey: 'OFF-005', OfficeName: 'Century 21 Leading Edge',        OfficeEmail: 'info@c21.ca'         },
+  { OfficeKey: 'OFF-001', OfficeName: 'Royal LePage Urban Realty',      OfficeEmail: 'info@royallepage.ca', OfficePhone: '416-555-1001', ModificationTimestamp: '2024-01-10T10:00:00Z', PhotosChangeTimestamp: '2024-01-10T10:00:00Z' },
+  { OfficeKey: 'OFF-002', OfficeName: 'RE/MAX Hallmark Realty',         OfficeEmail: 'info@remax.ca',       OfficePhone: '416-555-1002', ModificationTimestamp: '2024-01-11T10:00:00Z', PhotosChangeTimestamp: '2024-01-11T10:00:00Z' },
+  { OfficeKey: 'OFF-003', OfficeName: "Sotheby's International Realty", OfficeEmail: 'info@sothebys.ca',    OfficePhone: '416-555-1003', ModificationTimestamp: '2024-01-12T10:00:00Z', PhotosChangeTimestamp: '2024-01-12T10:00:00Z' },
+  { OfficeKey: 'OFF-004', OfficeName: 'Keller Williams Referred Urban', OfficeEmail: 'info@kw.ca',          OfficePhone: '416-555-1004', ModificationTimestamp: '2024-01-13T10:00:00Z', PhotosChangeTimestamp: '2024-01-13T10:00:00Z' },
+  { OfficeKey: 'OFF-005', OfficeName: 'Century 21 Leading Edge',        OfficeEmail: 'info@c21.ca',         OfficePhone: '416-555-1005', ModificationTimestamp: '2024-01-14T10:00:00Z', PhotosChangeTimestamp: '2024-01-14T10:00:00Z' },
 ]

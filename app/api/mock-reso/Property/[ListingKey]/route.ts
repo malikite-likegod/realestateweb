@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { validateMockResoToken } from '@/lib/mock-reso-auth'
+import { validateMockToken } from '@/lib/mock-ampre-auth'
 import { MOCK_RESO_LISTINGS } from '@/data/mock-reso-seed'
 
 interface Props { params: Promise<{ ListingKey: string }> }
 
 export async function GET(request: Request, { params }: Props) {
-  if (!validateMockResoToken(request)) {
+  if (!validateMockToken(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const { ListingKey } = await params
