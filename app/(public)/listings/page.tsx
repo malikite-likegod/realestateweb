@@ -10,6 +10,7 @@ import { PROPERTY_TYPES, LISTING_TYPES } from '@/lib/constants'
 import { Map, List, SlidersHorizontal } from 'lucide-react'
 import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
+import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 
 function ListingsContent() {
   const searchParams = useSearchParams()
@@ -60,6 +61,8 @@ function ListingsContent() {
     latitude: r.latitude,
     longitude: r.longitude,
     listedAt: null,
+    listAgentFullName: r.listAgentFullName ?? null,
+    listOfficeName:    r.listOfficeName ?? null,
   }))
 
   return (
@@ -113,6 +116,7 @@ function ListingsContent() {
           <ListingMap markers={properties.filter(p => p.latitude).map(p => ({ lat: p.latitude!, lng: p.longitude!, title: p.title, price: p.price }))} height="600px" />
         )}
       </Container>
+      <MlsDisclaimer variant="idx" />
     </div>
   )
 }

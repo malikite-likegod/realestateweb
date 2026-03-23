@@ -7,6 +7,7 @@ import { Bed, Bath, Square, MapPin, Heart } from 'lucide-react'
 import { cn, formatPrice } from '@/lib/utils'
 import { Badge } from '@/components/ui'
 import type { PropertySummary } from '@/types'
+import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
 
 interface PropertyCardProps {
   property: PropertySummary
@@ -73,6 +74,10 @@ export function PropertyCard({ property, featured = false, className }: Property
               <span className="flex items-center gap-1"><Square size={13} /> {property.sqft.toLocaleString()} sqft</span>
             )}
           </div>
+          <BrokerageAttribution
+            listAgentFullName={property.listAgentFullName}
+            listOfficeName={property.listOfficeName}
+          />
         </div>
       </Link>
     </motion.div>

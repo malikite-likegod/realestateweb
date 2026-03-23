@@ -71,6 +71,8 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       images:       p.media ? (JSON.parse(p.media) as { url: string }[]).map(m => m.url) : [],
       latitude:     p.latitude,
       longitude:    p.longitude,
+      listAgentFullName: p.listAgentFullName ?? null,
+      listOfficeName:    p.listOfficeName ?? null,
     }))
 
     results = [...results, ...resoResults]

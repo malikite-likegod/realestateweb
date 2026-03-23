@@ -36,6 +36,8 @@ export type SearchResult = {
   city: string | null
   propertyType: string | null
   listingType: string
+  listAgentFullName?: string | null
+  listOfficeName?: string | null
   images: string[]
   latitude: number | null
   longitude: number | null

@@ -40,6 +40,8 @@ export type PropertySummary = {
   latitude: number | null
   longitude: number | null
   listedAt: Date | null
+  listAgentFullName?: string | null
+  listOfficeName?: string | null
 }
 
 export type IdxPropertySummary = {
