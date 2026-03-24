@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { CheckCircle, Settings } from 'lucide-react'
 
 export default function SetupPage() {
@@ -60,12 +61,12 @@ export default function SetupPage() {
           </div>
           <h1 className="font-serif text-2xl font-bold text-white mb-2">Setup Complete</h1>
           <p className="text-charcoal-400 text-sm mb-6">Your admin account has been created.</p>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center justify-center rounded-xl bg-gold-500 hover:bg-gold-400 text-charcoal-950 font-semibold text-sm px-6 py-2.5 transition-colors"
           >
             Go to Homepage
-          </a>
+          </Link>
         </div>
       </div>
     )
