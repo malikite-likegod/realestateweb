@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build && prisma db push",
-    "start": "next start",
+    "start": "next start -p 3000",
     "lint": "next lint",
     "setup": "tsx scripts/setup.ts",
     "db:migrate": "prisma migrate dev",
