@@ -19,15 +19,19 @@ export default async function CommunitiesPage() {
 
   // Fetch listing counts in parallel
   const counts = await Promise.all(
-    communities.map(c =>
-      prisma.property.count({
+    communities.map(c => {
+      // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
+      const cityFilter: Record<string, unknown> = isMySQL
+        ? { contains: c.city, mode: 'insensitive' }
+        : { contains: c.city }
+      return prisma.property.count({
         where: {
-          city:     isMySQL ? { contains: c.city, mode: 'insensitive' } : { contains: c.city },
+          city:     cityFilter as { contains: string },
           status:   'active',
           listings: { some: { publishedAt: { not: null } } },
         },
       })
-    )
+    })
   )
 
   // CommunityGrid expects { name, slug, description, image, listingCount }

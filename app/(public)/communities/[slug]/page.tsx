@@ -26,9 +26,14 @@ export default async function CommunityDetailPage({ params }: Props) {
   // See lib/property-service.ts for the authoritative pattern.
   const isMySQL = process.env.DATABASE_URL?.includes('mysql')
 
+  // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
+  const cityFilter: Record<string, unknown> = isMySQL
+    ? { contains: community.city, mode: 'insensitive' }
+    : { contains: community.city }
+
   const properties = await prisma.property.findMany({
     where: {
-      city:     isMySQL ? { contains: community.city, mode: 'insensitive' } : { contains: community.city },
+      city:     cityFilter as { contains: string },
       status:   'active',
       listings: { some: { publishedAt: { not: null } } },
     },
