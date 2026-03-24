@@ -18,6 +18,7 @@ export async function register() {
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
 
   const { processPendingJobs } = await import('./lib/automation/job-queue')
+  const { prisma } = await import('./lib/prisma')
 
   // Guard against multiple registrations in dev (hot reload can call register() more than once)
   const key = Symbol.for('automation_runner_started')
@@ -33,8 +34,19 @@ export async function register() {
       if (result.processed > 0 || result.failed > 0) {
         console.log(`[automation] Processed ${result.processed} jobs, ${result.failed} failed, ${result.skipped} skipped`)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[automation] Job processing error:', err)
+      // PrismaClientRustPanicError is non-recoverable — reconnect the engine
+      if (err instanceof Error && err.constructor.name === 'PrismaClientRustPanicError') {
+        console.log('[automation] Prisma engine panicked — reconnecting...')
+        try {
+          await prisma.$disconnect()
+          await prisma.$connect()
+          console.log('[automation] Prisma reconnected successfully')
+        } catch (reconnectErr) {
+          console.error('[automation] Reconnect failed:', reconnectErr)
+        }
+      }
     }
   }, intervalMs)
 }
