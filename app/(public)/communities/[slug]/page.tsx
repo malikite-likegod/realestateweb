@@ -1,41 +1,88 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { Container, Section, ContentBlock, HeroSection } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
+import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { LeadCaptureForm } from '@/components/forms'
+import { prisma } from '@/lib/prisma'
+import type { PropertySummary } from '@/types/real-estate'
 
 interface Props { params: Promise<{ slug: string }> }
 
-const communities: Record<string, { name: string; description: string; image: string; longDesc: string }> = {
-  'forest-hill': { name: 'Forest Hill', image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80', description: 'Prestige and privacy in Toronto\'s most coveted enclave.', longDesc: 'Forest Hill is widely regarded as one of Toronto\'s most exclusive neighbourhoods. Known for its grand estates, lush parks, and top-tier schools, Forest Hill offers a lifestyle of unparalleled luxury and community.' },
-  'rosedale': { name: 'Rosedale', image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1920&q=80', description: 'Historic elegance meets modern luxury in Toronto\'s ravine country.', longDesc: 'Rosedale is one of Canada\'s most prestigious neighbourhoods, characterized by winding tree-lined streets, ravine lots, and magnificent Victorian and Edwardian homes.' },
-  'yorkville': { name: 'Yorkville', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1920&q=80', description: 'Toronto\'s most glamorous urban neighbourhood.', longDesc: 'Yorkville is synonymous with luxury and sophistication. Home to world-class boutiques, art galleries, and Michelin-calibre restaurants, it attracts discerning buyers seeking the finest urban lifestyle.' },
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const community = communities[slug]
-  return { title: community?.name ?? slug, description: community?.description }
+  const community = await prisma.community.findUnique({ where: { slug } })
+  if (!community) return { title: slug }
+  return { title: community.name, description: community.description ?? undefined }
 }
 
 export default async function CommunityDetailPage({ params }: Props) {
   const { slug } = await params
-  const community = communities[slug] ?? { name: slug, image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1920&q=80', description: '', longDesc: '' }
+
+  const community = await prisma.community.findUnique({ where: { slug } })
+  if (!community) notFound()
+
+  // SQLite does not support mode: 'insensitive' on equals.
+  // See lib/property-service.ts for the authoritative pattern.
+  const isMySQL = process.env.DATABASE_URL?.includes('mysql')
+
+  const properties = await prisma.property.findMany({
+    where: {
+      city:     isMySQL ? { contains: community.city, mode: 'insensitive' } : { contains: community.city },
+      status:   'active',
+      listings: { some: { publishedAt: { not: null } } },
+    },
+    orderBy: { listedAt: 'desc' },
+  })
+
+  // Map to PropertySummary — Property.images is a JSON string
+  const propertySummaries: PropertySummary[] = properties.map(p => ({
+    id:           p.id,
+    title:        p.title,
+    price:        p.price,
+    bedrooms:     p.bedrooms,
+    bathrooms:    p.bathrooms,
+    sqft:         p.sqft,
+    address:      p.address,
+    city:         p.city,
+    propertyType: p.propertyType,
+    listingType:  p.listingType,
+    status:       p.status,
+    images:       JSON.parse(p.images ?? '[]') as string[],
+    latitude:     p.latitude,
+    longitude:    p.longitude,
+    listedAt:     p.listedAt,
+  }))
 
   return (
     <div className="pt-20">
-      <HeroSection title={community.name} subtitle={community.description} backgroundImage={community.image} fullHeight={false} />
+      <HeroSection
+        title={community.name}
+        subtitle={community.description ?? ''}
+        backgroundImage={community.imageUrl ?? ''}
+        fullHeight={false}
+      />
       <Section>
         <Container>
-          <ContentBlock title="About the Neighbourhood" body={community.longDesc} />
+          <ContentBlock
+            title="About the Neighbourhood"
+            body={community.description ?? ''}
+          />
           <div className="mt-16">
             <h2 className="font-serif text-3xl font-bold text-charcoal-900 mb-8">Available Properties</h2>
-            <PropertyGrid properties={[]} loading={false} />
+            <PropertyGrid properties={propertySummaries} loading={false} />
           </div>
+          <MlsDisclaimer variant="idx" />
         </Container>
       </Section>
       <Section background="charcoal">
         <Container size="sm">
-          <ContentBlock eyebrow="Interested?" title={`Find Your Home in ${community.name}`} centered light />
+          <ContentBlock
+            eyebrow="Interested?"
+            title={`Find Your Home in ${community.name}`}
+            centered
+            light
+          />
           <div className="mt-10 bg-white rounded-3xl p-8">
             <LeadCaptureForm title="" source={`community_${slug}`} />
           </div>
