@@ -16,17 +16,15 @@ export default async function CommunitiesManagerPage() {
     orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
   })
 
-  // SQLite does not support mode: 'insensitive' on equals — use the isMySQL pattern
-  // from lib/property-service.ts. MySQL needs it; SQLite's = is case-sensitive but
-  // cities should be stored consistently through the admin UI.
-  const isMySQL = process.env.DATABASE_URL?.includes('mysql')
+  // SQLite does not support mode: 'insensitive'; PostgreSQL requires it.
+  const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
 
   // Fetch listing counts in parallel
   const counts = await Promise.all(
     communities.map(c =>
       prisma.property.count({
         where: {
-          city:     (isMySQL ? { contains: c.city, mode: 'insensitive' } : { contains: c.city }) as { contains: string },
+          city:     (isRelationalDB ? { contains: c.city, mode: 'insensitive' } : { contains: c.city }) as { contains: string },
           status:   'active',
           listings: { some: { publishedAt: { not: null } } },
         },

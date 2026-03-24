@@ -35,10 +35,9 @@ function buildWhere(filters: PropertyFilters) {
     standardStatus: filters.status ?? 'Active',
   }
   if (filters.city) {
-    // SQLite: contains is already case-insensitive by default.
-    // MySQL: requires mode: 'insensitive' for case-insensitive contains.
-    const isMySQL = process.env.DATABASE_URL?.includes('mysql')
-    where.city = isMySQL
+    // SQLite does not support mode: 'insensitive'; PostgreSQL/MySQL require it.
+    const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
+    where.city = isRelationalDB
       ? { contains: filters.city, mode: 'insensitive' }
       : { contains: filters.city }
   }

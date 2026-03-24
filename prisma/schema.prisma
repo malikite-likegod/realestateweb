@@ -1,12 +1,13 @@
-// Prisma schema — dual SQLite (dev) / MySQL (prod)
+// Prisma schema — dual SQLite (dev) / PostgreSQL (prod)
 // Switch via DATABASE_URL + provider env var
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

@@ -18,15 +18,14 @@ export default async function CommunitiesPage() {
       orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     })
 
-    // SQLite does not support mode: 'insensitive' on equals.
-    // See lib/property-service.ts for the authoritative pattern.
-    const isMySQL = process.env.DATABASE_URL?.includes('mysql')
+    // SQLite does not support mode: 'insensitive'; PostgreSQL requires it.
+    const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
 
     // Fetch listing counts in parallel
     const counts = await Promise.all(
       communities.map(c => {
         // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
-        const cityFilter: Record<string, unknown> = isMySQL
+        const cityFilter: Record<string, unknown> = isRelationalDB
           ? { contains: c.city, mode: 'insensitive' }
           : { contains: c.city }
         return prisma.property.count({

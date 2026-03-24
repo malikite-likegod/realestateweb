@@ -2,6 +2,7 @@ import type { NextConfig } from 'next'
 import path from 'path'
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   // nodemailer and Node.js built-ins used in server-only modules — exclude from webpack bundling.
   // Listed in both serverExternalPackages (for server components/routes) and webpack externals
   // (for instrumentation.ts which has its own bundle context).

@@ -22,12 +22,11 @@ export default async function CommunityDetailPage({ params }: Props) {
   const community = await prisma.community.findUnique({ where: { slug } })
   if (!community) notFound()
 
-  // SQLite does not support mode: 'insensitive' on equals.
-  // See lib/property-service.ts for the authoritative pattern.
-  const isMySQL = process.env.DATABASE_URL?.includes('mysql')
+  // SQLite does not support mode: 'insensitive'; PostgreSQL requires it.
+  const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
 
   // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
-  const cityFilter: Record<string, unknown> = isMySQL
+  const cityFilter: Record<string, unknown> = isRelationalDB
     ? { contains: community.city, mode: 'insensitive' }
     : { contains: community.city }
 
