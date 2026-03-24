@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { z } from 'zod'
 import { validateApiKey } from '@/lib/auth'
 import { dispatchCommand } from '@/services/ai/commands'
@@ -8,16 +8,15 @@ const commandSchema = z.object({
   data: z.record(z.unknown()),
 })
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   // API key auth
   const authHeader = request.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Missing API key' }, { status: 401 })
   }
 
-  const apiKey = authHeader.slice(7)
-  const user = await validateApiKey(apiKey)
-  if (!user) return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+  const apiKeyRecord = await validateApiKey(authHeader, request)
+  if (!apiKeyRecord) return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
 
   try {
     const body = await request.json()

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
+import type { NextRequest } from 'next/server'
 import { signJwt, verifyJwt, verifyContactJwt, verifyPendingContactJwt } from './jwt'
 import { prisma } from './prisma'
 
@@ -50,8 +51,9 @@ export async function requireSession() {
   return session
 }
 
-export async function validateApiKey(key: string) {
-  // We store a hash; compare prefix first for performance
+export async function validateApiKey(authHeader: string | null, request: NextRequest) {
+  if (!authHeader?.startsWith('Bearer ')) return null
+  const key = authHeader.slice(7)
   const prefix = key.slice(0, 8)
   const apiKey = await prisma.apiKey.findFirst({
     where: { prefix },
@@ -60,10 +62,8 @@ export async function validateApiKey(key: string) {
   if (!apiKey) return null
   const valid = await bcrypt.compare(key, apiKey.keyHash)
   if (!valid) return null
-
-  // update lastUsedAt
   await prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
-  return apiKey.user
+  return apiKey
 }
 
 export async function getContactSession() {
