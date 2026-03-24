@@ -21,7 +21,6 @@ export async function PUT(request: Request, { params }: Props) {
 
   const { id } = await params
 
-  // Verify the record exists before updating
   const existing = await prisma.community.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -32,10 +31,11 @@ export async function PUT(request: Request, { params }: Props) {
       description?: string | null
       imageUrl?: string | null
       city: string
+      municipality?: string | null
+      neighbourhood?: string | null
       displayOrder?: number
     }
 
-    // Check slug uniqueness, excluding this record
     const slugConflict = await prisma.community.findFirst({
       where: { slug: body.slug, NOT: { id } },
     })
@@ -49,6 +49,8 @@ export async function PUT(request: Request, { params }: Props) {
         description:  body.description  ?? null,
         imageUrl:     body.imageUrl     ?? null,
         city:         body.city,
+        municipality:  body.municipality  ?? null,
+        neighbourhood: body.neighbourhood ?? null,
         displayOrder: body.displayOrder ?? 0,
       },
     })
