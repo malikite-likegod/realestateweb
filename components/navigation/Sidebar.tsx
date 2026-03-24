@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, Briefcase, CheckSquare, Activity,
-  Home, FileText, BarChart2, Zap, Settings, LogOut, Building2, MessageCircle, CalendarDays, TrendingUp, Layout, FolderOpen, BookOpen, Mail
+  Home, FileText, BarChart2, Zap, Settings, LogOut, Building2, MessageCircle, CalendarDays, TrendingUp, Layout, FolderOpen, BookOpen, Mail, MapPin
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/constants'
@@ -21,6 +21,7 @@ const navItems = [
   { label: 'Communications', href: '/admin/communications', icon: MessageCircle },
   { label: 'Activities',     href: '/admin/activities',     icon: Activity },
   { label: 'Listings',    href: '/admin/listings',    icon: Building2 },
+  { label: 'Communities', href: '/admin/communities', icon: MapPin    },
   { label: 'Blog',           href: '/admin/blog',           icon: FileText },
   { label: 'Market Reports', href: '/admin/market-reports', icon: TrendingUp },
   { label: 'Landing Pages',  href: '/admin/landing-pages',  icon: Layout },
