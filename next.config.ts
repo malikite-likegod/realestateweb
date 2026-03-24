@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import path from 'path'
 
 const nextConfig: NextConfig = {
   // nodemailer and Node.js built-ins used in server-only modules — exclude from webpack bundling.
@@ -6,6 +7,11 @@ const nextConfig: NextConfig = {
   // (for instrumentation.ts which has its own bundle context).
   serverExternalPackages: ['nodemailer'],
   webpack: (config, { isServer }) => {
+    // Explicitly set @ alias so it resolves reliably on all deployment environments
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+    }
     if (isServer) {
       const existing = Array.isArray(config.externals) ? config.externals : config.externals ? [config.externals] : []
       config.externals = [...existing, 'nodemailer', 'fs', 'fs/promises', 'path', 'crypto']
