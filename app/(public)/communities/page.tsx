@@ -8,40 +8,48 @@ export const metadata: Metadata = {
   description: 'Discover Toronto\'s most prestigious and vibrant neighbourhoods.',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function CommunitiesPage() {
-  const communities = await prisma.community.findMany({
-    orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
-  })
+  let items: { name: string; slug: string; description: string; image: string; listingCount: number }[] = []
 
-  // SQLite does not support mode: 'insensitive' on equals.
-  // See lib/property-service.ts for the authoritative pattern.
-  const isMySQL = process.env.DATABASE_URL?.includes('mysql')
-
-  // Fetch listing counts in parallel
-  const counts = await Promise.all(
-    communities.map(c => {
-      // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
-      const cityFilter: Record<string, unknown> = isMySQL
-        ? { contains: c.city, mode: 'insensitive' }
-        : { contains: c.city }
-      return prisma.property.count({
-        where: {
-          city:     cityFilter as { contains: string },
-          status:   'active',
-          listings: { some: { publishedAt: { not: null } } },
-        },
-      })
+  try {
+    const communities = await prisma.community.findMany({
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     })
-  )
 
-  // CommunityGrid expects { name, slug, description, image, listingCount }
-  const items = communities.map((c, i) => ({
-    name:         c.name,
-    slug:         c.slug,
-    description:  c.description ?? '',
-    image:        c.imageUrl    ?? '',
-    listingCount: counts[i],
-  }))
+    // SQLite does not support mode: 'insensitive' on equals.
+    // See lib/property-service.ts for the authoritative pattern.
+    const isMySQL = process.env.DATABASE_URL?.includes('mysql')
+
+    // Fetch listing counts in parallel
+    const counts = await Promise.all(
+      communities.map(c => {
+        // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
+        const cityFilter: Record<string, unknown> = isMySQL
+          ? { contains: c.city, mode: 'insensitive' }
+          : { contains: c.city }
+        return prisma.property.count({
+          where: {
+            city:     cityFilter as { contains: string },
+            status:   'active',
+            listings: { some: { publishedAt: { not: null } } },
+          },
+        })
+      })
+    )
+
+    // CommunityGrid expects { name, slug, description, image, listingCount }
+    items = communities.map((c, i) => ({
+      name:         c.name,
+      slug:         c.slug,
+      description:  c.description ?? '',
+      image:        c.imageUrl    ?? '',
+      listingCount: counts[i],
+    }))
+  } catch {
+    // DB not ready yet — render empty state
+  }
 
   return (
     <div className="pt-20">

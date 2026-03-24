@@ -15,15 +15,18 @@ import { Home, TrendingUp, Phone, Users, Shield, Clock } from 'lucide-react'
 import Link from 'next/link'
 import type { PropertySummary } from '@/types'
 
-async function getFeaturedProperties(): Promise<PropertySummary[]> {
-  const properties = await prisma.property.findMany({
-    where: { status: 'active', listings: { some: { featured: true } } },
-    orderBy: { createdAt: 'desc' },
-    take: 6,
-    include: { listings: { where: { featured: true }, take: 1 } },
-  })
+export const dynamic = 'force-dynamic'
 
-  return properties.map(p => ({
+async function getFeaturedProperties(): Promise<PropertySummary[]> {
+  try {
+    const properties = await prisma.property.findMany({
+      where: { status: 'active', listings: { some: { featured: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+      include: { listings: { where: { featured: true }, take: 1 } },
+    })
+
+    return properties.map(p => ({
     id: p.id,
     title: p.title,
     price: p.price,
@@ -38,8 +41,11 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
     images: parseJsonSafe<string[]>(p.images, ['/placeholder-property.jpg']),
     latitude: p.latitude,
     longitude: p.longitude,
-    listedAt: p.listedAt,
-  }))
+      listedAt: p.listedAt,
+    }))
+  } catch {
+    return []
+  }
 }
 
 const testimonials = [
