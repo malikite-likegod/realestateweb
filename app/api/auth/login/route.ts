@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { signPendingJwt } from '@/lib/jwt'
 import { sendTransactionalEmail } from '@/lib/communications/email-service'
+import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -13,15 +14,24 @@ const loginSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const ip = extractIp(request)
+  const userAgent = extractUserAgent(request)
+
   try {
     const body = await request.json()
     const { email, password } = loginSchema.parse(body)
 
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    if (!user) {
+      void logAuditEvent({ event: 'login_failure', actor: email, ip, userAgent, meta: { reason: 'unknown_email' } })
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
 
     const valid = await verifyPassword(password, user.passwordHash)
-    if (!valid) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    if (!valid) {
+      void logAuditEvent({ event: 'login_failure', actor: email, userId: user.id, ip, userAgent, meta: { reason: 'invalid_password' } })
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
 
     // 2FA path: if the user has TOTP enabled, send OTP instead of issuing full session
     if (user.totpEnabled) {
@@ -42,8 +52,12 @@ export async function POST(request: Request) {
         })
       } catch (err) {
         console.error('[login/2fa] SMTP error:', err)
+        // SMTP failure: do NOT log 2fa_sent (OTP was never delivered)
         return NextResponse.json({ error: 'Could not send verification email' }, { status: 500 })
       }
+
+      // Log only after successful SMTP delivery
+      void logAuditEvent({ event: '2fa_sent', actor: user.email, userId: user.id, ip, userAgent })
 
       const pendingToken = await signPendingJwt(user.id)
       const res = NextResponse.json({ requires2fa: true })
@@ -57,7 +71,9 @@ export async function POST(request: Request) {
       return res
     }
 
+    // Non-2FA success
     const token = await createSession(user.id)
+    void logAuditEvent({ event: 'login_success', actor: user.email, userId: user.id, ip, userAgent })
 
     const response = NextResponse.json({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
@@ -66,7 +82,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
     return response
