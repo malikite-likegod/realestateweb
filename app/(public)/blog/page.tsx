@@ -10,11 +10,15 @@ export const metadata: Metadata = { title: 'Blog & Market Insights', description
 export const revalidate = 3600 // hourly
 
 async function getPosts() {
-  return prisma.blogPost.findMany({
-    where: { status: 'published' },
-    orderBy: { publishedAt: 'desc' },
-    take: 12,
-  })
+  try {
+    return await prisma.blogPost.findMany({
+      where: { status: 'published' },
+      orderBy: { publishedAt: 'desc' },
+      take: 12,
+    })
+  } catch {
+    return []
+  }
 }
 
 export default async function BlogPage() {
