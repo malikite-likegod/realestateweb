@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { sendTransactionalEmail } from '@/lib/communications/email-service'
+import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
 export async function POST(request: Request) {
   let body: { email?: string }
@@ -54,6 +55,14 @@ export async function POST(request: Request) {
     // Log but do not surface — would confirm email existence to caller
     console.error('[forgot-password] SMTP error:', err)
   }
+
+  void logAuditEvent({
+    event: 'password_reset_request',
+    actor: email,
+    userId: user.id,
+    ip: extractIp(request),
+    userAgent: extractUserAgent(request),
+  })
 
   return NextResponse.json({ ok: true })
 }

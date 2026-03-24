@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
 export async function POST(request: Request) {
   const session = await getSession()
@@ -35,6 +36,14 @@ export async function POST(request: Request) {
   await prisma.user.update({
     where: { id: session.id },
     data: { passwordHash: newHash, passwordChangedAt: new Date() },
+  })
+
+  void logAuditEvent({
+    event: 'password_change',
+    actor: user.email,
+    userId: user.id,
+    ip: extractIp(request),
+    userAgent: extractUserAgent(request),
   })
 
   // Clear the auth_token cookie in the response — the server-side passwordChangedAt check

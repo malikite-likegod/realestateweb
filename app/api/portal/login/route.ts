@@ -3,6 +3,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { signContactJwt } from '@/lib/jwt'
+import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
 const schema = z.object({
   email:    z.string().email(),
@@ -10,6 +11,9 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
+  const ip = extractIp(request)
+  const userAgent = extractUserAgent(request)
+
   try {
     const body = await request.json()
     const { email, password } = schema.parse(body)
@@ -19,14 +23,31 @@ export async function POST(request: Request) {
       select: { id: true, firstName: true, passwordHash: true, accountStatus: true, email: true },
     })
 
-    // Generic error prevents account enumeration
+    // Generic client error prevents account enumeration — audit log records specifics
     const INVALID = NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
 
-    if (!contact || !contact.passwordHash) return INVALID
-    if (contact.accountStatus !== 'active') return INVALID
+    if (!contact) {
+      void logAuditEvent({ event: 'portal_login_failure', actor: email, ip, userAgent, meta: { reason: 'unknown_email' } })
+      return INVALID
+    }
+
+    if (!contact.passwordHash) {
+      void logAuditEvent({ event: 'portal_login_failure', actor: email, contactId: contact.id, ip, userAgent, meta: { reason: 'no_password_set' } })
+      return INVALID
+    }
+
+    if (contact.accountStatus !== 'active') {
+      void logAuditEvent({ event: 'portal_login_failure', actor: email, contactId: contact.id, ip, userAgent, meta: { reason: 'account_inactive' } })
+      return INVALID
+    }
 
     const valid = await bcrypt.compare(password, contact.passwordHash)
-    if (!valid) return INVALID
+    if (!valid) {
+      void logAuditEvent({ event: 'portal_login_failure', actor: email, contactId: contact.id, ip, userAgent, meta: { reason: 'invalid_password' } })
+      return INVALID
+    }
+
+    void logAuditEvent({ event: 'portal_login_success', actor: email, contactId: contact.id, ip, userAgent })
 
     const token = await signContactJwt(contact.id, contact.email ?? '')
     const response = NextResponse.json({ firstName: contact.firstName })

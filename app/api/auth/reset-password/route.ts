@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
 export async function POST(request: Request) {
   let body: { token?: string; email?: string; newPassword?: string; confirmPassword?: string }
@@ -50,6 +51,14 @@ export async function POST(request: Request) {
       resetTokenHash: null,
       resetTokenExpiry: null,
     },
+  })
+
+  void logAuditEvent({
+    event: 'password_reset_complete',
+    actor: email,
+    userId: user.id,
+    ip: extractIp(request),
+    userAgent: extractUserAgent(request),
   })
 
   return NextResponse.json({ ok: true })
