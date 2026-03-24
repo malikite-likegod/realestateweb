@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, Briefcase, CheckSquare, Activity,
-  Home, FileText, BarChart2, Zap, Settings, LogOut, Building2, MessageCircle, CalendarDays, TrendingUp, Layout, FolderOpen, BookOpen, Mail, MapPin
+  Home, FileText, BarChart2, Zap, Settings, LogOut, Building2, MessageCircle, CalendarDays, TrendingUp, Layout, FolderOpen, BookOpen, Mail, MapPin, Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/constants'
@@ -29,6 +29,7 @@ const navItems = [
   { label: 'Analytics',   href: '/admin/analytics',   icon: BarChart2 },
   { label: 'Automation',  href: '/admin/automation',  icon: Zap },
   { label: 'Settings',    href: '/admin/settings',    icon: Settings },
+  { label: 'Security',   href: '/admin/security',    icon: Shield },
 ]
 
 interface SidebarProps {
