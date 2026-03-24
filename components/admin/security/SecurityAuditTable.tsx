@@ -29,12 +29,12 @@ const EVENT_BADGE: Record<string, string> = {
   login_success:           'bg-green-100 text-green-800',
   '2fa_success':           'bg-green-100 text-green-800',
   portal_login_success:    'bg-green-100 text-green-800',
-  '2fa_sent':              'bg-blue-100 text-blue-800',
+  '2fa_sent':              'bg-gray-100 text-gray-700',
   logout:                  'bg-gray-100 text-gray-700',
   portal_logout:           'bg-gray-100 text-gray-700',
-  password_reset_request:  'bg-yellow-100 text-yellow-800',
-  password_reset_complete: 'bg-yellow-100 text-yellow-800',
-  password_change:         'bg-yellow-100 text-yellow-800',
+  password_reset_request:  'bg-gray-100 text-gray-700',
+  password_reset_complete: 'bg-gray-100 text-gray-700',
+  password_change:         'bg-gray-100 text-gray-700',
 }
 
 function badgeClass(event: string): string {

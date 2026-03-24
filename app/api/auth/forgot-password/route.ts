@@ -21,7 +21,10 @@ export async function POST(request: Request) {
   const user = await prisma.user.findUnique({ where: { email } })
 
   // Always return ok — never reveal whether the email is registered
-  if (!user) return NextResponse.json({ ok: true })
+  if (!user) {
+    void logAuditEvent({ event: 'password_reset_request', actor: email, ip: extractIp(request), userAgent: extractUserAgent(request) })
+    return NextResponse.json({ ok: true })
+  }
 
   const rawToken = randomBytes(32).toString('hex')
   const tokenHash = await bcrypt.hash(rawToken, 10)
