@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { mockGuard } from '@/lib/mock-guard'
 import { validateMockToken } from '@/lib/mock-ampre-auth'
 import { parseODataFilter, applyFilter } from '@/lib/odata-filter'
 import { MOCK_RESO_OFFICES } from '@/data/mock-reso-seed'
@@ -28,6 +29,7 @@ function applyOrderBy(items: typeof MOCK_RESO_OFFICES, orderby: string): typeof 
 }
 
 export async function GET(request: Request) {
+  const guard = mockGuard(); if (guard) return guard
   if (!validateMockToken(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
