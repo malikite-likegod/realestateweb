@@ -37,6 +37,9 @@
     "recharts": "^2.13.3",
     "sanitize-html": "^2.17.1",
     "tailwind-merge": "^2.5.4",
+    "tailwindcss": "^3.4.14",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -47,12 +50,9 @@
     "@types/react-dom": "^18",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
-    "autoprefixer": "^10.4.20",
     "eslint": "^8",
     "eslint-config-next": "15.0.3",
-    "postcss": "^8.4.47",
     "prisma": "^5.20.0",
-    "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
     "typescript": "^5"
   }
