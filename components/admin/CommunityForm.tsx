@@ -68,6 +68,7 @@ export function CommunityForm({ initial }: Props) {
     fetch('/api/admin/communities/locations')
       .then(r => r.json())
       .then(d => setAreas(d.areas ?? []))
+      .catch(() => {})
   }, [])
 
   // Fetch municipalities when city changes
@@ -87,6 +88,7 @@ export function CommunityForm({ initial }: Props) {
     fetch(`/api/admin/communities/locations?area=${encodeURIComponent(form.city)}`)
       .then(r => r.json())
       .then(d => setMunicipalityOptions(d.municipalities ?? []))
+      .catch(() => {})
       .finally(() => setFetchingMunicipality(false))
   }, [form.city])
 
@@ -110,6 +112,7 @@ export function CommunityForm({ initial }: Props) {
     )
       .then(r => r.json())
       .then(d => setNeighbourhoodOptions(d.neighbourhoods ?? []))
+      .catch(() => {})
       .finally(() => setFetchingNeighbourhood(false))
   }, [form.municipality, form.city])
 
