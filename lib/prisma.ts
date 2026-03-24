@@ -11,7 +11,7 @@ export const prisma =
         // Limit connection pool on shared hosting to prevent engine panics
         ? process.env.DATABASE_URL.includes('?')
           ? process.env.DATABASE_URL
-          : `${process.env.DATABASE_URL}?connection_limit=3&pool_timeout=10`
+          : `${process.env.DATABASE_URL}?connection_limit=1&pool_timeout=10&socket_timeout=10`
         : process.env.DATABASE_URL
       : undefined,
   })

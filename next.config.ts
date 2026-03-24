@@ -27,7 +27,13 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    serverActions: { allowedOrigins: ['localhost:3000'] },
+    serverActions: {
+      allowedOrigins: [
+        'localhost:3000',
+        'michaeltaylorrealty.com',
+        'www.michaeltaylorrealty.com',
+      ],
+    },
   },
 }
 

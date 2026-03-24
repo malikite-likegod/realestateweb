@@ -13,6 +13,9 @@
 export async function register() {
   // Only run in the Node.js runtime (not Edge), and only when the job runner is enabled
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
+  // On shared hosting, the automation runner consumes threads continuously.
+  // It is disabled in production unless explicitly enabled.
+  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_AUTOMATION_RUNNER !== 'true') return
   if (process.env.DISABLE_AUTOMATION_RUNNER === 'true') return
 
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
