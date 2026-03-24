@@ -1081,15 +1081,17 @@ model ContactSavedListing {
 // ─── Communities ──────────────────────────────────────────────────────────────
 
 model Community {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String   @unique
-  description  String?
-  imageUrl     String?
-  city         String
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  imageUrl      String?
+  city          String
+  municipality  String?
+  neighbourhood String?
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("communities")
 }
