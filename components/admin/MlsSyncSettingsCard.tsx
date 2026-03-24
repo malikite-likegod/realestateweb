@@ -49,6 +49,7 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
     try {
       const res  = await fetch('/api/reso/sync', { method: 'POST' })
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Sync failed')
       const r    = data.result
       setSyncMsg(`IDX sync complete — ${r.added} added, ${r.updated} updated, ${r.deleted} deleted`)
     } catch {
