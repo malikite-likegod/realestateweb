@@ -20,8 +20,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export async function generateStaticParams() {
-  const reports = await prisma.marketReport.findMany({ where: { status: 'published' }, select: { slug: true } })
-  return reports.map(r => ({ slug: r.slug }))
+  try {
+    const reports = await prisma.marketReport.findMany({ where: { status: 'published' }, select: { slug: true } })
+    return reports.map(r => ({ slug: r.slug }))
+  } catch {
+    return []
+  }
 }
 
 export const revalidate = 3600
