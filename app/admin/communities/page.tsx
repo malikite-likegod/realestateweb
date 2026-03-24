@@ -26,7 +26,7 @@ export default async function CommunitiesManagerPage() {
     communities.map(c =>
       prisma.property.count({
         where: {
-          city:     isMySQL ? { contains: c.city, mode: 'insensitive' } : { contains: c.city },
+          city:     (isMySQL ? { contains: c.city, mode: 'insensitive' } : { contains: c.city }) as { contains: string },
           status:   'active',
           listings: { some: { publishedAt: { not: null } } },
         },
