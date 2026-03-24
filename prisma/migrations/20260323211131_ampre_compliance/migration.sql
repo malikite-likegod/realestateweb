@@ -25,8 +25,36 @@ CREATE INDEX "reso_sync_logs_syncedAt_idx" ON "reso_sync_logs"("syncedAt");
 PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
 
--- CreateIndex
-CREATE UNIQUE INDEX "reso_members_memberKey_key" ON "reso_members"("memberKey");
+-- CreateTable (reso_members and reso_offices were added via db push; ensure they exist for shadow DB replay)
+CREATE TABLE IF NOT EXISTS "reso_members" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "memberKey" TEXT NOT NULL,
+    "memberFullName" TEXT,
+    "memberEmail" TEXT,
+    "memberMobilePhone" TEXT,
+    "memberStatus" TEXT,
+    "officeKey" TEXT,
+    "officeName" TEXT,
+    "modificationTimestamp" DATETIME,
+    "photosChangeTimestamp" DATETIME,
+    "lastSyncedAt" DATETIME NOT NULL,
+    "rawJson" TEXT
+);
+
+CREATE TABLE IF NOT EXISTS "reso_offices" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "officeKey" TEXT NOT NULL,
+    "officeName" TEXT,
+    "officeEmail" TEXT,
+    "officePhone" TEXT,
+    "modificationTimestamp" DATETIME,
+    "photosChangeTimestamp" DATETIME,
+    "lastSyncedAt" DATETIME NOT NULL,
+    "rawJson" TEXT
+);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "reso_offices_officeKey_key" ON "reso_offices"("officeKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "reso_members_memberKey_key" ON "reso_members"("memberKey");
+
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "reso_offices_officeKey_key" ON "reso_offices"("officeKey");
