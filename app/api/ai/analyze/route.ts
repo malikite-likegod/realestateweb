@@ -1,26 +1,31 @@
 import { NextResponse } from 'next/server'
-import { validateApiKey } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Missing API key' }, { status: 401 })
-  }
-
-  const apiKey = authHeader.slice(7)
-  const user = await validateApiKey(apiKey)
-  if (!user) return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const type = searchParams.get('type') ?? 'overview'
+  const type  = searchParams.get('type') ?? 'overview'
 
   if (type === 'buyer_intent') {
-    const topSearches = await prisma.propertySearchLog.findMany({
-      orderBy: { occurredAt: 'desc' },
-      take: 100,
+    const page  = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)))
+    const [topSearches, total] = await Promise.all([
+      prisma.propertySearchLog.findMany({
+        orderBy: { occurredAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.propertySearchLog.count(),
+    ])
+    return NextResponse.json({
+      data:  topSearches.map(s => ({ query: JSON.parse(s.query), results: s.results, occurredAt: s.occurredAt })),
+      total,
+      page,
+      limit,
     })
-    return NextResponse.json({ data: topSearches.map(s => ({ query: JSON.parse(s.query), results: s.results, occurredAt: s.occurredAt })) })
   }
 
   if (type === 'popular_listings') {
@@ -35,10 +40,10 @@ export async function GET(request: Request) {
 
   if (type === 'lead_scores') {
     const hotLeads = await prisma.contact.findMany({
-      where: { leadScore: { gte: 50 } },
+      where:   { leadScore: { gte: 50 } },
       orderBy: { leadScore: 'desc' },
-      take: 20,
-      select: { id: true, firstName: true, lastName: true, email: true, leadScore: true, source: true },
+      take:    20,
+      select:  { id: true, firstName: true, lastName: true, email: true, leadScore: true, source: true },
     })
     return NextResponse.json({ data: hotLeads })
   }
@@ -50,6 +55,5 @@ export async function GET(request: Request) {
     prisma.property.count({ where: { status: 'active' } }),
     prisma.propertySearchLog.count({ where: { occurredAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
   ])
-
   return NextResponse.json({ data: { contacts, deals, activeListings: listings, searchesThisWeek: searchLogs } })
 }
