@@ -51,7 +51,7 @@ export async function requireSession() {
   return session
 }
 
-export async function validateApiKey(authHeader: string | null, request: NextRequest) {
+export async function validateApiKey(authHeader: string | null, _request: NextRequest) {
   if (!authHeader?.startsWith('Bearer ')) return null
   const key = authHeader.slice(7)
   const prefix = key.slice(0, 8)
