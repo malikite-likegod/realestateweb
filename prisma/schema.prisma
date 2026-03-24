@@ -42,6 +42,7 @@ model User {
   stageHistoryMoves DealStageHistory[] @relation("StageHistoryMover")
   optLogEntries     CommunicationOptLog[]
   savedSearches     SavedSearch[]
+  securityAuditLogs SecurityAuditLog[]
 
   @@map("users")
 }
@@ -121,6 +122,7 @@ model Contact {
   savedSearches     SavedSearch[]
   notifications     Notification[]
   savedListings     ContactSavedListing[]
+  securityAuditLogs SecurityAuditLog[]
 
   @@map("contacts")
 }
@@ -1094,4 +1096,29 @@ model Community {
   updatedAt     DateTime @updatedAt
 
   @@map("communities")
+}
+
+// ─── Security Audit ────────────────────────────────────────────────────────
+
+model SecurityAuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  event     String   // login_success | login_failure | logout | 2fa_sent | 2fa_success | 2fa_failure | password_reset_request | password_reset_complete | password_change | portal_login_success | portal_login_failure | portal_logout
+  actor     String?  // email address attempted (may not resolve to a real user)
+  userId    String?  // FK to User if resolved; null for unknown-email failures
+  contactId String?  // FK to Contact for portal events
+  ip        String?
+  userAgent String?
+  meta      String?  // JSON blob for extra context (e.g. failure reason)
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([contactId])
+  @@index([ip])
+  @@index([actor])
+  @@map("security_audit_log")
 }
