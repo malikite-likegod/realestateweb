@@ -15,8 +15,11 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Cron: skip if interval hasn't elapsed since last idx_property sync
-  if (isCron) {
+  // Cron: skip if interval hasn't elapsed (unless ?force=true is passed)
+  const { searchParams } = new URL(request.url)
+  const force = searchParams.get('force') === 'true'
+
+  if (isCron && !force) {
     const [lastSync, intervalMinutes] = await Promise.all([
       prisma.resoSyncLog.findFirst({
         where:   { syncType: 'idx_property' },
@@ -37,7 +40,6 @@ export async function POST(request: Request) {
     }
   }
 
-  const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') ?? 'idx'
 
   try {
