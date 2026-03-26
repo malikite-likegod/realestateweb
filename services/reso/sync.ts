@@ -57,7 +57,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
     while (true) {
       const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
         $filter:  cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey),
-        $orderby: 'ModificationTimestamp,ListingKey',
+        $orderby: 'ModificationTimestamp asc',
         $top:     BATCH_SIZE,
         $select:  IDX_SELECT,
       })
@@ -186,7 +186,7 @@ export async function syncDlaProperty(): Promise<ResoSyncResult> {
     while (true) {
       const batch = await ampreGet<ResoPropertyRaw>('dla', 'Property', {
         $filter:  cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey),
-        $orderby: 'ModificationTimestamp,ListingKey',
+        $orderby: 'ModificationTimestamp asc',
         $top:     BATCH_SIZE,
         $select:  DLA_SELECT,
       })
@@ -284,7 +284,7 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
     while (true) {
       const batch = await ampreGet<ResoMemberRaw>('vox', 'Member', {
         $filter:  cursorFilter('ModificationTimestamp', 'MemberKey', lastTimestamp, lastKey),
-        $orderby: 'ModificationTimestamp,MemberKey',
+        $orderby: 'ModificationTimestamp asc',
         $top:     BATCH_SIZE,
         $select:  VOX_MEMBER_SELECT,
       })
@@ -369,7 +369,7 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
     while (true) {
       const batch = await ampreGet<ResoOfficeRaw>('vox', 'Office', {
         $filter:  cursorFilter('ModificationTimestamp', 'OfficeKey', lastTimestamp, lastKey),
-        $orderby: 'ModificationTimestamp,OfficeKey',
+        $orderby: 'ModificationTimestamp asc',
         $top:     BATCH_SIZE,
         $select:  VOX_OFFICE_SELECT,
       })
