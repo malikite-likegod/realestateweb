@@ -4,8 +4,8 @@ set -e
 echo "==> Pulling latest code..."
 git pull origin main
 
-echo "==> Building Docker image..."
-docker compose build app
+echo "==> Building Docker images..."
+docker compose -f docker-compose.yml -f docker-compose.migrate.yml build app migrate
 
 echo "==> Running migrations..."
 docker compose -f docker-compose.yml -f docker-compose.migrate.yml run --rm migrate

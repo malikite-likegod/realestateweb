@@ -9,4 +9,4 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    entrypoint: ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
+    entrypoint: ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node node_modules/prisma/build/index.js db seed"]
