@@ -47,7 +47,7 @@ const IDX_SELECT = [
   'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
   'StreetNumber', 'StreetName', 'UnitNumber',
   'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
-  'Media', 'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
+  'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
   'ListingContractDate', 'ModificationTimestamp',
 ].join(',')
 
@@ -100,7 +100,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             latitude:              r.Latitude              ?? null,
             longitude:             r.Longitude             ?? null,
             publicRemarks:         r.PublicRemarks         ?? null,
-            media:                 r.Media ? JSON.stringify(r.Media) : null,
+            media:                 null, // fetched separately from the Media resource
             listAgentKey:          r.ListAgentKey          ?? null,
             listAgentName:         r.ListAgentFullName     ?? null,
             listOfficeKey:         r.ListOfficeKey         ?? null,
