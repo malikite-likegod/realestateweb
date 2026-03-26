@@ -28,11 +28,15 @@ async function fetchOData<T>(
   resource: string,
   params: ODataParams
 ): Promise<Response> {
-  const qs = new URLSearchParams()
-  if (params.$filter)       qs.set('$filter',  params.$filter)
-  if (params.$select)       qs.set('$select',  params.$select)
-  if (params.$top  != null) qs.set('$top',     String(params.$top))
-  if (params.$orderby)      qs.set('$orderby', params.$orderby)
+  // Build query string manually — URLSearchParams encodes spaces as '+' but OData
+  // servers expect standard percent-encoding (%20). Using encodeURIComponent ensures
+  // operators like 'gt', 'lt' and timestamps are not misinterpreted.
+  const parts: string[] = []
+  if (params.$filter)       parts.push(`$filter=${encodeURIComponent(params.$filter)}`)
+  if (params.$select)       parts.push(`$select=${encodeURIComponent(params.$select)}`)
+  if (params.$top  != null) parts.push(`$top=${params.$top}`)
+  if (params.$orderby)      parts.push(`$orderby=${encodeURIComponent(params.$orderby)}`)
+  const qs = parts.join('&')
 
   const url = `${BASE_URL}/${resource}?${qs}`
   return fetch(url, {

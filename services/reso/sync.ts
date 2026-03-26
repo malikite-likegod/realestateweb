@@ -31,6 +31,11 @@ function toODataTs(date: Date): string {
 }
 
 function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey: string): string {
+  // Use mindatetime() for the epoch sentinel — avoids sending a literal 1970 timestamp
+  // which some AMPRE endpoints reject
+  if (lastTs.getTime() === EPOCH.getTime()) {
+    return `${tsField} gt mindatetime()`
+  }
   return `${tsField} gt ${toODataTs(lastTs)}`
 }
 
