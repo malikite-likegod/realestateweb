@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { syncIdxProperty, syncDlaProperty, syncVoxMember, syncVoxOffice } from '@/services/reso/sync'
+import { syncIdxProperty, syncIdxMedia, syncDlaProperty, syncVoxMember, syncVoxOffice } from '@/services/reso/sync'
 import { prisma } from '@/lib/prisma'
 import { getMlsSyncInterval } from '@/lib/site-settings'
 
@@ -49,6 +49,11 @@ export async function POST(request: Request) {
 
   const type = searchParams.get('type') ?? 'idx'
 
+  if (type === 'media') {
+    runInBackground(syncIdxMedia)
+    return NextResponse.json({ success: true, message: 'Media sync started in background' })
+  }
+
   if (type === 'dla') {
     runInBackground(syncDlaProperty)
     return NextResponse.json({ success: true, message: 'DLA sync started in background' })
@@ -62,6 +67,7 @@ export async function POST(request: Request) {
   if (type === 'all') {
     runInBackground(async () => {
       await syncIdxProperty()
+      await syncIdxMedia()
       await syncDlaProperty()
       await syncVoxMember()
       await syncVoxOffice()

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { ampreGet } from './client'
-import type { ResoPropertyRaw, ResoMemberRaw, ResoOfficeRaw, ResoSyncResult } from './types'
+import type { ResoPropertyRaw, ResoMediaRaw, ResoMemberRaw, ResoOfficeRaw, ResoSyncResult } from './types'
 
 const BATCH_SIZE = 500
 const EPOCH      = new Date('1970-01-01T00:00:00Z')
@@ -431,6 +431,87 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
     }
   } catch (e) {
     result.errors.push(`Sync failed: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  result.durationMs = Date.now() - start
+  await prisma.resoSyncLog.create({
+    data: {
+      syncType,
+      added:      result.added,
+      updated:    result.updated,
+      deleted:    result.removed,
+      errors:     result.errors.length,
+      notes:      result.errors.length ? result.errors.join('\n') : null,
+      durationMs: result.durationMs,
+    },
+  })
+
+  return result
+}
+
+// ─── IDX Media Sync ────────────────────────────────────────────────────────
+//
+// Fetches photo URLs from the AMPRE Media resource for properties that are
+// already in the local DB (brokerage listings). Groups by ResourceRecordKey
+// and writes a JSON array into reso_properties.media.
+
+const MEDIA_SELECT = 'MediaKey,ResourceRecordKey,MediaURL,Order,ModificationTimestamp'
+
+export async function syncIdxMedia(): Promise<ResoSyncResult> {
+  const start    = Date.now()
+  const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
+  const syncType = 'idx_media'
+
+  let { lastTimestamp } = await loadCheckpoint(syncType)
+
+  try {
+    // Collect all media grouped by listing key
+    const mediaMap = new Map<string, { url: string; order: number }[]>()
+
+    while (true) {
+      const batch = await ampreGet<ResoMediaRaw>('idx', 'Media', {
+        $filter:  combineFilters(
+          `ResourceName eq 'Property'`,
+          `ModificationTimestamp gt ${toODataTs(lastTimestamp)}`
+        ),
+        $orderby: 'ModificationTimestamp asc',
+        $top:     BATCH_SIZE,
+        $select:  MEDIA_SELECT,
+      })
+
+      for (const m of batch.value) {
+        if (!m.MediaURL || !m.ResourceRecordKey) continue
+        const existing = mediaMap.get(m.ResourceRecordKey) ?? []
+        existing.push({ url: m.MediaURL, order: m.Order ?? 0 })
+        mediaMap.set(m.ResourceRecordKey, existing)
+        if (m.ModificationTimestamp) {
+          const ts = new Date(m.ModificationTimestamp)
+          if (ts > lastTimestamp) lastTimestamp = ts
+        }
+      }
+
+      if (batch.value.length < BATCH_SIZE) break
+    }
+
+    // Write media arrays only to properties we have locally
+    for (const [listingKey, items] of mediaMap) {
+      try {
+        const sorted = items.sort((a, b) => a.order - b.order)
+        const updated = await prisma.resoProperty.updateMany({
+          where: { listingKey },
+          data:  { media: JSON.stringify(sorted) },
+        })
+        if (updated.count > 0) result.updated++
+      } catch (e) {
+        result.errors.push(`${listingKey}: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    }
+
+    if (lastTimestamp > EPOCH) {
+      await saveCheckpoint(syncType, lastTimestamp, '')
+    }
+  } catch (e) {
+    result.errors.push(`Media sync failed: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   result.durationMs = Date.now() - start

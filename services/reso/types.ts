@@ -61,6 +61,15 @@ export interface ResoOfficeRaw {
   PhotosChangeTimestamp?:  string
 }
 
+export interface ResoMediaRaw {
+  MediaKey:              string
+  ResourceRecordKey:     string   // ListingKey of the parent property
+  MediaURL?:             string
+  Order?:                number
+  MediaType?:            string
+  ModificationTimestamp?: string
+}
+
 export interface AmpreODataResponse<T> {
   '@odata.context'?:  string
   '@odata.count'?:    number
