@@ -1,11 +1,11 @@
 # ── Stage 1: install all deps ─────────────────────────────────────────────────
-FROM node:20-bullseye-slim AS deps
+FROM node:20-bullseye AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
-FROM node:20-bullseye-slim AS builder
+FROM node:20-bullseye AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
