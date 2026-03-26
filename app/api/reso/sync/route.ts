@@ -50,8 +50,13 @@ export async function POST(request: Request) {
   const type = searchParams.get('type') ?? 'idx'
 
   if (type === 'media') {
-    runInBackground(syncIdxMedia)
-    return NextResponse.json({ success: true, message: 'Media sync started in background' })
+    // Run synchronously so errors are visible in the response
+    try {
+      const result = await syncIdxMedia()
+      return NextResponse.json({ success: true, result })
+    } catch (error) {
+      return NextResponse.json({ error: 'Media sync failed', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
+    }
   }
 
   if (type === 'dla') {
