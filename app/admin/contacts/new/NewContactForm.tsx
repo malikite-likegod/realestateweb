@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Trash2, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Button, useToast } from '@/components/ui'
 
 type PhoneEntry   = { label: string; number: string; isPrimary: boolean }
