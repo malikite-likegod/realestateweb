@@ -34,6 +34,16 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
   return `${tsField} gt ${toODataTs(lastTs)}`
 }
 
+function brokerageFilter(): string | null {
+  const name = process.env.AMPRE_BROKERAGE_NAME
+  if (!name) return null
+  return `ListOfficeName eq '${name.replace(/'/g, "''")}'`
+}
+
+function combineFilters(...filters: (string | null)[]): string {
+  return filters.filter(Boolean).map(f => `(${f})`).join(' and ')
+}
+
 // ─── IDX Property Sync ─────────────────────────────────────────────────────
 
 const IDX_SELECT = [
@@ -57,7 +67,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
   try {
     while (true) {
       const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
-        $filter:  cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey),
+        $filter:  combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), brokerageFilter()),
         $orderby: 'ModificationTimestamp asc',
         $top:     BATCH_SIZE,
         $select:  IDX_SELECT,
@@ -136,7 +146,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
     if (fullRun) {
       const cutoff = new Date(Date.now() - 60_000) // listings not synced in last 60s
       const stale = await prisma.resoProperty.findMany({
-        where:  { standardStatus: 'Active', lastSyncedAt: { lt: cutoff } },
+        where:  { standardStatus: 'Active', onDemand: false, lastSyncedAt: { lt: cutoff } },
         select: { listingKey: true },
       })
       if (stale.length > 0) {
@@ -437,6 +447,68 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
   })
 
   return result
+}
+
+// ─── On-demand single listing fetch ───────────────────────────────────────
+//
+// Used when a visitor views a listing not in the local DB (e.g. a competitor
+// listing linked from search results). Fetches from AMPRE IDX, caches in DB
+// with onDemand=true so the bulk sync stale-check ignores it.
+
+export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean> {
+  try {
+    const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
+      $filter: `ListingKey eq '${listingKey.replace(/'/g, "''")}'`,
+      $top:    1,
+      $select: IDX_SELECT,
+    })
+    const r = batch.value[0]
+    if (!r) return false
+
+    const data = {
+      listingId:             r.ListingId             ?? null,
+      standardStatus:        r.StandardStatus,
+      propertyType:          r.PropertyType          ?? null,
+      propertySubType:       r.PropertySubType       ?? null,
+      listPrice:             r.ListPrice             ?? null,
+      originalListPrice:     r.OriginalListPrice     ?? null,
+      closePrice:            r.ClosePrice            ?? null,
+      bedroomsTotal:         r.BedroomsTotal         ?? null,
+      bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
+      livingArea:            r.BuildingAreaTotal     ?? null,
+      lotSizeSquareFeet:     r.LotSizeArea           ?? null,
+      yearBuilt:             r.YearBuilt             ?? null,
+      streetNumber:          r.StreetNumber          ?? null,
+      streetName:            r.StreetName            ?? null,
+      unitNumber:            r.UnitNumber            ?? null,
+      city:                  r.City                  ?? '',
+      stateOrProvince:       r.StateOrProvince       ?? '',
+      postalCode:            r.PostalCode            ?? null,
+      latitude:              r.Latitude              ?? null,
+      longitude:             r.Longitude             ?? null,
+      publicRemarks:         r.PublicRemarks         ?? null,
+      media:                 null,
+      listAgentKey:          r.ListAgentKey          ?? null,
+      listAgentName:         r.ListAgentFullName     ?? null,
+      listOfficeKey:         r.ListOfficeKey         ?? null,
+      listOfficeName:        r.ListOfficeName        ?? null,
+      listingContractDate:   r.ListingContractDate ? new Date(r.ListingContractDate) : null,
+      modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
+      lastSyncedAt:          new Date(),
+      onDemand:              true,
+      rawJson:               JSON.stringify(r),
+    }
+
+    await prisma.resoProperty.upsert({
+      where:  { listingKey },
+      update: data,
+      create: { ...data, listingKey },
+    })
+    return true
+  } catch (e) {
+    console.error(`[onDemand] Failed to fetch ${listingKey}:`, e)
+    return false
+  }
 }
 
 // ─── Legacy export (backward compat for existing route.ts) ────────────────

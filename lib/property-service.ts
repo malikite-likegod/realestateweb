@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { withCache } from '@/lib/cache'
 import type { ResoProperty } from '@prisma/client'
+import { fetchPropertyOnDemand } from '@/services/reso/sync'
 
 export interface PropertyFilters {
   city?:         string
@@ -79,10 +80,20 @@ export const PropertyService = {
     // `key` may be a listingKey (e.g. "TRREB-1001234") or a cuid `id`.
     // Try listingKey first (the canonical identifier for RESO properties),
     // then fall back to id for backwards compatibility.
+    // If still not found, attempt on-demand fetch from AMPRE so listings
+    // outside the brokerage sync are available when linked directly.
     return withCache(`property:${key}`, 60, async () => {
       const byListingKey = await prisma.resoProperty.findUnique({ where: { listingKey: key } })
       if (byListingKey) return byListingKey
-      return prisma.resoProperty.findUnique({ where: { id: key } })
+
+      const byId = await prisma.resoProperty.findUnique({ where: { id: key } })
+      if (byId) return byId
+
+      // On-demand: treat `key` as a listingKey and fetch from AMPRE
+      const fetched = await fetchPropertyOnDemand(key)
+      if (fetched) return prisma.resoProperty.findUnique({ where: { listingKey: key } })
+
+      return null
     })
   },
 }

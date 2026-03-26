@@ -380,6 +380,7 @@ model ResoProperty {
   listAgentFullName             String?
   majorChangeTimestamp          DateTime?
   lastSyncedAt                  DateTime  @default(now())
+  onDemand              Boolean   @default(false)
   rawJson               String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
