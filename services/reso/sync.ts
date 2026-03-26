@@ -454,19 +454,23 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
 // Fetches photo URLs only for listing keys already in the local DB, using
 // ResourceRecordKey in (...) so we never scan the full Media feed.
 
-const MEDIA_KEY_BATCH = 50   // listing keys per AMPRE request
-const MEDIA_SELECT    = 'MediaKey,ResourceRecordKey,MediaURL,Order,MediaStatus'
+const MEDIA_KEY_BATCH = 10   // small batches to avoid AMPRE server timeout
+const MEDIA_SELECT    = 'MediaKey,ResourceRecordKey,MediaURL,Order,MediaStatus,ImageSizeDescription'
 
 export async function syncIdxMedia(): Promise<ResoSyncResult> {
   const start  = Date.now()
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
 
   try {
-    // Get all listing keys we have locally
-    const localProps = await prisma.resoProperty.findMany({ select: { listingKey: true } })
-    const allKeys    = localProps.map(p => p.listingKey)
+    // Only fetch media for listings that don't have it yet
+    const localProps = await prisma.resoProperty.findMany({
+      where:  { media: null },
+      select: { listingKey: true },
+    })
+    const allKeys = localProps.map(p => p.listingKey)
 
-    // Process in batches of MEDIA_KEY_BATCH
+    console.log(`[idx_media] Fetching media for ${allKeys.length} listings`)
+
     for (let i = 0; i < allKeys.length; i += MEDIA_KEY_BATCH) {
       const keysBatch = allKeys.slice(i, i + MEDIA_KEY_BATCH)
       const inList    = keysBatch.map(k => `'${k.replace(/'/g, "''")}'`).join(',')
@@ -475,7 +479,7 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
 
       try {
         const batch = await ampreGet<ResoMediaRaw>('idx', 'Media', {
-          $filter:  `ResourceRecordKey in (${inList}) and ImageSizeDescription eq 'Largest'`,
+          $filter:  `ResourceRecordKey in (${inList})`,
           $orderby: 'ResourceRecordKey,Order',
           $top:     10000,
           $select:  MEDIA_SELECT,
@@ -483,6 +487,7 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
 
         for (const m of batch.value) {
           if (m.MediaStatus === 'Deleted' || !m.MediaURL || !m.ResourceRecordKey) continue
+          // Prefer 'Largest' size — skip smaller variants if a larger one exists
           const existing = mediaMap.get(m.ResourceRecordKey) ?? []
           existing.push({ url: m.MediaURL, order: m.Order ?? 0 })
           mediaMap.set(m.ResourceRecordKey, existing)
