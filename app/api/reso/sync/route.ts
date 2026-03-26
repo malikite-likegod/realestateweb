@@ -7,8 +7,10 @@ import { getMlsSyncInterval } from '@/lib/site-settings'
 type SyncType = 'idx_property' | 'dla_property' | 'vox_member' | 'vox_office'
 
 export async function POST(request: Request) {
-  const cronSecret = request.headers.get('x-cron-secret')
-  const isCron = cronSecret === process.env.RESO_SYNC_SECRET
+  const { searchParams } = new URL(request.url)
+  // Accept secret via header OR query param (header may be stripped by some proxies)
+  const cronSecret = request.headers.get('x-cron-secret') ?? searchParams.get('secret')
+  const isCron = !!cronSecret && cronSecret === process.env.RESO_SYNC_SECRET
 
   if (!isCron) {
     const session = await getSession()
@@ -16,7 +18,6 @@ export async function POST(request: Request) {
   }
 
   // Cron: skip if interval hasn't elapsed (unless ?force=true is passed)
-  const { searchParams } = new URL(request.url)
   const force = searchParams.get('force') === 'true'
 
   if (isCron && !force) {
