@@ -140,10 +140,15 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
         select: { listingKey: true },
       })
       if (stale.length > 0) {
-        await prisma.resoProperty.updateMany({
-          where: { listingKey: { in: stale.map(p => p.listingKey) } },
-          data:  { standardStatus: 'Closed' },
-        })
+        // Chunk to stay under PostgreSQL's 32 767 bind-variable limit
+        const CHUNK = 1000
+        for (let i = 0; i < stale.length; i += CHUNK) {
+          const keys = stale.slice(i, i + CHUNK).map(p => p.listingKey)
+          await prisma.resoProperty.updateMany({
+            where: { listingKey: { in: keys } },
+            data:  { standardStatus: 'Closed' },
+          })
+        }
         result.removed = stale.length
       }
     }
