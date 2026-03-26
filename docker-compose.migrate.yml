@@ -1,7 +1,9 @@
 # Run once to migrate + seed: docker compose -f docker-compose.yml -f docker-compose.migrate.yml run --rm migrate
 services:
   migrate:
-    build: .
+    build:
+      context: .
+      target: builder
     depends_on:
       postgres:
         condition: service_healthy
