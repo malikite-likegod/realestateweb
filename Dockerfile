@@ -1,13 +1,12 @@
 # ── Stage 1: install all deps ─────────────────────────────────────────────────
-FROM node:20-slim AS deps
+FROM node:20-bullseye-slim AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
-FROM node:20-slim AS builder
+FROM node:20-bullseye-slim AS builder
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -15,7 +14,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # ── Stage 3: minimal runtime ──────────────────────────────────────────────────
-FROM node:20-slim AS runner
+FROM node:20-bullseye-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -23,8 +22,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/* && \
-    addgroup --system --gid 1001 nodejs && \
+RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 --ingroup nodejs nextjs && \
     mkdir -p .next/cache && chown -R nextjs:nodejs .next
 
