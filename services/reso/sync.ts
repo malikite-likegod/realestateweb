@@ -451,74 +451,58 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
 
 // ─── IDX Media Sync ────────────────────────────────────────────────────────
 //
-// Fetches photo URLs from the AMPRE Media resource for properties already in
-// the local DB. Uses ImageSizeDescription eq 'Largest' so we get one URL per
-// photo instead of every size variant. Cursor uses ModificationTimestamp + MediaKey
-// per AMPRE replication docs.
+// Fetches photo URLs only for listing keys already in the local DB, using
+// ResourceRecordKey in (...) so we never scan the full Media feed.
 
-const MEDIA_BATCH  = 100  // AMPRE recommends 100 for Media resource
-const MEDIA_SELECT = 'MediaKey,ResourceRecordKey,MediaURL,Order,ModificationTimestamp,MediaStatus'
+const MEDIA_KEY_BATCH = 50   // listing keys per AMPRE request
+const MEDIA_SELECT    = 'MediaKey,ResourceRecordKey,MediaURL,Order,MediaStatus'
 
 export async function syncIdxMedia(): Promise<ResoSyncResult> {
-  const start    = Date.now()
+  const start  = Date.now()
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
-  const syncType = 'idx_media'
-
-  let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
 
   try {
-    // Collect media grouped by ResourceRecordKey (ListingKey)
-    const mediaMap = new Map<string, { url: string; order: number }[]>()
+    // Get all listing keys we have locally
+    const localProps = await prisma.resoProperty.findMany({ select: { listingKey: true } })
+    const allKeys    = localProps.map(p => p.listingKey)
 
-    while (true) {
-      // Cursor: OR pattern (timestamp + MediaKey tie-breaker) per AMPRE docs
-      const tsStr = toODataTs(lastTimestamp)
-      const cursorF = lastKey
-        ? `(ModificationTimestamp gt ${tsStr}) or (ModificationTimestamp eq ${tsStr} and MediaKey gt '${lastKey}')`
-        : `ModificationTimestamp gt ${tsStr}`
+    // Process in batches of MEDIA_KEY_BATCH
+    for (let i = 0; i < allKeys.length; i += MEDIA_KEY_BATCH) {
+      const keysBatch = allKeys.slice(i, i + MEDIA_KEY_BATCH)
+      const inList    = keysBatch.map(k => `'${k.replace(/'/g, "''")}'`).join(',')
 
-      const batch = await ampreGet<ResoMediaRaw>('idx', 'Media', {
-        $filter:  combineFilters(
-          cursorF,
-          `ResourceName eq 'Property'`,
-          `ImageSizeDescription eq 'Largest'`
-        ),
-        $orderby: 'ModificationTimestamp,MediaKey',
-        $top:     MEDIA_BATCH,
-        $select:  MEDIA_SELECT,
-      })
+      const mediaMap = new Map<string, { url: string; order: number }[]>()
 
-      for (const m of batch.value) {
-        // Skip soft-deleted records
-        if (m.MediaStatus === 'Deleted') continue
-        if (!m.MediaURL || !m.ResourceRecordKey) continue
-
-        const existing = mediaMap.get(m.ResourceRecordKey) ?? []
-        existing.push({ url: m.MediaURL, order: m.Order ?? 0 })
-        mediaMap.set(m.ResourceRecordKey, existing)
-      }
-
-      if (batch.value.length > 0) {
-        const last = batch.value[batch.value.length - 1]
-        if (last.ModificationTimestamp) lastTimestamp = new Date(last.ModificationTimestamp)
-        lastKey = last.MediaKey
-        await saveCheckpoint(syncType, lastTimestamp, lastKey)
-      }
-
-      if (batch.value.length < MEDIA_BATCH) break
-    }
-
-    // Write sorted media arrays to matching local properties
-    for (const [listingKey, items] of mediaMap) {
       try {
-        const sorted  = items.sort((a, b) => a.order - b.order)
-        const updated = await prisma.resoProperty.updateMany({
-          where: { listingKey },
-          data:  { media: JSON.stringify(sorted) },
+        const batch = await ampreGet<ResoMediaRaw>('idx', 'Media', {
+          $filter:  `ResourceRecordKey in (${inList}) and ImageSizeDescription eq 'Largest'`,
+          $orderby: 'ResourceRecordKey,Order',
+          $top:     10000,
+          $select:  MEDIA_SELECT,
         })
-        if (updated.count > 0) result.updated++
+
+        for (const m of batch.value) {
+          if (m.MediaStatus === 'Deleted' || !m.MediaURL || !m.ResourceRecordKey) continue
+          const existing = mediaMap.get(m.ResourceRecordKey) ?? []
+          existing.push({ url: m.MediaURL, order: m.Order ?? 0 })
+          mediaMap.set(m.ResourceRecordKey, existing)
+        }
       } catch (e) {
-        result.errors.push(`${listingKey}: ${e instanceof Error ? e.message : String(e)}`)
+        result.errors.push(`Batch ${i}: ${e instanceof Error ? e.message : String(e)}`)
+        continue
+      }
+
+      for (const [listingKey, items] of mediaMap) {
+        try {
+          const sorted = items.sort((a, b) => a.order - b.order)
+          await prisma.resoProperty.updateMany({
+            where: { listingKey },
+            data:  { media: JSON.stringify(sorted) },
+          })
+          result.updated++
+        } catch (e) {
+          result.errors.push(`${listingKey}: ${e instanceof Error ? e.message : String(e)}`)
+        }
       }
     }
   } catch (e) {
@@ -528,7 +512,7 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
   result.durationMs = Date.now() - start
   await prisma.resoSyncLog.create({
     data: {
-      syncType,
+      syncType:   'idx_media',
       added:      result.added,
       updated:    result.updated,
       deleted:    result.removed,
