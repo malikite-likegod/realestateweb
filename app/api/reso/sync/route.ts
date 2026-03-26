@@ -6,6 +6,12 @@ import { getMlsSyncInterval } from '@/lib/site-settings'
 
 type SyncType = 'idx_property' | 'dla_property' | 'vox_member' | 'vox_office'
 
+// Run sync in background — returns immediately so Nginx doesn't time out on
+// the initial full-sync which can take several minutes.
+function runInBackground(fn: () => Promise<unknown>) {
+  setImmediate(() => fn().catch(err => console.error('[reso/sync] background error:', err)))
+}
+
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   // Accept secret via header OR query param (header may be stripped by some proxies)
@@ -43,34 +49,29 @@ export async function POST(request: Request) {
 
   const type = searchParams.get('type') ?? 'idx'
 
-  try {
-    if (type === 'dla') {
-      const result = await syncDlaProperty()
-      return NextResponse.json({ success: true, result })
-    }
-
-    if (type === 'vox') {
-      const [memberResult, officeResult] = await Promise.all([syncVoxMember(), syncVoxOffice()])
-      return NextResponse.json({ success: true, result: { member: memberResult, office: officeResult } })
-    }
-
-    if (type === 'all') {
-      const idxResult    = await syncIdxProperty()
-      const dlaResult    = await syncDlaProperty()
-      const memberResult = await syncVoxMember()
-      const officeResult = await syncVoxOffice()
-      return NextResponse.json({ success: true, result: { idx: idxResult, dla: dlaResult, member: memberResult, office: officeResult } })
-    }
-
-    // Default: idx
-    const result = await syncIdxProperty()
-    return NextResponse.json({ success: true, result })
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Sync failed', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    )
+  if (type === 'dla') {
+    runInBackground(syncDlaProperty)
+    return NextResponse.json({ success: true, message: 'DLA sync started in background' })
   }
+
+  if (type === 'vox') {
+    runInBackground(() => Promise.all([syncVoxMember(), syncVoxOffice()]))
+    return NextResponse.json({ success: true, message: 'VOX sync started in background' })
+  }
+
+  if (type === 'all') {
+    runInBackground(async () => {
+      await syncIdxProperty()
+      await syncDlaProperty()
+      await syncVoxMember()
+      await syncVoxOffice()
+    })
+    return NextResponse.json({ success: true, message: 'Full sync started in background' })
+  }
+
+  // Default: idx
+  runInBackground(syncIdxProperty)
+  return NextResponse.json({ success: true, message: 'IDX sync started in background' })
 }
 
 export async function GET() {
