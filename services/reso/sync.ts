@@ -451,52 +451,67 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
 
 // ─── IDX Media Sync ────────────────────────────────────────────────────────
 //
-// Fetches photo URLs from the AMPRE Media resource for properties that are
-// already in the local DB (brokerage listings). Groups by ResourceRecordKey
-// and writes a JSON array into reso_properties.media.
+// Fetches photo URLs from the AMPRE Media resource for properties already in
+// the local DB. Uses ImageSizeDescription eq 'Largest' so we get one URL per
+// photo instead of every size variant. Cursor uses ModificationTimestamp + MediaKey
+// per AMPRE replication docs.
 
-const MEDIA_SELECT = 'MediaKey,ResourceRecordKey,MediaURL,Order,ModificationTimestamp'
+const MEDIA_BATCH  = 100  // AMPRE recommends 100 for Media resource
+const MEDIA_SELECT = 'MediaKey,ResourceRecordKey,MediaURL,Order,ModificationTimestamp,MediaStatus'
 
 export async function syncIdxMedia(): Promise<ResoSyncResult> {
   const start    = Date.now()
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
   const syncType = 'idx_media'
 
-  let { lastTimestamp } = await loadCheckpoint(syncType)
+  let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
 
   try {
-    // Collect all media grouped by listing key
+    // Collect media grouped by ResourceRecordKey (ListingKey)
     const mediaMap = new Map<string, { url: string; order: number }[]>()
 
     while (true) {
+      // Cursor: OR pattern (timestamp + MediaKey tie-breaker) per AMPRE docs
+      const tsStr = toODataTs(lastTimestamp)
+      const cursorF = lastKey
+        ? `(ModificationTimestamp gt ${tsStr}) or (ModificationTimestamp eq ${tsStr} and MediaKey gt '${lastKey}')`
+        : `ModificationTimestamp gt ${tsStr}`
+
       const batch = await ampreGet<ResoMediaRaw>('idx', 'Media', {
         $filter:  combineFilters(
+          cursorF,
           `ResourceName eq 'Property'`,
-          `ModificationTimestamp gt ${toODataTs(lastTimestamp)}`
+          `ImageSizeDescription eq 'Largest'`
         ),
-        $orderby: 'ModificationTimestamp asc',
-        $top:     BATCH_SIZE,
+        $orderby: 'ModificationTimestamp,MediaKey',
+        $top:     MEDIA_BATCH,
         $select:  MEDIA_SELECT,
       })
 
       for (const m of batch.value) {
+        // Skip soft-deleted records
+        if (m.MediaStatus === 'Deleted') continue
         if (!m.MediaURL || !m.ResourceRecordKey) continue
+
         const existing = mediaMap.get(m.ResourceRecordKey) ?? []
         existing.push({ url: m.MediaURL, order: m.Order ?? 0 })
         mediaMap.set(m.ResourceRecordKey, existing)
-        if (m.ModificationTimestamp) {
-          const ts = new Date(m.ModificationTimestamp)
-          if (ts > lastTimestamp) lastTimestamp = ts
-        }
       }
 
-      if (batch.value.length < BATCH_SIZE) break
+      if (batch.value.length > 0) {
+        const last = batch.value[batch.value.length - 1]
+        if (last.ModificationTimestamp) lastTimestamp = new Date(last.ModificationTimestamp)
+        lastKey = last.MediaKey
+        await saveCheckpoint(syncType, lastTimestamp, lastKey)
+      }
+
+      if (batch.value.length < MEDIA_BATCH) break
     }
 
-    // Write media arrays only to properties we have locally
+    // Write sorted media arrays to matching local properties
     for (const [listingKey, items] of mediaMap) {
       try {
-        const sorted = items.sort((a, b) => a.order - b.order)
+        const sorted  = items.sort((a, b) => a.order - b.order)
         const updated = await prisma.resoProperty.updateMany({
           where: { listingKey },
           data:  { media: JSON.stringify(sorted) },
@@ -505,10 +520,6 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
       } catch (e) {
         result.errors.push(`${listingKey}: ${e instanceof Error ? e.message : String(e)}`)
       }
-    }
-
-    if (lastTimestamp > EPOCH) {
-      await saveCheckpoint(syncType, lastTimestamp, '')
     }
   } catch (e) {
     result.errors.push(`Media sync failed: ${e instanceof Error ? e.message : String(e)}`)

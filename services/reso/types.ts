@@ -62,11 +62,13 @@ export interface ResoOfficeRaw {
 }
 
 export interface ResoMediaRaw {
-  MediaKey:              string
-  ResourceRecordKey:     string   // ListingKey of the parent property
-  MediaURL?:             string
-  Order?:                number
-  MediaType?:            string
+  MediaKey:               string
+  ResourceRecordKey:      string   // ListingKey of the parent property
+  MediaURL?:              string
+  Order?:                 number
+  MediaType?:             string
+  MediaStatus?:           string   // 'Deleted' = soft-deleted
+  ImageSizeDescription?:  string   // e.g. 'Largest', 'Large'
   ModificationTimestamp?: string
 }
 
