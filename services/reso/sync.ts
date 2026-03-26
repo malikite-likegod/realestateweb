@@ -68,9 +68,14 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
 
   let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
   let fullRun = false
+  let page = 0
+
+  console.log(`[idx_property] Starting sync from ${toODataTs(lastTimestamp)}`)
 
   try {
     while (true) {
+      page++
+      console.log(`[idx_property] Fetching page ${page} (added=${result.added} updated=${result.updated})`)
       const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
         $filter:  combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), brokerageFilter()),
         $orderby: 'ModificationTimestamp asc',
@@ -173,6 +178,8 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
   }
 
   result.durationMs = Date.now() - start
+  console.log(`[idx_property] Done — added=${result.added} updated=${result.updated} removed=${result.removed} errors=${result.errors.length} duration=${result.durationMs}ms`)
+
   await prisma.resoSyncLog.create({
     data: {
       syncType,
