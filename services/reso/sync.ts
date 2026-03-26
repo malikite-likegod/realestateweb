@@ -25,8 +25,13 @@ async function saveCheckpoint(syncType: string, lastTimestamp: Date, lastKey: st
 
 // ─── Cursor filter builder ─────────────────────────────────────────────────
 
+function toODataTs(date: Date): string {
+  // AMPRE requires DateTimeOffset without milliseconds
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z')
+}
+
 function cursorFilter(tsField: string, keyField: string, lastTs: Date, lastKey: string): string {
-  const ts = lastTs.toISOString()
+  const ts = toODataTs(lastTs)
   return `${tsField} gt ${ts} or (${tsField} eq ${ts} and ${keyField} gt '${lastKey}')`
 }
 
