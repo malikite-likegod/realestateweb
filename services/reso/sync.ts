@@ -30,9 +30,8 @@ function toODataTs(date: Date): string {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z')
 }
 
-function cursorFilter(tsField: string, keyField: string, lastTs: Date, lastKey: string): string {
-  const ts = toODataTs(lastTs)
-  return `${tsField} gt ${ts} or (${tsField} eq ${ts} and ${keyField} gt '${lastKey}')`
+function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey: string): string {
+  return `${tsField} gt ${toODataTs(lastTs)}`
 }
 
 // ─── IDX Property Sync ─────────────────────────────────────────────────────
