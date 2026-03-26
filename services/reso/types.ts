@@ -10,6 +10,7 @@ export interface ResoPropertyRaw {
   BedroomsTotal?:        number
   BathroomsTotalInteger?: number
   LivingArea?:           number
+  BuildingAreaTotal?:    number
   LotSizeAcres?:         number
   YearBuilt?:            number
   StreetNumber?:         string
