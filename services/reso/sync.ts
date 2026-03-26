@@ -37,7 +37,7 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
 function brokerageFilter(): string | null {
   const name = process.env.AMPRE_BROKERAGE_NAME
   if (!name) return null
-  return `ListOfficeName eq '${name.replace(/'/g, "''")}'`
+  return `ListOfficeName eq '${name.replace(/'/g, "''")}' and StandardStatus eq 'Active'`
 }
 
 function combineFilters(...filters: (string | null)[]): string {
