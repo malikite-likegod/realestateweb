@@ -35,9 +35,14 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
 }
 
 function brokerageFilter(): string | null {
+  // ListOfficeName is not indexed as a filterable field on AMPRE — filter client-side instead
+  return `StandardStatus eq 'Active'`
+}
+
+function matchesBrokerage(officeName: string | undefined): boolean {
   const name = process.env.AMPRE_BROKERAGE_NAME
-  if (!name) return null
-  return `ListOfficeName eq '${name.replace(/'/g, "''")}' and StandardStatus eq 'Active'`
+  if (!name) return true   // no filter set — accept all
+  return (officeName ?? '').trim().toUpperCase() === name.trim().toUpperCase()
 }
 
 function combineFilters(...filters: (string | null)[]): string {
@@ -78,6 +83,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
           console.warn(`[idx_property] Skipping ${r.ListingKey} — null ModificationTimestamp`)
           return false
         }
+        if (!matchesBrokerage(r.ListOfficeName)) return false
         return true
       })
 
