@@ -44,7 +44,8 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
 const IDX_SELECT = [
   'ListingKey', 'ListingId', 'StandardStatus', 'PropertyType', 'PropertySubType',
   'ListPrice', 'OriginalListPrice', 'ClosePrice', 'BedroomsTotal', 'BathroomsTotalInteger',
-  'BuildingAreaTotal', 'LotSizeAcres', 'YearBuilt', 'StreetNumber', 'StreetName', 'UnitNumber',
+  'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
+  'StreetNumber', 'StreetName', 'UnitNumber',
   'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
   'Media', 'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
   'ListingContractDate', 'ModificationTimestamp',
@@ -88,7 +89,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             bedroomsTotal:         r.BedroomsTotal         ?? null,
             bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
             livingArea:            r.BuildingAreaTotal     ?? null,
-            lotSizeSquareFeet:     r.LotSizeAcres          ?? null,
+            lotSizeSquareFeet:     r.LotSizeArea           ?? null,
             yearBuilt:             r.YearBuilt             ?? null,
             streetNumber:          r.StreetNumber          ?? null,
             streetName:            r.StreetName            ?? null,
