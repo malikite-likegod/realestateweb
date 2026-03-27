@@ -2,6 +2,40 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { verifyJwt } from './lib/jwt'
 import { publicSearchLimit, portalLimit, loginLimit, authLimit, forgotPassLimit } from '@/lib/rate-limit'
 
+// ── Blocked IP cache ────────────────────────────────────────────────────────
+let blockedIpCache: { ips: Set<string>; refreshedAt: number } = {
+  ips: new Set(),
+  refreshedAt: 0,
+}
+const BLOCKED_IP_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+async function getBlockedIps(): Promise<Set<string>> {
+  if (Date.now() - blockedIpCache.refreshedAt < BLOCKED_IP_CACHE_TTL_MS) {
+    return blockedIpCache.ips
+  }
+
+  const secret = process.env.INTERNAL_SECRET
+  if (!secret) return blockedIpCache.ips
+
+  blockedIpCache.refreshedAt = Date.now() // prevent thundering herd while refresh is in flight
+
+  try {
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const res  = await fetch(`${base}/api/internal/blocked-ips`, {
+      headers: { 'x-internal-secret': secret },
+      signal:  AbortSignal.timeout(2000),
+      cache:   'no-store',
+    })
+    if (res.ok) {
+      const json: { ips: string[] } = await res.json()
+      blockedIpCache = { ips: new Set(json.ips), refreshedAt: Date.now() }
+    }
+  } catch {
+    // On fetch failure keep stale cache — never crash middleware
+  }
+  return blockedIpCache.ips
+}
+
 const PROTECTED_PATHS = ['/admin', '/api/contacts', '/api/deals', '/api/tasks',
   '/api/activities', '/api/listings', '/api/blog', '/api/stages', '/api/api-keys',
   '/api/admin', '/api/tags', '/api/uploads']
@@ -11,6 +45,35 @@ const LISTING_PATH_RE = /^\/listings\/([^/]+)$/
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ── Blocked IP check ───────────────────────────────────────────────────────
+  const skipBlockPaths = [
+    '/admin/login',
+    '/api/auth/login',
+    '/api/auth/2fa/verify',
+    '/api/portal/login',
+    // Note: /api/internal/* is excluded by the middleware matcher config — no need to list here
+  ]
+  const isBlockSkipped = skipBlockPaths.some(p => pathname.startsWith(p))
+
+  if (!isBlockSkipped) {
+    const clientIp =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown'
+    // Normalize: strip leading zeros per octet
+    const normalizedIp = clientIp
+      .split('.')
+      .map(p => { const n = parseInt(p, 10); return isNaN(n) ? p : String(n) })
+      .join('.')
+    const blocked = await getBlockedIps()
+    if (blocked.has(normalizedIp)) {
+      return NextResponse.json(
+        { error: 'Your IP has been blocked.' },
+        { status: 403 }
+      )
+    }
+  }
 
   // ── Rate limiting ───────────────────────────────────────────────────────────
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
@@ -166,5 +229,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/:path*', '/listings/:path*'],
+  matcher: ['/admin/:path*', '/api/((?!internal/).*)', '/listings/:path*'],
 }
