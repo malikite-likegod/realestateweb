@@ -39,9 +39,12 @@ export function PropertyCard({ property, featured = false, className }: Property
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex gap-2">
-            <Badge variant={property.status === 'active' ? 'success' : 'warning'} className="capitalize">
-              {property.listingType === 'lease' ? 'For Lease' : property.listingType === 'sale' ? 'For Sale' : 'For Rent'}
+            <Badge variant={property.status === 'active' ? 'success' : 'warning'}>
+              {property.listingType === 'lease' ? 'For Lease' : 'For Sale'}
             </Badge>
+            {property.propertyType && !['Residential', 'residential'].includes(property.propertyType) && (
+              <Badge variant="default">{property.propertyType}</Badge>
+            )}
             {featured && <Badge variant="gold">Featured</Badge>}
           </div>
 

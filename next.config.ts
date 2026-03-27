@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.cloudinary.com' },
       { protocol: 'https', hostname: '**.idx.broker' },
       { protocol: 'https', hostname: 'images.treb.com' },
+      { protocol: 'https', hostname: '**.ampre.ca' },
     ],
   },
   experimental: {
