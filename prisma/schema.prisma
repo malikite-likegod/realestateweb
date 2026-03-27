@@ -381,7 +381,6 @@ model ResoProperty {
   majorChangeTimestamp          DateTime?
   lastSyncedAt                  DateTime  @default(now())
   onDemand              Boolean   @default(false)
-  rawJson               String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -425,11 +424,9 @@ model ResoMember {
   memberMobilePhone     String?
   memberStatus          String?
   officeKey             String?
-  officeName            String?
   modificationTimestamp DateTime?
   photosChangeTimestamp DateTime?
   lastSyncedAt          DateTime
-  rawJson               String?
 
   @@map("reso_members")
 }
@@ -443,7 +440,6 @@ model ResoOffice {
   modificationTimestamp DateTime?
   photosChangeTimestamp DateTime?
   lastSyncedAt          DateTime
-  rawJson               String?
 
   @@map("reso_offices")
 }
