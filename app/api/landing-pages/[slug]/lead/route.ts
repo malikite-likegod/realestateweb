@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+
+const leadSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName:  z.string().max(100).optional(),
+  email:     z.string().email().max(254),
+  phone:     z.string().max(30).optional(),
+  message:   z.string().max(2000).optional(),
+})
 import { sendWebhook } from '@/services/ai/webhooks'
 import { enqueueJob } from '@/lib/automation/job-queue'
 import { validateEmail } from '@/lib/services/zerobounce'
@@ -13,10 +22,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const { firstName, lastName, email, phone, message } = await req.json()
-
-  if (!firstName || !email) {
-    return NextResponse.json({ error: 'firstName and email are required' }, { status: 400 })
+  let firstName: string, lastName: string | undefined, email: string, phone: string | undefined, message: string | undefined
+  try {
+    ;({ firstName, lastName, email, phone, message } = leadSchema.parse(await req.json()))
+  } catch (e) {
+    if (e instanceof z.ZodError) return NextResponse.json({ error: e.errors }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
   // ZeroBounce email validation (skipped if ZEROBOUNCE_API_KEY not set)
