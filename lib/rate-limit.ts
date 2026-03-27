@@ -34,6 +34,8 @@ export function createRateLimit(options: RateLimitOptions) {
   }
 }
 
-export const publicSearchLimit = createRateLimit({ windowMs: 60_000,  max: 30, keyPrefix: 'pub'   })
-export const portalLimit       = createRateLimit({ windowMs: 60_000,  max: 60, keyPrefix: 'vow'   })
-export const loginLimit        = createRateLimit({ windowMs: 900_000, max: 5,  keyPrefix: 'login' })
+export const publicSearchLimit = createRateLimit({ windowMs: 60_000,   max: 30, keyPrefix: 'pub'    })
+export const portalLimit       = createRateLimit({ windowMs: 60_000,   max: 60, keyPrefix: 'vow'    })
+export const loginLimit        = createRateLimit({ windowMs: 900_000,  max: 5,  keyPrefix: 'login'  })
+export const authLimit         = createRateLimit({ windowMs: 900_000,  max: 5,  keyPrefix: 'auth'   })
+export const forgotPassLimit   = createRateLimit({ windowMs: 3600_000, max: 3,  keyPrefix: 'forgot' })

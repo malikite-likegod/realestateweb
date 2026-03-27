@@ -14,8 +14,7 @@ function runInBackground(fn: () => Promise<unknown>) {
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
-  // Accept secret via header OR query param (header may be stripped by some proxies)
-  const cronSecret = request.headers.get('x-cron-secret') ?? searchParams.get('secret')
+  const cronSecret = request.headers.get('x-cron-secret')
   const isCron = !!cronSecret && cronSecret === process.env.RESO_SYNC_SECRET
 
   if (!isCron) {

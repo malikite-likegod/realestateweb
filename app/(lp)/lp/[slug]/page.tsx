@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
+import { sanitizeContent } from '@/lib/sanitize'
 import { LeadForm } from './LeadForm'
 import type { Metadata } from 'next'
 
@@ -34,7 +35,7 @@ export default async function LandingPageRoute({ params }: Props) {
 
       {/* ── HTML content block ─────────────────────────────────── */}
       {/* Rendered as-is — author controls all styling via inline HTML */}
-      <div dangerouslySetInnerHTML={{ __html: page.content }} />
+      <div dangerouslySetInnerHTML={{ __html: sanitizeContent(page.content) }} />
 
       {/* ── Lead capture form ──────────────────────────────────── */}
       <section className="bg-charcoal-50 py-20 px-4">

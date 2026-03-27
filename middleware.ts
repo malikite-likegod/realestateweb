@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { verifyJwt } from './lib/jwt'
-import { publicSearchLimit, portalLimit, loginLimit } from '@/lib/rate-limit'
+import { publicSearchLimit, portalLimit, loginLimit, authLimit, forgotPassLimit } from '@/lib/rate-limit'
 
 const PROTECTED_PATHS = ['/admin', '/api/contacts', '/api/deals', '/api/tasks',
   '/api/activities', '/api/listings', '/api/blog', '/api/stages', '/api/api-keys',
-  '/api/admin']
+  '/api/admin', '/api/tags', '/api/uploads']
 
 // Public listing detail pages: /listings/[id]
 const LISTING_PATH_RE = /^\/listings\/([^/]+)$/
@@ -40,6 +40,26 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === '/api/portal/login') {
     const { allowed, retryAfterMs } = loginLimit.check(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
+
+  if (pathname === '/api/auth/login' || pathname === '/api/auth/2fa/verify') {
+    const { allowed, retryAfterMs } = authLimit.check(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
+
+  if (pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password') {
+    const { allowed, retryAfterMs } = forgotPassLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
