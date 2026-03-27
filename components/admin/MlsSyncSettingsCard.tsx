@@ -70,13 +70,13 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
     setSyncing(true)
     setSyncMsg(null)
     try {
-      const res  = await fetch('/api/reso/sync', { method: 'POST' })
+      const res  = await fetch('/api/reso/sync?type=all&force=true', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Sync failed')
-      const r = data.result
-      setSyncMsg(`IDX sync complete — ${r.added} added, ${r.updated} updated, ${r.deleted} deleted`)
-    } catch {
-      setSyncMsg('Sync failed — check server logs')
+      // Sync runs in background — poll for completion
+      setSyncMsg('Sync started in background — check back in a few minutes')
+    } catch (e) {
+      setSyncMsg(`Sync failed — ${e instanceof Error ? e.message : 'check server logs'}`)
     } finally {
       setSyncing(false)
     }
