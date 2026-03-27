@@ -501,6 +501,7 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
         continue
       }
 
+      // Write media for listings that had results
       for (const [listingKey, items] of mediaMap) {
         try {
           const sorted = items.sort((a, b) => a.order - b.order)
@@ -512,6 +513,16 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
         } catch (e) {
           result.errors.push(`${listingKey}: ${e instanceof Error ? e.message : String(e)}`)
         }
+      }
+
+      // Mark listings with no photos as '[]' so they aren't re-fetched every run
+      const withPhotos = new Set(mediaMap.keys())
+      const noPhotoKeys = keysBatch.filter(k => !withPhotos.has(k))
+      if (noPhotoKeys.length > 0) {
+        await prisma.resoProperty.updateMany({
+          where: { listingKey: { in: noPhotoKeys } },
+          data:  { media: '[]' },
+        })
       }
     }
   } catch (e) {
