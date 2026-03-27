@@ -1104,7 +1104,7 @@ model SecurityAuditLog {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  event     String   // login_success | login_failure | logout | 2fa_sent | 2fa_success | 2fa_failure | password_reset_request | password_reset_complete | password_change | portal_login_success | portal_login_failure | portal_logout
+  event     String   // login_success | login_failure | logout | 2fa_sent | 2fa_success | 2fa_failure | password_reset_request | password_reset_complete | password_change | portal_login_success | portal_login_failure | portal_logout | ip_blocklist_upload | ip_blocklist_remove
   actor     String?  // email address attempted (may not resolve to a real user)
   userId    String?  // FK to User if resolved; null for unknown-email failures
   contactId String?  // FK to Contact for portal events
@@ -1121,4 +1121,16 @@ model SecurityAuditLog {
   @@index([ip])
   @@index([actor])
   @@map("security_audit_log")
+}
+
+// ─── Blocked IPs ──────────────────────────────────────────────────────────
+
+model BlockedIp {
+  id        String   @id @default(cuid())
+  ip        String   @unique  // stored normalized (no leading zeros per octet)
+  blockedAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+  @@map("blocked_ips")
 }

@@ -13,6 +13,8 @@ export const AUDIT_EVENTS = [
   'portal_login_success',
   'portal_login_failure',
   'portal_logout',
+  'ip_blocklist_upload',
+  'ip_blocklist_remove',
 ] as const
 
 export type AuditEvent = (typeof AUDIT_EVENTS)[number]
