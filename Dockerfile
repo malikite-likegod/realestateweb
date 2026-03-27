@@ -1,7 +1,7 @@
 # ── Stage 1: install all deps ─────────────────────────────────────────────────
 FROM node:20-bullseye AS deps
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json .npmrc ./
 RUN npm ci
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
