@@ -62,7 +62,8 @@ const IDX_SELECT = [
 ].join(',')
 
 export async function syncIdxProperty(): Promise<ResoSyncResult> {
-  const start  = Date.now()
+  const start         = Date.now()
+  const syncStartedAt = new Date()  // used as stale-cleanup cutoff
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
   const syncType = 'idx_property'
 
@@ -92,8 +93,9 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
         return true
       })
 
-      for (const r of records) {
-        try {
+      if (records.length > 0) {
+        const now = new Date()
+        const ops = records.map(r => {
           const data = {
             listingId:             r.ListingId             ?? null,
             standardStatus:        r.StandardStatus,
@@ -123,23 +125,33 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             listOfficeName:        r.ListOfficeName        ?? null,
             listingContractDate:   r.ListingContractDate ? new Date(r.ListingContractDate) : null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
-            lastSyncedAt:          new Date(),
+            lastSyncedAt:          now,
             rawJson:               JSON.stringify(r),
           }
-
-          const existing = await prisma.resoProperty.findUnique({ where: { listingKey: r.ListingKey }, select: { id: true } })
-          await prisma.resoProperty.upsert({
+          // Don't overwrite media on update — it's fetched separately by syncIdxMedia
+          const { media: _media, ...updateData } = data
+          return prisma.resoProperty.upsert({
             where:  { listingKey: r.ListingKey },
-            update: data,
+            update: updateData,
             create: { ...data, listingKey: r.ListingKey },
+            select: { createdAt: true, updatedAt: true },
           })
-          if (existing) { result.updated++ } else { result.added++ }
-        } catch (e) {
-          result.errors.push(`${r.ListingKey}: ${e instanceof Error ? e.message : String(e)}`)
-        }
-      }
+        })
 
-      if (records.length > 0) {
+        try {
+          const upserted = await prisma.$transaction(ops)
+          for (const res of upserted) {
+            // createdAt === updatedAt means the row was just inserted
+            if (res.createdAt.getTime() === res.updatedAt.getTime()) {
+              result.added++
+            } else {
+              result.updated++
+            }
+          }
+        } catch (e) {
+          result.errors.push(`Batch page ${page}: ${e instanceof Error ? e.message : String(e)}`)
+        }
+
         const last = records[records.length - 1]
         lastTimestamp = new Date(last.ModificationTimestamp!)
         lastKey       = last.ListingKey
@@ -152,12 +164,13 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
       }
     }
 
-    // Mark active listings absent from this full run as Closed
-    // Only fires on full completion — not on interrupted/rate-limited runs
+    // Mark active listings absent from this full run as Closed.
+    // Uses syncStartedAt (not now-60s) so records processed early in a long
+    // run are not incorrectly classified as stale.
+    // Only fires on full completion — not on interrupted/rate-limited runs.
     if (fullRun) {
-      const cutoff = new Date(Date.now() - 60_000) // listings not synced in last 60s
       const stale = await prisma.resoProperty.findMany({
-        where:  { standardStatus: 'Active', onDemand: false, lastSyncedAt: { lt: cutoff } },
+        where:  { standardStatus: 'Active', onDemand: false, lastSyncedAt: { lt: syncStartedAt } },
         select: { listingKey: true },
       })
       if (stale.length > 0) {
@@ -228,41 +241,43 @@ export async function syncDlaProperty(): Promise<ResoSyncResult> {
         return true
       })
 
-      for (const r of records) {
+      if (records.length > 0) {
+        const now = new Date()
+        const ops = records.map(r => prisma.resoProperty.upsert({
+          where:  { listingKey: r.ListingKey },
+          update: {
+            // DLA only writes its enriched fields — never touches IDX-owned fields
+            mlsStatus:                r.MlsStatus                ? r.MlsStatus                : undefined,
+            contractStatus:           r.ContractStatus           ? r.ContractStatus           : undefined,
+            photosChangeTimestamp:    r.PhotosChangeTimestamp    ? new Date(r.PhotosChangeTimestamp)    : undefined,
+            documentsChangeTimestamp: r.DocumentsChangeTimestamp ? new Date(r.DocumentsChangeTimestamp) : undefined,
+            mediaChangeTimestamp:     r.MediaChangeTimestamp     ? new Date(r.MediaChangeTimestamp)     : undefined,
+            listAgentFullName:        r.ListAgentFullName        ? r.ListAgentFullName        : undefined,
+            listOfficeName:           r.ListOfficeName           ? r.ListOfficeName           : undefined,
+            majorChangeTimestamp:     r.MajorChangeTimestamp     ? new Date(r.MajorChangeTimestamp)     : undefined,
+            lastSyncedAt:             now,
+          },
+          create: {
+            listingKey:               r.ListingKey,
+            city:                     '',
+            stateOrProvince:          '',
+            standardStatus:           'Active',
+            mlsStatus:                r.MlsStatus                ?? null,
+            contractStatus:           r.ContractStatus           ?? null,
+            photosChangeTimestamp:    r.PhotosChangeTimestamp    ? new Date(r.PhotosChangeTimestamp)    : null,
+            documentsChangeTimestamp: r.DocumentsChangeTimestamp ? new Date(r.DocumentsChangeTimestamp) : null,
+            mediaChangeTimestamp:     r.MediaChangeTimestamp     ? new Date(r.MediaChangeTimestamp)     : null,
+            listAgentFullName:        r.ListAgentFullName        ?? null,
+            listOfficeName:           r.ListOfficeName           ?? null,
+            majorChangeTimestamp:     r.MajorChangeTimestamp     ? new Date(r.MajorChangeTimestamp)     : null,
+            lastSyncedAt:             now,
+          },
+        }))
         try {
-          // DLA only writes its enriched fields — never touches IDX-owned fields
-          await prisma.resoProperty.upsert({
-            where:  { listingKey: r.ListingKey },
-            update: {
-              mlsStatus:                r.MlsStatus                ? r.MlsStatus                : undefined,
-              contractStatus:           r.ContractStatus           ? r.ContractStatus           : undefined,
-              photosChangeTimestamp:    r.PhotosChangeTimestamp    ? new Date(r.PhotosChangeTimestamp)    : undefined,
-              documentsChangeTimestamp: r.DocumentsChangeTimestamp ? new Date(r.DocumentsChangeTimestamp) : undefined,
-              mediaChangeTimestamp:     r.MediaChangeTimestamp     ? new Date(r.MediaChangeTimestamp)     : undefined,
-              listAgentFullName:        r.ListAgentFullName        ? r.ListAgentFullName        : undefined,
-              listOfficeName:           r.ListOfficeName           ? r.ListOfficeName           : undefined,
-              majorChangeTimestamp:     r.MajorChangeTimestamp     ? new Date(r.MajorChangeTimestamp)     : undefined,
-              lastSyncedAt:             new Date(),
-            },
-            create: {
-              listingKey:               r.ListingKey,
-              city:                     '',
-              stateOrProvince:          '',
-              standardStatus:           'Active',
-              mlsStatus:                r.MlsStatus                ?? null,
-              contractStatus:           r.ContractStatus           ?? null,
-              photosChangeTimestamp:    r.PhotosChangeTimestamp    ? new Date(r.PhotosChangeTimestamp)    : null,
-              documentsChangeTimestamp: r.DocumentsChangeTimestamp ? new Date(r.DocumentsChangeTimestamp) : null,
-              mediaChangeTimestamp:     r.MediaChangeTimestamp     ? new Date(r.MediaChangeTimestamp)     : null,
-              listAgentFullName:        r.ListAgentFullName        ?? null,
-              listOfficeName:           r.ListOfficeName           ?? null,
-              majorChangeTimestamp:     r.MajorChangeTimestamp     ? new Date(r.MajorChangeTimestamp)     : null,
-              lastSyncedAt:             new Date(),
-            },
-          })
-          result.updated++
+          await prisma.$transaction(ops)
+          result.updated += records.length
         } catch (e) {
-          result.errors.push(`${r.ListingKey}: ${e instanceof Error ? e.message : String(e)}`)
+          result.errors.push(`Batch: ${e instanceof Error ? e.message : String(e)}`)
         }
       }
 
@@ -326,8 +341,9 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
         return true
       })
 
-      for (const r of records) {
-        try {
+      if (records.length > 0) {
+        const now = new Date()
+        const ops = records.map(r => {
           const data = {
             memberFullName:        r.MemberFullName        ?? null,
             memberEmail:           r.MemberEmail           ?? null,
@@ -337,18 +353,20 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
             officeName:            r.OfficeName            ?? null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
             photosChangeTimestamp: r.PhotosChangeTimestamp ? new Date(r.PhotosChangeTimestamp) : null,
-            lastSyncedAt:          new Date(),
+            lastSyncedAt:          now,
             rawJson:               JSON.stringify(r),
           }
-          const existing = await prisma.resoMember.findUnique({ where: { memberKey: r.MemberKey }, select: { id: true } })
-          await prisma.resoMember.upsert({
+          return prisma.resoMember.upsert({
             where:  { memberKey: r.MemberKey },
             update: data,
             create: { ...data, memberKey: r.MemberKey },
           })
-          if (existing) { result.updated++ } else { result.added++ }
+        })
+        try {
+          await prisma.$transaction(ops)
+          result.updated += records.length
         } catch (e) {
-          result.errors.push(`${r.MemberKey}: ${e instanceof Error ? e.message : String(e)}`)
+          result.errors.push(`Batch: ${e instanceof Error ? e.message : String(e)}`)
         }
       }
 
@@ -411,25 +429,28 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
         return true
       })
 
-      for (const r of records) {
-        try {
+      if (records.length > 0) {
+        const now = new Date()
+        const ops = records.map(r => {
           const data = {
             officeName:            r.OfficeName            ?? null,
             officeEmail:           r.OfficeEmail           ?? null,
             officePhone:           r.OfficePhone           ?? null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
-            lastSyncedAt:          new Date(),
+            lastSyncedAt:          now,
             rawJson:               JSON.stringify(r),
           }
-          const existing = await prisma.resoOffice.findUnique({ where: { officeKey: r.OfficeKey }, select: { id: true } })
-          await prisma.resoOffice.upsert({
+          return prisma.resoOffice.upsert({
             where:  { officeKey: r.OfficeKey },
             update: data,
             create: { ...data, officeKey: r.OfficeKey },
           })
-          if (existing) { result.updated++ } else { result.added++ }
+        })
+        try {
+          await prisma.$transaction(ops)
+          result.updated += records.length
         } catch (e) {
-          result.errors.push(`${r.OfficeKey}: ${e instanceof Error ? e.message : String(e)}`)
+          result.errors.push(`Batch: ${e instanceof Error ? e.message : String(e)}`)
         }
       }
 
