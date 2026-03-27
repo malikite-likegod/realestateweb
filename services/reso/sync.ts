@@ -613,7 +613,6 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
       lastSyncedAt:          new Date(),
       onDemand:              true,
-      rawJson:               JSON.stringify(r),
     }
 
     await prisma.resoProperty.upsert({
