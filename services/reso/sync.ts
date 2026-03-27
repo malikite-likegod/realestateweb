@@ -34,22 +34,8 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
   return `${tsField} gt ${toODataTs(lastTs)}`
 }
 
-function brokerageFilter(): string | null {
-  const officeKey = process.env.AMPRE_OFFICE_KEY
-  if (officeKey) {
-    // ListOfficeKey is a key field and likely indexed — filter server-side.
-    // Client-side matchesBrokerage() still runs as a safety net in case AMPRE
-    // silently ignores this filter (same behaviour as ListOfficeName).
-    return `(StandardStatus eq 'Active') and (ListOfficeKey eq '${officeKey.replace(/'/g, "''")}')`
-  }
-  // Fall back to status-only filter; brokerage match is done client-side
+function activeFilter(): string {
   return `StandardStatus eq 'Active'`
-}
-
-function matchesBrokerage(officeName: string | undefined): boolean {
-  const name = process.env.AMPRE_BROKERAGE_NAME
-  if (!name) return true   // no filter set — accept all
-  return (officeName ?? '').trim().toUpperCase() === name.trim().toUpperCase()
 }
 
 function combineFilters(...filters: (string | null)[]): string {
@@ -85,7 +71,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
       page++
       console.log(`[idx_property] Fetching page ${page} (added=${result.added} updated=${result.updated})`)
       const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
-        $filter:  combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), brokerageFilter()),
+        $filter:  combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), activeFilter()),
         $orderby: 'ModificationTimestamp asc',
         $top:     BATCH_SIZE,
         $select:  IDX_SELECT,
@@ -96,7 +82,6 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
           console.warn(`[idx_property] Skipping ${r.ListingKey} — null ModificationTimestamp`)
           return false
         }
-        if (!matchesBrokerage(r.ListOfficeName)) return false
         return true
       })
 
