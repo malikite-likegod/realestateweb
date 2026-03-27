@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#f5f2ed"/>
+
+  <!-- House outline -->
+  <path d="M118 168 L200 96 L282 168" fill="none" stroke="#9a9390" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- House body -->
+  <rect x="122" y="168" width="156" height="90" fill="none" stroke="#9a9390" stroke-width="2" rx="1"/>
+
+  <!-- Chimney -->
+  <rect x="236" y="110" width="20" height="42" fill="none" stroke="#9a9390" stroke-width="1.5"/>
+
+  <!-- Left window -->
+  <rect x="136" y="180" width="36" height="30" fill="none" stroke="#b8b0a8" stroke-width="1.2"/>
+  <line x1="154" y1="180" x2="154" y2="210" stroke="#c8c0b8" stroke-width="0.6"/>
+  <line x1="136" y1="195" x2="172" y2="195" stroke="#c8c0b8" stroke-width="0.6"/>
+
+  <!-- Right window -->
+  <rect x="228" y="180" width="36" height="30" fill="none" stroke="#b8b0a8" stroke-width="1.2"/>
+  <line x1="246" y1="180" x2="246" y2="210" stroke="#c8c0b8" stroke-width="0.6"/>
+  <line x1="228" y1="195" x2="264" y2="195" stroke="#c8c0b8" stroke-width="0.6"/>
+
+  <!-- Door -->
+  <rect x="182" y="216" width="36" height="42" fill="none" stroke="#b8b0a8" stroke-width="1.2"/>
+  <!-- Door knob -->
+  <circle cx="213" cy="238" r="2" fill="#c8c0b8"/>
+
+  <!-- Caption -->
+  <text x="200" y="284" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" letter-spacing="3" fill="#9a9390" font-weight="300">NO PHOTOS AVAILABLE</text>
+</svg>

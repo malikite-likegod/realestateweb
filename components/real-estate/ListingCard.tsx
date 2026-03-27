@@ -12,7 +12,7 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
-  const image = listing.images?.[0] ?? '/placeholder-property.jpg'
+  const image = listing.images?.[0] ?? '/images/minimal-light-placeholder.svg'
   return (
     <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }} className="group rounded-2xl overflow-hidden bg-white border border-charcoal-100 shadow-sm hover:shadow-md transition-shadow">
       <Link href={`/listings/idx/${listing.idxId}`}>

@@ -111,9 +111,9 @@ export function PropertyInterestsPanel({ contactId }: Props) {
   const getFirstImage = (media: string | null): string => {
     try {
       const items = JSON.parse(media ?? '[]') as { url: string }[]
-      return items[0]?.url ?? '/placeholder-property.jpg'
+      return items[0]?.url ?? '/images/minimal-light-placeholder.svg'
     }
-    catch { return '/placeholder-property.jpg' }
+    catch { return '/images/minimal-light-placeholder.svg' }
   }
 
   return (

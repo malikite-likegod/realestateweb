@@ -36,7 +36,7 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
       const mediaItems = parseJsonSafe<{ url: string; order: number }[]>(p.media, [])
       const images = mediaItems.length
         ? mediaItems.sort((a, b) => a.order - b.order).map(m => m.url)
-        : ['/placeholder-property.jpg']
+        : ['/images/minimal-light-placeholder.svg']
 
       const addressParts = [
         p.streetNumber,

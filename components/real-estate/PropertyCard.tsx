@@ -17,7 +17,7 @@ interface PropertyCardProps {
 
 export function PropertyCard({ property, featured = false, className }: PropertyCardProps) {
   const images = property.images ?? []
-  const mainImage = images[0] ?? '/placeholder-property.jpg'
+  const mainImage = images[0] ?? '/images/minimal-light-placeholder.svg'
 
   return (
     <motion.div

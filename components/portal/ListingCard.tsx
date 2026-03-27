@@ -36,10 +36,11 @@ export function ListingCard({ listing, isSaved }: Props) {
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <Link href={`/portal/listings/${listing.id}`}>
         <div className="h-48 bg-gray-100">
-          {photo
-            ? <img src={photo} alt={p.title} className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No photo</div>
-          }
+          <img
+            src={photo ?? '/images/minimal-light-placeholder.svg'}
+            alt={p.title}
+            className="w-full h-full object-cover"
+          />
         </div>
       </Link>
       <div className="p-4">
