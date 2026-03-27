@@ -35,7 +35,14 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
 }
 
 function brokerageFilter(): string | null {
-  // ListOfficeName is not indexed as a filterable field on AMPRE — filter client-side instead
+  const officeKey = process.env.AMPRE_OFFICE_KEY
+  if (officeKey) {
+    // ListOfficeKey is a key field and likely indexed — filter server-side.
+    // Client-side matchesBrokerage() still runs as a safety net in case AMPRE
+    // silently ignores this filter (same behaviour as ListOfficeName).
+    return `(StandardStatus eq 'Active') and (ListOfficeKey eq '${officeKey.replace(/'/g, "''")}')`
+  }
+  // Fall back to status-only filter; brokerage match is done client-side
   return `StandardStatus eq 'Active'`
 }
 
