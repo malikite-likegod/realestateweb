@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { ampreGet } from './client'
 import type { ResoPropertyRaw, ResoMediaRaw, ResoMemberRaw, ResoOfficeRaw, ResoSyncResult } from './types'
 
-const BATCH_SIZE = 500
+const BATCH_SIZE = 1000
 const EPOCH      = new Date('1970-01-01T00:00:00Z')
 
 // ─── Checkpoint helpers ────────────────────────────────────────────────────
@@ -118,7 +118,6 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             listingContractDate:   r.ListingContractDate ? new Date(r.ListingContractDate) : null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
             lastSyncedAt:          now,
-            rawJson:               JSON.stringify(r),
           }
           // Don't overwrite media on update — it's fetched separately by syncIdxMedia
           const { media: _media, ...updateData } = data
@@ -340,7 +339,6 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
             modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
             photosChangeTimestamp: r.PhotosChangeTimestamp ? new Date(r.PhotosChangeTimestamp) : null,
             lastSyncedAt:          now,
-            rawJson:               JSON.stringify(r),
           }
           return prisma.resoMember.upsert({
             where:  { memberKey: r.MemberKey },
@@ -414,7 +412,6 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
             officePhone:           r.OfficePhone           ?? null,
             modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
             lastSyncedAt:          now,
-            rawJson:               JSON.stringify(r),
           }
           return prisma.resoOffice.upsert({
             where:  { officeKey: r.OfficeKey },

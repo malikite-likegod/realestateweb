@@ -66,11 +66,11 @@ export async function POST(request: Request) {
 
   if (type === 'all') {
     runInBackground(async () => {
-      await syncIdxProperty()
-      await syncIdxMedia()
-      await syncDlaProperty()
-      await syncVoxMember()
-      await syncVoxOffice()
+      // IDX properties, VOX members, and VOX offices write to different tables — run in parallel
+      await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
+      // DLA enriches property rows — run after IDX to avoid row conflicts
+      // Media fetches photos for listings that don't have them yet
+      await Promise.all([syncDlaProperty(), syncIdxMedia()])
     })
     return NextResponse.json({ success: true, message: 'Full sync started in background' })
   }
