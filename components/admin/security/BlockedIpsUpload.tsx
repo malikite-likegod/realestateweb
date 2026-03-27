@@ -38,14 +38,21 @@ function downloadTemplate() {
 
 function parseRows(csvText: string): { rows: ParsedIpRow[]; total: number } {
   const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-  // Find header row — case-insensitive match for 'ip'
-  const headerIdx = lines.findIndex(l => l.split(',')[0].trim().toLowerCase() === 'ip')
+  // Find header row — look for a row containing an 'ip' column anywhere
+  const headerIdx = lines.findIndex(l =>
+    l.split(',').some(col => col.trim().toLowerCase() === 'ip')
+  )
+  // Determine which column index contains the IP
+  const ipColIdx = headerIdx >= 0
+    ? lines[headerIdx].split(',').findIndex(col => col.trim().toLowerCase() === 'ip')
+    : 0
   const dataLines = headerIdx >= 0 ? lines.slice(headerIdx + 1) : lines
   const total = dataLines.length
   const slice = dataLines.slice(0, MAX_PREVIEW_ROWS)
-  const rows: ParsedIpRow[] = slice.map(raw => {
-    if (!raw)              return { raw, normalized: null, valid: false, error: 'Empty' }
-    if (!isValidIpv4(raw)) return { raw, normalized: null, valid: false, error: 'Invalid IPv4' }
+  const rows: ParsedIpRow[] = slice.map(line => {
+    const raw = line.split(',')[ipColIdx]?.trim() ?? ''
+    if (!raw)               return { raw: line, normalized: null, valid: false, error: 'Empty' }
+    if (!isValidIpv4(raw))  return { raw,        normalized: null, valid: false, error: 'Invalid IPv4' }
     return { raw, normalized: normalizeIpv4(raw), valid: true }
   })
   return { rows, total }
@@ -159,7 +166,7 @@ export function BlockedIpsUpload({ onUploaded }: Props) {
           </div>
 
           <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-4 py-2">
-            <span>Single column CSV with header <code className="font-mono bg-blue-100 px-1 rounded">ip</code>. IPv4 addresses only.</span>
+            <span>CSV with an <code className="font-mono bg-blue-100 px-1 rounded">ip</code> column. Accepts AbuseIPDB exports and single-column files. IPv4 only.</span>
             <button className="ml-auto flex items-center gap-1 underline whitespace-nowrap" onClick={e => { e.stopPropagation(); downloadTemplate() }}>
               <Download size={14} /> Template
             </button>
