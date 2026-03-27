@@ -10,9 +10,11 @@ export interface PropertyFilters {
   minBeds?:      number
   minBaths?:     number
   propertyType?: string
-  status?:       string   // default: 'Active'
-  page?:         number   // default: 1
-  pageSize?:     number   // default: 20
+  status?:       string        // default: 'Active'
+  officeKey?:    string | null // filter by listOfficeKey
+  officeName?:   string | null // filter by listOfficeName (fallback)
+  page?:         number        // default: 1
+  pageSize?:     number        // default: 20
 }
 
 export interface PropertyListResult {
@@ -51,13 +53,15 @@ function buildWhere(filters: PropertyFilters) {
   if (filters.minBeds  != null) where.bedroomsTotal         = { gte: filters.minBeds }
   if (filters.minBaths != null) where.bathroomsTotalInteger = { gte: filters.minBaths }
   if (filters.propertyType)     where.propertySubType       = { contains: filters.propertyType }
+  if (filters.officeKey)        where.listOfficeKey         = filters.officeKey
+  else if (filters.officeName)  where.listOfficeName        = { equals: filters.officeName, mode: 'insensitive' }
   return where
 }
 
 export const PropertyService = {
   async getProperties(filters: PropertyFilters = {}): Promise<PropertyListResult> {
     const page     = Math.max(1, filters.page     ?? 1)
-    const pageSize = Math.min(50, Math.max(1, filters.pageSize ?? 20))
+    const pageSize = Math.min(200, Math.max(1, filters.pageSize ?? 20))
     const skip     = (page - 1) * pageSize
     const cacheKey = buildCacheKey({ ...filters, page, pageSize })
 

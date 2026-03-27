@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { parseJsonSafe } from '@/lib/utils'
 import { buildPropertyWhere, buildOrderBy } from './filters'
+import { getBrokerageFilter } from '@/lib/site-settings'
 import type { SearchFilters, SearchResult, SearchResponse } from './types'
 
 export async function searchProperties(filters: SearchFilters, sessionId?: string, contactId?: string): Promise<SearchResponse> {
   const page = Math.max(1, filters.page ?? 1)
-  const pageSize = Math.min(50, Math.max(1, filters.pageSize ?? 12))
+  const pageSize = Math.min(200, Math.max(1, filters.pageSize ?? 12))
   const skip = (page - 1) * pageSize
   const source = filters.source ?? 'all'
 
@@ -44,6 +45,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
 
   if (source === 'reso' || source === 'all') {
     const { PropertyService } = await import('@/lib/property-service')
+    const { officeKey, officeName } = await getBrokerageFilter()
     const resoResult = await PropertyService.getProperties({
       city:         filters.city,
       minPrice:     filters.minPrice,
@@ -51,6 +53,8 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       minBeds:      filters.minBeds,
       minBaths:     filters.minBaths,
       propertyType: filters.propertyType,
+      officeKey,
+      officeName,
       page:         source === 'all' ? 1    : page,
       pageSize:     source === 'all' ? 9999 : pageSize,
     })
@@ -59,15 +63,15 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       id:          p.id,
       listingKey:  p.listingKey,
       source:      'reso' as const,
-      title:       [p.streetNumber, p.streetName, p.unitNumber].filter(Boolean).join(' ') || p.listingKey,
+      title:       [p.streetNumber, p.streetName, p.streetSuffix, p.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean).join(' ') || p.listingKey,
       price:       p.listPrice,
       bedrooms:    p.bedroomsTotal,
       bathrooms:   p.bathroomsTotalInteger,
       sqft:        p.livingArea ? Math.round(p.livingArea) : null,
-      address:     [p.streetNumber, p.streetName].filter(Boolean).join(' '),
+      address:     [p.streetNumber, p.streetName, p.streetSuffix].filter(Boolean).join(' '),
       city:        p.city,
       propertyType: p.propertySubType,
-      listingType:  'sale',
+      listingType:  (p.transactionType ?? '').toLowerCase().includes('lease') ? 'lease' : 'sale',
       images:       p.media ? (JSON.parse(p.media) as { url: string }[]).map(m => m.url) : [],
       latitude:     p.latitude,
       longitude:    p.longitude,
