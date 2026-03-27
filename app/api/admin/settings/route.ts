@@ -28,7 +28,7 @@ export async function PATCH(request: Request) {
         })
       )
     )
-    revalidateTag('blur_mode')
+    revalidateTag('blur_mode', 'default')
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
