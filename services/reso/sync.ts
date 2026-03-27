@@ -492,12 +492,28 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
           $select:  MEDIA_SELECT,
         })
 
+        // size preference: higher index = better quality
+        const SIZE_RANK: Record<string, number> = {
+          'Thumbnail': 0, 'Small': 1, 'Medium': 2, 'Large': 3, 'Largest': 4,
+        }
+        // bestMap: listingKey → Map<order, {url, sizeRank}>
+        const bestMap = new Map<string, Map<number, { url: string; sizeRank: number }>>()
+
         for (const m of batch.value) {
           if (m.MediaStatus === 'Deleted' || !m.MediaURL || !m.ResourceRecordKey) continue
-          // Prefer 'Largest' size — skip smaller variants if a larger one exists
-          const existing = mediaMap.get(m.ResourceRecordKey) ?? []
-          existing.push({ url: m.MediaURL, order: m.Order ?? 0 })
-          mediaMap.set(m.ResourceRecordKey, existing)
+          const order    = m.Order ?? 0
+          const sizeRank = SIZE_RANK[m.ImageSizeDescription ?? ''] ?? 2
+          const byOrder  = bestMap.get(m.ResourceRecordKey) ?? new Map()
+          const current  = byOrder.get(order)
+          if (!current || sizeRank > current.sizeRank) {
+            byOrder.set(order, { url: m.MediaURL, sizeRank })
+          }
+          bestMap.set(m.ResourceRecordKey, byOrder)
+        }
+
+        for (const [key, byOrder] of bestMap) {
+          const items = Array.from(byOrder.entries()).map(([order, { url }]) => ({ url, order }))
+          mediaMap.set(key, items)
         }
       } catch (e) {
         result.errors.push(`Batch ${i}: ${e instanceof Error ? e.message : String(e)}`)
