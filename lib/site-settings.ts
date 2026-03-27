@@ -34,3 +34,19 @@ export const getMlsSyncInterval = unstable_cache(
   ['mls-sync-interval'],
   { revalidate: 60 }
 )
+
+export const getBrokerageFilter = unstable_cache(
+  async () => {
+    const rows = await prisma.siteSettings.findMany({
+      where: { key: { in: ['brokerage_office_key', 'brokerage_name'] } },
+    })
+    const map: Record<string, string> = {}
+    for (const r of rows) map[r.key] = r.value
+    return {
+      officeKey:  map['brokerage_office_key'] ?? process.env.AMPRE_OFFICE_KEY      ?? null,
+      officeName: map['brokerage_name']        ?? process.env.AMPRE_BROKERAGE_NAME  ?? null,
+    }
+  },
+  ['brokerage-filter'],
+  { revalidate: 300 }
+)

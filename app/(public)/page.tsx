@@ -11,6 +11,7 @@ import { Button } from '@/components/ui'
 import { SearchBar } from '@/components/navigation'
 import { prisma } from '@/lib/prisma'
 import { parseJsonSafe } from '@/lib/utils'
+import { getBrokerageFilter } from '@/lib/site-settings'
 import { Home, TrendingUp, Phone, Users, Shield, Clock } from 'lucide-react'
 import Link from 'next/link'
 import type { PropertySummary } from '@/types'
@@ -19,11 +20,10 @@ export const dynamic = 'force-dynamic'
 
 async function getFeaturedProperties(): Promise<PropertySummary[]> {
   try {
-    const officeName = process.env.AMPRE_BROKERAGE_NAME
-    const officeKey  = process.env.AMPRE_OFFICE_KEY
+    const { officeKey, officeName } = await getBrokerageFilter()
 
     const where: Record<string, unknown> = { standardStatus: 'Active' }
-    if (officeKey)  where.listOfficeKey  = officeKey
+    if (officeKey)       where.listOfficeKey  = officeKey
     else if (officeName) where.listOfficeName = { equals: officeName, mode: 'insensitive' }
 
     const properties = await prisma.resoProperty.findMany({
@@ -38,26 +38,34 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
         ? mediaItems.sort((a, b) => a.order - b.order).map(m => m.url)
         : ['/placeholder-property.jpg']
 
-      const addressParts = [p.streetNumber, p.streetName, p.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
+      const addressParts = [
+        p.streetNumber,
+        p.streetName,
+        p.streetSuffix,
+        p.unitNumber ? `#${p.unitNumber}` : null,
+      ].filter(Boolean)
+
+      const txType = (p.transactionType ?? '').toLowerCase()
+      const listingType = txType.includes('lease') ? 'lease' : 'sale'
 
       return {
-        id:               p.id,
-        title:            addressParts.join(' ') || p.city,
-        price:            p.listPrice ?? 0,
-        bedrooms:         p.bedroomsTotal,
-        bathrooms:        p.bathroomsTotalInteger,
-        sqft:             p.livingArea,
-        address:          addressParts.join(' ') || '',
-        city:             p.city,
-        propertyType:     p.propertyType ?? 'Residential',
-        listingType:      'sale',
-        status:           p.standardStatus.toLowerCase(),
+        id:                p.id,
+        title:             addressParts.join(' ') || p.city,
+        price:             p.listPrice ?? 0,
+        bedrooms:          p.bedroomsTotal,
+        bathrooms:         p.bathroomsTotalInteger,
+        sqft:              p.livingArea,
+        address:           addressParts.join(' ') || '',
+        city:              p.city,
+        propertyType:      p.propertyType ?? 'Residential',
+        listingType,
+        status:            p.standardStatus.toLowerCase(),
         images,
-        latitude:         p.latitude,
-        longitude:        p.longitude,
-        listedAt:         p.listingContractDate,
+        latitude:          p.latitude,
+        longitude:         p.longitude,
+        listedAt:          p.listingContractDate,
         listAgentFullName: p.listAgentFullName,
-        listOfficeName:   p.listOfficeName,
+        listOfficeName:    p.listOfficeName,
       }
     })
   } catch {

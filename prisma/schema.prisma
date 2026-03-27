@@ -356,7 +356,9 @@ model ResoProperty {
   yearBuilt             Int?
   streetNumber          String?
   streetName            String?
+  streetSuffix          String?
   unitNumber            String?
+  transactionType       String?
   city                  String
   stateOrProvince       String
   postalCode            String?

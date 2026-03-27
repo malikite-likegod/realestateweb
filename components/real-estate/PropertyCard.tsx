@@ -40,7 +40,7 @@ export function PropertyCard({ property, featured = false, className }: Property
           {/* Badges */}
           <div className="absolute top-3 left-3 flex gap-2">
             <Badge variant={property.status === 'active' ? 'success' : 'warning'} className="capitalize">
-              {property.listingType === 'sale' ? 'For Sale' : 'For Rent'}
+              {property.listingType === 'lease' ? 'For Lease' : property.listingType === 'sale' ? 'For Sale' : 'For Rent'}
             </Badge>
             {featured && <Badge variant="gold">Featured</Badge>}
           </div>

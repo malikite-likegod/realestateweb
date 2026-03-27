@@ -17,7 +17,9 @@ export interface ResoPropertyRaw {
   YearBuilt?:            number
   StreetNumber?:         string
   StreetName?:           string
+  StreetSuffix?:         string
   UnitNumber?:           string
+  TransactionType?:      string
   City?:                 string
   StateOrProvince?:      string
   PostalCode?:           string
