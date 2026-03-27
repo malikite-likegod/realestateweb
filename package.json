@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && NODE_OPTIONS='--max-old-space-size=3072' next build",
     "start": "NODE_OPTIONS='--max-old-space-size=3072' next start -p 3000",
     "lint": "next lint",
     "setup": "tsx scripts/setup.ts",
@@ -35,7 +35,7 @@
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "eslint": "^8",
-    "eslint-config-next": "15.0.3",
+    "eslint-config-next": "^16.2.1",
     "framer-motion": "^11.11.0",
     "jose": "^5.9.3",
     "lru-cache": "^11.2.7",
