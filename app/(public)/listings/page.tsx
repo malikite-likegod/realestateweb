@@ -7,15 +7,19 @@ import { PropertyGrid } from '@/components/real-estate'
 import { ListingMap } from '@/components/real-estate'
 import { Button, Select, Input } from '@/components/ui'
 import { PROPERTY_TYPES, LISTING_TYPES } from '@/lib/constants'
-import { Map, List, SlidersHorizontal } from 'lucide-react'
+import { Map, List, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
+
+const PAGE_SIZE = 50
 
 function ListingsContent() {
   const searchParams = useSearchParams()
   const [results, setResults] = useState<SearchResult[]>([])
   const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'grid' | 'map'>('grid')
   const [showFilters, setShowFilters] = useState(false)
@@ -32,18 +36,31 @@ function ListingsContent() {
 
   const [activeFilters, setActiveFilters] = useState(filters)
 
-  const fetchResults = useCallback(async (currentFilters: typeof filters) => {
+  const fetchResults = useCallback(async (currentFilters: typeof filters, currentPage: number) => {
     setLoading(true)
     const params = new URLSearchParams()
     Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.set(k, v) })
+    params.set('source', 'reso')
+    params.set('page', String(currentPage))
+    params.set('pageSize', String(PAGE_SIZE))
     const res = await fetch(`/api/search?${params}`)
     const data = await res.json()
     setResults(data.results ?? [])
     setTotal(data.total ?? 0)
+    setTotalPages(data.totalPages ?? 1)
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchResults(activeFilters) }, [fetchResults, activeFilters])
+  useEffect(() => {
+    setPage(1)
+    fetchResults(activeFilters, 1)
+  }, [fetchResults, activeFilters])
+
+  useEffect(() => {
+    fetchResults(activeFilters, page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page])
 
   const properties = results.map(r => ({
     id: r.listingKey ?? r.id,
@@ -64,6 +81,9 @@ function ListingsContent() {
     listAgentFullName: r.listAgentFullName ?? null,
     listOfficeName:    r.listOfficeName ?? null,
   }))
+
+  const start = (page - 1) * PAGE_SIZE + 1
+  const end   = Math.min(page * PAGE_SIZE, total)
 
   return (
     <div className="pt-20">
@@ -98,7 +118,12 @@ function ListingsContent() {
       <Container className="py-8">
         {/* Results header */}
         <div className="flex items-center justify-between mb-6">
-          <p className="text-charcoal-600"><strong className="text-charcoal-900">{total}</strong> properties found</p>
+          <p className="text-charcoal-600">
+            {total > 0
+              ? <><strong className="text-charcoal-900">{start}–{end}</strong> of <strong className="text-charcoal-900">{total}</strong> properties</>
+              : <><strong className="text-charcoal-900">{total}</strong> properties found</>
+            }
+          </p>
           <SaveSearchButton
             filters={Object.fromEntries(
               Object.entries(activeFilters).filter(([, v]) => v !== '')
@@ -114,6 +139,47 @@ function ListingsContent() {
           <PropertyGrid properties={properties} loading={loading} columns={3} />
         ) : (
           <ListingMap markers={properties.filter(p => p.latitude).map(p => ({ lat: p.latitude!, lng: p.longitude!, title: p.title, price: p.price }))} height="600px" />
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-10 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setPage(p => p - 1)}
+              disabled={page === 1}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg border border-charcoal-200 text-sm text-charcoal-700 hover:bg-charcoal-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} /> Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+              .reduce<(number | '…')[]>((acc, p, i, arr) => {
+                if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('…')
+                acc.push(p)
+                return acc
+              }, [])
+              .map((p, i) =>
+                p === '…'
+                  ? <span key={`ellipsis-${i}`} className="px-2 text-charcoal-400">…</span>
+                  : <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`w-9 h-9 rounded-lg text-sm font-medium ${page === p ? 'bg-charcoal-900 text-white' : 'border border-charcoal-200 text-charcoal-700 hover:bg-charcoal-50'}`}
+                    >
+                      {p}
+                    </button>
+              )
+            }
+
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={page === totalPages}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg border border-charcoal-200 text-sm text-charcoal-700 hover:bg-charcoal-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
         )}
       </Container>
       <MlsDisclaimer variant="idx" />
