@@ -321,7 +321,7 @@ export async function syncDlaProperty(): Promise<ResoSyncResult> {
 
 const VOX_MEMBER_SELECT = [
   'MemberKey', 'MemberFullName', 'MemberEmail', 'MemberMobilePhone',
-  'MemberStatus', 'OfficeKey', 'OfficeName', 'ModificationTimestamp', 'PhotosChangeTimestamp',
+  'MemberStatus', 'OfficeKey', 'ModificationTimestamp', 'PhotosChangeTimestamp',
 ].join(',')
 
 export async function syncVoxMember(): Promise<ResoSyncResult> {
@@ -357,7 +357,6 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
             memberMobilePhone:     r.MemberMobilePhone     ?? null,
             memberStatus:          r.MemberStatus          ?? null,
             officeKey:             r.OfficeKey             ?? null,
-            officeName:            r.OfficeName            ?? null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
             photosChangeTimestamp: r.PhotosChangeTimestamp ? new Date(r.PhotosChangeTimestamp) : null,
             lastSyncedAt:          now,
@@ -417,24 +416,20 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
   const syncType = 'vox_office'
 
-  let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
+  // Office endpoint does not support ModificationTimestamp in $filter.
+  // Paginate by OfficeKey instead — fetch all offices each run (small set).
+  let lastKey = '0'
 
   try {
     while (true) {
       const batch = await ampreGet<ResoOfficeRaw>('vox', 'Office', {
-        $filter:  cursorFilter('ModificationTimestamp', 'OfficeKey', lastTimestamp, lastKey),
-        $orderby: 'ModificationTimestamp asc',
+        $filter:  `OfficeKey gt '${lastKey.replace(/'/g, "''")}'`,
+        $orderby: 'OfficeKey asc',
         $top:     BATCH_SIZE,
         $select:  VOX_OFFICE_SELECT,
       })
 
-      const records = batch.value.filter(r => {
-        if (!r.ModificationTimestamp) {
-          console.warn(`[vox_office] Skipping ${r.OfficeKey} — null ModificationTimestamp`)
-          return false
-        }
-        return true
-      })
+      const records = batch.value.filter(r => !!r.OfficeKey)
 
       if (records.length > 0) {
         const now = new Date()
@@ -462,10 +457,7 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
       }
 
       if (records.length > 0) {
-        const last = records[records.length - 1]
-        lastTimestamp = new Date(last.ModificationTimestamp!)
-        lastKey       = last.OfficeKey
-        await saveCheckpoint(syncType, lastTimestamp, lastKey)
+        lastKey = records[records.length - 1].OfficeKey
       }
 
       if (batch.value.length < BATCH_SIZE) break
