@@ -19,30 +19,47 @@ export const dynamic = 'force-dynamic'
 
 async function getFeaturedProperties(): Promise<PropertySummary[]> {
   try {
-    const properties = await prisma.property.findMany({
-      where: { status: 'active', listings: { some: { featured: true } } },
-      orderBy: { createdAt: 'desc' },
+    const officeName = process.env.AMPRE_BROKERAGE_NAME
+    const officeKey  = process.env.AMPRE_OFFICE_KEY
+
+    const where: Record<string, unknown> = { standardStatus: 'Active' }
+    if (officeKey)  where.listOfficeKey  = officeKey
+    else if (officeName) where.listOfficeName = { equals: officeName, mode: 'insensitive' }
+
+    const properties = await prisma.resoProperty.findMany({
+      where,
+      orderBy: { listingContractDate: 'desc' },
       take: 6,
-      include: { listings: { where: { featured: true }, take: 1 } },
     })
 
-    return properties.map(p => ({
-    id: p.id,
-    title: p.title,
-    price: p.price,
-    bedrooms: p.bedrooms,
-    bathrooms: p.bathrooms,
-    sqft: p.sqft,
-    address: p.address,
-    city: p.city,
-    propertyType: p.propertyType,
-    listingType: p.listingType,
-    status: p.status,
-    images: parseJsonSafe<string[]>(p.images, ['/placeholder-property.jpg']),
-    latitude: p.latitude,
-    longitude: p.longitude,
-      listedAt: p.listedAt,
-    }))
+    return properties.map(p => {
+      const mediaItems = parseJsonSafe<{ url: string; order: number }[]>(p.media, [])
+      const images = mediaItems.length
+        ? mediaItems.sort((a, b) => a.order - b.order).map(m => m.url)
+        : ['/placeholder-property.jpg']
+
+      const addressParts = [p.streetNumber, p.streetName, p.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
+
+      return {
+        id:               p.id,
+        title:            addressParts.join(' ') || p.city,
+        price:            p.listPrice ?? 0,
+        bedrooms:         p.bedroomsTotal,
+        bathrooms:        p.bathroomsTotalInteger,
+        sqft:             p.livingArea,
+        address:          addressParts.join(' ') || '',
+        city:             p.city,
+        propertyType:     p.propertyType ?? 'Residential',
+        listingType:      'sale',
+        status:           p.standardStatus.toLowerCase(),
+        images,
+        latitude:         p.latitude,
+        longitude:        p.longitude,
+        listedAt:         p.listingContractDate,
+        listAgentFullName: p.listAgentFullName,
+        listOfficeName:   p.listOfficeName,
+      }
+    })
   } catch {
     return []
   }
