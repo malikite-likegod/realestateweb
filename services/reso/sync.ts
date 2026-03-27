@@ -327,26 +327,21 @@ const VOX_MEMBER_SELECT = [
 export async function syncVoxMember(): Promise<ResoSyncResult> {
   const start  = Date.now()
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
-  const syncType = 'vox_member'
 
-  let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
+  // Member endpoint does not support ModificationTimestamp in $filter.
+  // Paginate by MemberKey instead — fetch all members each run.
+  let lastKey = '0'
 
   try {
     while (true) {
       const batch = await ampreGet<ResoMemberRaw>('vox', 'Member', {
-        $filter:  cursorFilter('ModificationTimestamp', 'MemberKey', lastTimestamp, lastKey),
-        $orderby: 'ModificationTimestamp asc',
+        $filter:  `MemberKey gt '${lastKey.replace(/'/g, "''")}'`,
+        $orderby: 'MemberKey asc',
         $top:     BATCH_SIZE,
         $select:  VOX_MEMBER_SELECT,
       })
 
-      const records = batch.value.filter(r => {
-        if (!r.ModificationTimestamp) {
-          console.warn(`[vox_member] Skipping ${r.MemberKey} — null ModificationTimestamp`)
-          return false
-        }
-        return true
-      })
+      const records = batch.value.filter(r => !!r.MemberKey)
 
       if (records.length > 0) {
         const now = new Date()
@@ -357,7 +352,7 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
             memberMobilePhone:     r.MemberMobilePhone     ?? null,
             memberStatus:          r.MemberStatus          ?? null,
             officeKey:             r.OfficeKey             ?? null,
-            modificationTimestamp: new Date(r.ModificationTimestamp!),
+            modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
             photosChangeTimestamp: r.PhotosChangeTimestamp ? new Date(r.PhotosChangeTimestamp) : null,
             lastSyncedAt:          now,
             rawJson:               JSON.stringify(r),
@@ -374,13 +369,7 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
         } catch (e) {
           result.errors.push(`Batch: ${e instanceof Error ? e.message : String(e)}`)
         }
-      }
-
-      if (records.length > 0) {
-        const last = records[records.length - 1]
-        lastTimestamp = new Date(last.ModificationTimestamp!)
-        lastKey       = last.MemberKey
-        await saveCheckpoint(syncType, lastTimestamp, lastKey)
+        lastKey = records[records.length - 1].MemberKey
       }
 
       if (batch.value.length < BATCH_SIZE) break
@@ -392,7 +381,7 @@ export async function syncVoxMember(): Promise<ResoSyncResult> {
   result.durationMs = Date.now() - start
   await prisma.resoSyncLog.create({
     data: {
-      syncType,
+      syncType:   'vox_member',
       added:      result.added,
       updated:    result.updated,
       deleted:    result.removed,
@@ -438,7 +427,7 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
             officeName:            r.OfficeName            ?? null,
             officeEmail:           r.OfficeEmail           ?? null,
             officePhone:           r.OfficePhone           ?? null,
-            modificationTimestamp: new Date(r.ModificationTimestamp!),
+            modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
             lastSyncedAt:          now,
             rawJson:               JSON.stringify(r),
           }
