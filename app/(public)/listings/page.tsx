@@ -12,7 +12,12 @@ import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE        = 50
+const SEARCH_PAGE_SIZE = 100
+
+function hasActiveSearch(f: { keyword: string; city: string; minPrice: string; maxPrice: string; minBeds: string; propertyType: string; listingType: string }) {
+  return Object.values(f).some(v => v !== '')
+}
 
 function ListingsContent() {
   const searchParams = useSearchParams()
@@ -38,16 +43,24 @@ function ListingsContent() {
 
   const fetchResults = useCallback(async (currentFilters: typeof filters, currentPage: number) => {
     setLoading(true)
+    const searching = hasActiveSearch(currentFilters)
     const params = new URLSearchParams()
     Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.set(k, v) })
     params.set('source', 'reso')
-    params.set('page', String(currentPage))
-    params.set('pageSize', String(PAGE_SIZE))
+    if (searching) {
+      params.set('brokerageOnly', 'false')
+      params.set('pageSize', String(SEARCH_PAGE_SIZE))
+      params.set('page', '1')
+    } else {
+      params.set('brokerageOnly', 'true')
+      params.set('pageSize', String(PAGE_SIZE))
+      params.set('page', String(currentPage))
+    }
     const res = await fetch(`/api/search?${params}`)
     const data = await res.json()
     setResults(data.results ?? [])
     setTotal(data.total ?? 0)
-    setTotalPages(data.totalPages ?? 1)
+    setTotalPages(searching ? 1 : (data.totalPages ?? 1))
     setLoading(false)
   }, [])
 

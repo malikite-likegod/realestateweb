@@ -45,7 +45,8 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
 
   if (source === 'reso' || source === 'all') {
     const { PropertyService } = await import('@/lib/property-service')
-    const { officeKey, officeName } = await getBrokerageFilter()
+    const brokerageOnly = filters.brokerageOnly !== false
+    const { officeKey, officeName } = brokerageOnly ? await getBrokerageFilter() : { officeKey: null, officeName: null }
     const resoResult = await PropertyService.getProperties({
       city:         filters.city,
       minPrice:     filters.minPrice,

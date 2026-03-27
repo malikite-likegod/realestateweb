@@ -21,8 +21,9 @@ export async function GET(request: Request) {
     lat:          searchParams.get('lat') ? Number(searchParams.get('lat')) : undefined,
     lng:          searchParams.get('lng') ? Number(searchParams.get('lng')) : undefined,
     radiusKm:     searchParams.get('radiusKm') ? Number(searchParams.get('radiusKm')) : undefined,
+    brokerageOnly: searchParams.get('brokerageOnly') !== 'false',
     page:         searchParams.get('page') ? Number(searchParams.get('page')) : 1,
-    pageSize:     Math.min(searchParams.get('pageSize') ? Number(searchParams.get('pageSize')) : 12, 100),
+    pageSize:     Math.min(searchParams.get('pageSize') ? Number(searchParams.get('pageSize')) : 12, 200),
     sortBy:       (searchParams.get('sortBy') ?? undefined) as SearchFilters['sortBy'],
     sortDir:      (searchParams.get('sortDir') ?? undefined) as SearchFilters['sortDir'],
   }

@@ -17,6 +17,7 @@ export type SearchFilters = {
   lat?: number
   lng?: number
   radiusKm?: number
+  brokerageOnly?: boolean  // true = filter to configured office; false = all MLS
   page?: number
   pageSize?: number
   sortBy?: 'price' | 'createdAt' | 'beds'
