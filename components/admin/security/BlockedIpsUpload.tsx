@@ -218,7 +218,9 @@ export function BlockedIpsUpload({ onUploaded }: Props) {
               disabled={validCount === 0 || loading}
               onClick={handleUpload}
             >
-              {loading ? 'Uploading...' : `Block ${validCount} IP${validCount !== 1 ? 's' : ''}`}
+              {loading ? 'Uploading…' : totalRows > MAX_PREVIEW_ROWS
+                ? `Block ${validCount}+ IPs (full file)`
+                : `Block ${validCount} IP${validCount !== 1 ? 's' : ''}`}
             </button>
           </div>
         </div>

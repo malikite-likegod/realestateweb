@@ -7,7 +7,12 @@ import { isValidIpv4, normalizeIpv4 } from '@/lib/ip-utils'
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date)
+  const day = d.getDate()
   d.setMonth(d.getMonth() + months)
+  // If the day overflowed (e.g. Oct 31 + 4 months → Mar 3), roll back to last day of target month
+  if (d.getDate() !== day) {
+    d.setDate(0) // setDate(0) = last day of previous month
+  }
   return d
 }
 

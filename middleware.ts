@@ -49,8 +49,7 @@ export async function middleware(request: NextRequest) {
   // ── Blocked IP check ───────────────────────────────────────────────────────
   const skipBlockPaths = [
     '/admin/login',
-    '/api/auth/login',
-    '/api/auth/2fa/verify',
+    '/api/auth/', // all auth routes (login, 2FA send/verify, etc.) — must be reachable even when blocked
     '/api/portal/login',
     // Note: /api/internal/* is excluded by the middleware matcher config — no need to list here
   ]
