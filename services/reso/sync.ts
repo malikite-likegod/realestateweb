@@ -61,6 +61,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
   const syncType = 'idx_property'
 
   let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
+  const wasFullScan = lastTimestamp.getTime() === EPOCH.getTime()
   let fullRun = false
   let page = 0
 
@@ -161,7 +162,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
     // Uses syncStartedAt (not now-60s) so records processed early in a long
     // run are not incorrectly classified as stale.
     // Only fires on full completion — not on interrupted/rate-limited runs.
-    if (fullRun) {
+    if (fullRun && wasFullScan) {
       const stale = await prisma.resoProperty.findMany({
         where:  { standardStatus: 'Active', onDemand: false, lastSyncedAt: { lt: syncStartedAt } },
         select: { listingKey: true },
