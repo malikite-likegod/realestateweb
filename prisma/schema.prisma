@@ -930,6 +930,7 @@ model EmailVerificationToken {
   email      String
   firstName  String
   lastName   String
+  phone      String?
   tokenHash  String    @unique
   sessionId  String
   returnUrl  String?

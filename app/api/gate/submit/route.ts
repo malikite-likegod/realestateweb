@@ -8,6 +8,7 @@ const schema = z.object({
   firstName: z.string().min(1),
   lastName:  z.string().min(1),
   email:     z.string().email(),
+  phone:     z.string().min(1),
   returnUrl: z.string().optional(),
 })
 
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       email:     data.email,
       firstName: data.firstName,
       lastName:  data.lastName,
+      phone:     data.phone,
       tokenHash,
       sessionId,
       returnUrl: data.returnUrl ?? '/listings',

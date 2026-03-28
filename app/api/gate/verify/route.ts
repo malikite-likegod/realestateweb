@@ -27,14 +27,16 @@ export async function GET(request: NextRequest) {
     data:  { usedAt: new Date() },
   })
 
-  // Upsert contact
+  // Upsert contact — include phone on create; fill it in on update if not already set
+  const existing = await prisma.contact.findUnique({ where: { email: record.email }, select: { id: true, phone: true } })
   const contact = await prisma.contact.upsert({
     where:  { email: record.email },
-    update: {},
+    update: existing?.phone ? {} : { phone: record.phone ?? null },
     create: {
       email:     record.email,
       firstName: record.firstName,
       lastName:  record.lastName,
+      phone:     record.phone ?? null,
       source:    'web',
       status:    'lead',
     },

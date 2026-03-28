@@ -14,6 +14,7 @@ export function ListingGateModal({ initialState, returnUrl }: Props) {
   const [firstName, setFirstName] = useState('')
   const [lastName,  setLastName]  = useState('')
   const [email,     setEmail]     = useState('')
+  const [phone,     setPhone]     = useState('')
   const [pendingEmail, setPendingEmail] = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
@@ -27,7 +28,7 @@ export function ListingGateModal({ initialState, returnUrl }: Props) {
     const res = await fetch('/api/gate/submit', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ firstName, lastName, email, returnUrl }),
+      body:    JSON.stringify({ firstName, lastName, email, phone, returnUrl }),
     })
     setLoading(false)
     if (res.ok) {
@@ -90,6 +91,17 @@ export function ListingGateModal({ initialState, returnUrl }: Props) {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
+                  className="w-full rounded-lg border border-charcoal-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-charcoal-700 mb-1">Phone Number</label>
+                <input
+                  required
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="(416) 555-0100"
                   className="w-full rounded-lg border border-charcoal-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
                 />
               </div>
