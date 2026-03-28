@@ -30,14 +30,12 @@ function ListingsContent() {
   const [showFilters, setShowFilters] = useState(false)
 
   // Cascading geo options
-  const [areaOptions,         setAreaOptions]         = useState<string[]>([])
-  const [municipalityOptions, setMunicipalityOptions] = useState<string[]>([])
-  const [communityOptions,    setCommunityOptions]    = useState<string[]>([])
+  const [areaOptions,      setAreaOptions]      = useState<string[]>([])
+  const [communityOptions, setCommunityOptions] = useState<string[]>([])
 
   const [filters, setFilters] = useState({
     keyword:       searchParams.get('keyword') ?? '',
     city:          searchParams.get('city') ?? '',
-    municipality:  searchParams.get('municipality') ?? '',
     community:     searchParams.get('community') ?? '',
     postalCode:    searchParams.get('postalCode') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
@@ -63,24 +61,14 @@ function ListingsContent() {
       .catch(() => {})
   }, [])
 
-  // Load municipalities when city (area) changes
+  // Load communities when area changes
   useEffect(() => {
-    if (!filters.city) { setMunicipalityOptions([]); setCommunityOptions([]); return }
-    fetch(`/api/search/geo?level=municipalities&area=${encodeURIComponent(filters.city)}`)
-      .then(r => r.json())
-      .then((data: string[]) => setMunicipalityOptions(data))
-      .catch(() => {})
-    setCommunityOptions([])
-  }, [filters.city])
-
-  // Load communities when municipality changes
-  useEffect(() => {
-    if (!filters.municipality) { setCommunityOptions([]); return }
-    fetch(`/api/search/geo?level=communities&municipality=${encodeURIComponent(filters.municipality)}`)
+    if (!filters.city) { setCommunityOptions([]); return }
+    fetch(`/api/search/geo?level=communities&area=${encodeURIComponent(filters.city)}`)
       .then(r => r.json())
       .then((data: string[]) => setCommunityOptions(data))
       .catch(() => {})
-  }, [filters.municipality])
+  }, [filters.city])
 
   const fetchResults = useCallback(async (currentFilters: typeof filters, currentPage: number) => {
     setLoading(true)
@@ -167,16 +155,8 @@ function ListingsContent() {
               options={areaOptions.map(a => ({ value: a, label: a }))}
               placeholder="Area"
               value={filters.city}
-              onChange={e => setFilters(f => ({ ...f, city: e.target.value, municipality: '', community: '' }))}
+              onChange={e => setFilters(f => ({ ...f, city: e.target.value, community: '' }))}
               className="w-40 bg-white"
-            />
-            <Select
-              options={municipalityOptions.map(m => ({ value: m, label: m }))}
-              placeholder="Municipality"
-              value={filters.municipality}
-              onChange={e => setFilters(f => ({ ...f, municipality: e.target.value, community: '' }))}
-              className="w-44 bg-white"
-              disabled={!filters.city || municipalityOptions.length === 0}
             />
             <Select
               options={communityOptions.map(c => ({ value: c, label: c }))}
@@ -184,7 +164,7 @@ function ListingsContent() {
               value={filters.community}
               onChange={e => setFilters(f => ({ ...f, community: e.target.value }))}
               className="w-44 bg-white"
-              disabled={!filters.municipality || communityOptions.length === 0}
+              disabled={!filters.city || communityOptions.length === 0}
             />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
