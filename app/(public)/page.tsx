@@ -109,6 +109,11 @@ export default async function HomePage() {
           <span>⭐ 4.9/5 Rating</span>
           <span>🏆 19+ Years of Experience</span>
         </div>
+        <div className="mt-4 flex justify-center">
+          <Link href="/portal/login" className="text-white/50 hover:text-white/80 text-xs transition-colors">
+            Already a client? <span className="underline underline-offset-2">Sign in to your portal</span>
+          </Link>
+        </div>
       </HeroSection>
 
       {/* Featured listings */}

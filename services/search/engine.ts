@@ -47,13 +47,51 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
     const { PropertyService } = await import('@/lib/property-service')
     const brokerageOnly = filters.brokerageOnly !== false
     const { officeKey, officeName } = brokerageOnly ? await getBrokerageFilter() : { officeKey: null, officeName: null }
+
+    // Resolve keyword → city / community / propertyType via cascade
+    let resolvedCity         = filters.city
+    let resolvedPropertyType = filters.propertyType
+    if (filters.keyword && !filters.city && !filters.propertyType) {
+      const kw = filters.keyword.trim()
+      const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
+      const containsOpt = isRelationalDB ? { contains: kw, mode: 'insensitive' as const } : { contains: kw }
+
+      // 1. Try as city
+      const cityCount = await prisma.resoProperty.count({
+        where: { standardStatus: 'Active', city: containsOpt },
+      })
+      if (cityCount > 0) {
+        resolvedCity = kw
+      } else {
+        // 2. Try as community name → search by that community's city
+        const community = await prisma.community.findFirst({
+          where: { name: containsOpt },
+        })
+        if (community) {
+          const communityCity = community.city
+          const communityCount = await prisma.resoProperty.count({
+            where: { standardStatus: 'Active', city: isRelationalDB ? { contains: communityCity, mode: 'insensitive' } : { contains: communityCity } },
+          })
+          if (communityCount > 0) resolvedCity = communityCity
+        }
+
+        // 3. If still no city match, try as property type
+        if (!resolvedCity) {
+          const typeCount = await prisma.resoProperty.count({
+            where: { standardStatus: 'Active', propertySubType: containsOpt },
+          })
+          if (typeCount > 0) resolvedPropertyType = kw
+        }
+      }
+    }
+
     const resoResult = await PropertyService.getProperties({
-      city:         filters.city,
+      city:         resolvedCity,
       minPrice:     filters.minPrice,
       maxPrice:     filters.maxPrice,
       minBeds:      filters.minBeds,
       minBaths:     filters.minBaths,
-      propertyType: filters.propertyType,
+      propertyType: resolvedPropertyType,
       officeKey,
       officeName,
       page:         source === 'all' ? 1    : page,

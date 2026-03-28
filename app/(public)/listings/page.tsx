@@ -12,8 +12,8 @@ import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 
-const PAGE_SIZE        = 50
-const SEARCH_PAGE_SIZE = 100
+const PAGE_SIZE            = 20
+const MAX_SEARCH_PAGES     = 5   // caps search results at 100 (5 × 20)
 
 function hasActiveSearch(f: { keyword: string; city: string; minPrice: string; maxPrice: string; minBeds: string; propertyType: string; listingType: string }) {
   return Object.values(f).some(v => v !== '')
@@ -47,20 +47,25 @@ function ListingsContent() {
     const params = new URLSearchParams()
     Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.set(k, v) })
     params.set('source', 'reso')
+    params.set('pageSize', String(PAGE_SIZE))
+    params.set('page', String(currentPage))
     if (searching) {
       params.set('brokerageOnly', 'false')
-      params.set('pageSize', String(SEARCH_PAGE_SIZE))
-      params.set('page', '1')
     } else {
       params.set('brokerageOnly', 'true')
-      params.set('pageSize', String(PAGE_SIZE))
-      params.set('page', String(currentPage))
     }
     const res = await fetch(`/api/search?${params}`)
     const data = await res.json()
     setResults(data.results ?? [])
-    setTotal(data.total ?? 0)
-    setTotalPages(searching ? 1 : (data.totalPages ?? 1))
+    if (searching) {
+      // Cap total and pages to MAX_SEARCH_PAGES so we never show more than 100 results
+      const cappedTotal = Math.min(data.total ?? 0, MAX_SEARCH_PAGES * PAGE_SIZE)
+      setTotal(cappedTotal)
+      setTotalPages(Math.min(data.totalPages ?? 1, MAX_SEARCH_PAGES))
+    } else {
+      setTotal(data.total ?? 0)
+      setTotalPages(data.totalPages ?? 1)
+    }
     setLoading(false)
   }, [])
 
@@ -152,6 +157,24 @@ function ListingsContent() {
           <PropertyGrid properties={properties} loading={loading} columns={3} />
         ) : (
           <ListingMap markers={properties.filter(p => p.latitude).map(p => ({ lat: p.latitude!, lng: p.longitude!, title: p.title, price: p.price }))} height="600px" />
+        )}
+
+        {/* More listings notice — shown on the last page of a non-brokerage search */}
+        {hasActiveSearch(activeFilters) && page === totalPages && totalPages > 0 && !loading && (
+          <div className="mt-10 rounded-2xl border border-gold-200 bg-gold-50 px-6 py-5 text-center">
+            <p className="font-semibold text-charcoal-900">Looking for more options?</p>
+            <p className="mt-1 text-sm text-charcoal-600">
+              The MLS has additional listings beyond what&apos;s shown here. Reach out and I&apos;ll send you a full, curated list matched to your needs.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <a href="/contact" className="inline-flex items-center gap-1.5 rounded-lg bg-charcoal-900 px-4 py-2 text-sm font-medium text-white hover:bg-charcoal-700 transition-colors">
+                Contact Michael
+              </a>
+              <a href="tel:+14168888352" className="inline-flex items-center gap-1.5 rounded-lg border border-charcoal-300 px-4 py-2 text-sm font-medium text-charcoal-700 hover:bg-charcoal-50 transition-colors">
+                (416) 888-8352
+              </a>
+            </div>
+          </div>
         )}
 
         {/* Pagination */}

@@ -12,6 +12,7 @@ import {
   CommOptLogPanel,
 } from '@/components/crm'
 import { PropertyInterestsPanel } from '@/components/admin/contacts/PropertyInterestsPanel'
+import { ContactActivityFeed } from '@/components/admin/contacts/ContactActivityFeed'
 import { SavedSearchesTab } from '@/components/admin/contacts/SavedSearchesTab'
 import { PortalInviteButton } from '@/components/admin/contacts/PortalInviteButton'
 import { Avatar, Badge, Tabs, BlurredField } from '@/components/ui'
@@ -426,6 +427,11 @@ export default async function ContactDetailPage({ params }: Props) {
               id:      'notes',
               label:   `Notes (${contact.notesList.length})`,
               content: <NotesPanel notes={contact.notesList} />,
+            },
+            {
+              id:      'activity',
+              label:   'Activity',
+              content: <ContactActivityFeed contactId={id} />,
             },
             {
               id:      'campaigns',
