@@ -42,6 +42,7 @@ services:
       IMAP_PASS:            ${IMAP_PASS:-}
       IMAP_MAILBOX:         ${IMAP_MAILBOX:-INBOX}
       AUTOMATION_PROCESS_SECRET: ${AUTOMATION_PROCESS_SECRET:-}
+      ENABLE_AUTOMATION_RUNNER: "true"
       OPENAI_API_KEY:       ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY:    ${ANTHROPIC_API_KEY:-}
       RESO_SYNC_SECRET:     ${RESO_SYNC_SECRET:-}
@@ -51,23 +52,6 @@ services:
       AMPRE_VOX_TOKEN:        ${AMPRE_VOX_TOKEN:-}
       AMPRE_BROKERAGE_NAME:   ${AMPRE_BROKERAGE_NAME:-}
 
-  cron:
-    build:
-      context: .
-      dockerfile: Dockerfile.cron
-    restart: unless-stopped
-    depends_on:
-      - app
-    environment:
-      AUTOMATION_PROCESS_SECRET: ${AUTOMATION_PROCESS_SECRET:-}
-    command: >
-      sh -c "
-        while true; do
-          curl -sf -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/automation/process;
-          curl -s  -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/emails/sync;
-          sleep 60;
-        done
-      "
 
 volumes:
   pgdata:

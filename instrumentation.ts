@@ -21,6 +21,7 @@ export async function register() {
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
 
   const { processPendingJobs } = await import('./lib/automation/job-queue')
+  const { syncInbox }          = await import('./lib/communications/imap-service')
   const { prisma } = await import('./lib/prisma')
 
   // Guard against multiple registrations in dev (hot reload can call register() more than once)
@@ -50,6 +51,15 @@ export async function register() {
           console.error('[automation] Reconnect failed:', reconnectErr)
         }
       }
+    }
+
+    try {
+      const sync = await syncInbox()
+      if (sync.imported > 0) {
+        console.log(`[imap] Imported ${sync.imported} inbound emails (${sync.unmatched} unmatched contacts)`)
+      }
+    } catch (err: unknown) {
+      console.error('[imap] Sync error:', err)
     }
   }, intervalMs)
 }
