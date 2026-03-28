@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Container } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
 import { ListingMap } from '@/components/real-estate'
-import { Button, Select, Input } from '@/components/ui'
+import { Button, Select, Input, AutocompleteInput } from '@/components/ui'
 import { LISTING_TYPES, PROPERTY_CLASSES, RESIDENTIAL_PROPERTY_TYPES, COMMERCIAL_PROPERTY_TYPES } from '@/lib/constants'
 import { Map, List, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { SearchResult } from '@/services/search/types'
@@ -140,12 +140,12 @@ function ListingsContent() {
               onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
               className="min-w-[240px]"
             />
-            <Select
-              options={areaOptions.map(a => ({ value: a, label: a }))}
-              placeholder="Area"
+            <AutocompleteInput
+              options={areaOptions}
               value={filters.city}
-              onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}
-              className="w-40 bg-white"
+              onChange={v => setFilters(f => ({ ...f, city: v }))}
+              placeholder="Area / City"
+              className="w-44"
             />
 <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
