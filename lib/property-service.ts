@@ -9,6 +9,7 @@ export interface PropertyFilters {
   maxPrice?:     number
   minBeds?:      number
   minBaths?:     number
+  propertyClass?: string  // 'Residential' | 'Commercial' — maps to resoProperty.propertyType
   propertyType?: string
   status?:       string        // default: 'Active'
   officeKey?:    string | null // filter by listOfficeKey
@@ -52,6 +53,7 @@ function buildWhere(filters: PropertyFilters) {
   }
   if (filters.minBeds  != null) where.bedroomsTotal         = { gte: filters.minBeds }
   if (filters.minBaths != null) where.bathroomsTotalInteger = { gte: filters.minBaths }
+  if (filters.propertyClass)    where.propertyType          = { contains: filters.propertyClass }
   if (filters.propertyType)     where.propertySubType       = { contains: filters.propertyType }
   if (filters.officeKey)        where.listOfficeKey         = filters.officeKey
   else if (filters.officeName)  where.listOfficeName        = { equals: filters.officeName, mode: 'insensitive' }

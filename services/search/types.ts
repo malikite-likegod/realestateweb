@@ -9,6 +9,7 @@ export type SearchFilters = {
   minBeds?: number
   maxBeds?: number
   minBaths?: number
+  propertyClass?: string  // 'Residential' | 'Commercial'
   propertyType?: string
   listingType?: string
   minSqft?: number

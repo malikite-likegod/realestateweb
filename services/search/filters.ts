@@ -17,6 +17,13 @@ export function buildPropertyWhere(f: SearchFilters): Prisma.PropertyWhereInput 
   }
   if (f.minBeds != null) where.bedrooms = { gte: f.minBeds }
   if (f.minBaths != null) where.bathrooms = { gte: f.minBaths }
+  if (f.propertyClass) {
+    if (f.propertyClass.toLowerCase() === 'commercial') {
+      where.propertyType = 'commercial'
+    } else if (f.propertyClass.toLowerCase() === 'residential') {
+      where.propertyType = { not: 'commercial' }
+    }
+  }
   if (f.propertyType) where.propertyType = f.propertyType
   if (f.listingType) where.listingType = f.listingType
   if (f.minSqft != null || f.maxSqft != null) {

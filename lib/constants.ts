@@ -1,6 +1,11 @@
 export const APP_NAME = 'Michael Taylor Real Estate'
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
+export const PROPERTY_CLASSES = [
+  { value: 'Residential', label: 'Residential' },
+  { value: 'Commercial',  label: 'Commercial'  },
+] as const
+
 export const PROPERTY_TYPES = [
   { value: 'detached', label: 'Detached House' },
   { value: 'semi', label: 'Semi-Detached' },

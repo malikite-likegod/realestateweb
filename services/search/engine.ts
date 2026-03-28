@@ -86,12 +86,13 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
     }
 
     const resoResult = await PropertyService.getProperties({
-      city:         resolvedCity,
-      minPrice:     filters.minPrice,
-      maxPrice:     filters.maxPrice,
-      minBeds:      filters.minBeds,
-      minBaths:     filters.minBaths,
-      propertyType: resolvedPropertyType,
+      city:          resolvedCity,
+      minPrice:      filters.minPrice,
+      maxPrice:      filters.maxPrice,
+      minBeds:       filters.minBeds,
+      minBaths:      filters.minBaths,
+      propertyClass: filters.propertyClass,
+      propertyType:  resolvedPropertyType,
       officeKey,
       officeName,
       page:         source === 'all' ? 1    : page,

@@ -6,7 +6,7 @@ import { Container } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
 import { ListingMap } from '@/components/real-estate'
 import { Button, Select, Input } from '@/components/ui'
-import { PROPERTY_TYPES, LISTING_TYPES } from '@/lib/constants'
+import { PROPERTY_TYPES, LISTING_TYPES, PROPERTY_CLASSES } from '@/lib/constants'
 import { Map, List, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
@@ -30,13 +30,14 @@ function ListingsContent() {
   const [showFilters, setShowFilters] = useState(false)
 
   const [filters, setFilters] = useState({
-    keyword:      searchParams.get('keyword') ?? '',
-    city:         searchParams.get('city') ?? '',
-    minPrice:     searchParams.get('minPrice') ?? '',
-    maxPrice:     searchParams.get('maxPrice') ?? '',
-    minBeds:      searchParams.get('minBeds') ?? '',
-    propertyType: searchParams.get('propertyType') ?? '',
-    listingType:  searchParams.get('listingType') ?? '',
+    keyword:       searchParams.get('keyword') ?? '',
+    city:          searchParams.get('city') ?? '',
+    minPrice:      searchParams.get('minPrice') ?? '',
+    maxPrice:      searchParams.get('maxPrice') ?? '',
+    minBeds:       searchParams.get('minBeds') ?? '',
+    propertyClass: searchParams.get('propertyClass') ?? '',
+    propertyType:  searchParams.get('propertyType') ?? '',
+    listingType:   searchParams.get('listingType') ?? '',
   })
 
   const [activeFilters, setActiveFilters] = useState(filters)
@@ -117,6 +118,7 @@ function ListingsContent() {
             />
             <Input placeholder="City" value={filters.city} onChange={e => setFilters(f => ({ ...f, city: e.target.value }))} className="w-36" />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
+            <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value }))} className="w-40 bg-white" />
             <Select options={PROPERTY_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Property" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-40 bg-white" />
             <Button variant="gold" onClick={() => setActiveFilters(filters)}>Search</Button>
             <button onClick={() => setShowFilters(v => !v)} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
