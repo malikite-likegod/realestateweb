@@ -11,6 +11,7 @@ export type SearchFilters = {
   minBaths?: number
   community?:    string   // neighbourhood / community name → resolved to city
   municipality?: string   // municipality name → resolved to city
+  postalCode?:   string   // partial or full postal code
   propertyClass?: string  // 'Residential' | 'Commercial'
   propertyType?: string
   listingType?: string

@@ -12,6 +12,7 @@ export interface PropertyFilters {
   propertyClass?: string       // 'Residential' | 'Commercial' — maps to resoProperty.propertyType
   propertyType?:  string
   listingType?:   string       // 'sale' | 'lease' — filters on transactionType
+  postalCode?:    string       // partial or full postal code
   status?:        string       // default: 'Active'
   officeKey?:     string | null
   officeName?:    string | null
@@ -76,6 +77,11 @@ function buildWhere(filters: PropertyFilters) {
         ? { not: { contains: 'lease', mode: 'insensitive' } }
         : { not: { contains: 'lease' } }
     }
+  }
+  if (filters.postalCode) {
+    where.postalCode = isRelationalDB
+      ? { startsWith: filters.postalCode, mode: 'insensitive' }
+      : { startsWith: filters.postalCode }
   }
   if (filters.officeKey)        where.listOfficeKey         = filters.officeKey
   else if (filters.officeName)  where.listOfficeName        = { equals: filters.officeName, mode: 'insensitive' }

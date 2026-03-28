@@ -29,11 +29,17 @@ function ListingsContent() {
   const [view, setView] = useState<'grid' | 'map'>('grid')
   const [showFilters, setShowFilters] = useState(false)
 
+  // Cascading geo options
+  const [areaOptions,         setAreaOptions]         = useState<string[]>([])
+  const [municipalityOptions, setMunicipalityOptions] = useState<string[]>([])
+  const [communityOptions,    setCommunityOptions]    = useState<string[]>([])
+
   const [filters, setFilters] = useState({
     keyword:       searchParams.get('keyword') ?? '',
     city:          searchParams.get('city') ?? '',
     municipality:  searchParams.get('municipality') ?? '',
     community:     searchParams.get('community') ?? '',
+    postalCode:    searchParams.get('postalCode') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
     maxPrice:      searchParams.get('maxPrice') ?? '',
     minBeds:       searchParams.get('minBeds') ?? '',
@@ -48,6 +54,33 @@ function ListingsContent() {
     filters.propertyClass === 'Residential' ? [...RESIDENTIAL_PROPERTY_TYPES] :
     filters.propertyClass === 'Commercial'  ? [...COMMERCIAL_PROPERTY_TYPES]  :
     [...RESIDENTIAL_PROPERTY_TYPES, ...COMMERCIAL_PROPERTY_TYPES]
+
+  // Load area options on mount
+  useEffect(() => {
+    fetch('/api/search/geo?level=areas')
+      .then(r => r.json())
+      .then((data: string[]) => setAreaOptions(data))
+      .catch(() => {})
+  }, [])
+
+  // Load municipalities when city (area) changes
+  useEffect(() => {
+    if (!filters.city) { setMunicipalityOptions([]); setCommunityOptions([]); return }
+    fetch(`/api/search/geo?level=municipalities&area=${encodeURIComponent(filters.city)}`)
+      .then(r => r.json())
+      .then((data: string[]) => setMunicipalityOptions(data))
+      .catch(() => {})
+    setCommunityOptions([])
+  }, [filters.city])
+
+  // Load communities when municipality changes
+  useEffect(() => {
+    if (!filters.municipality) { setCommunityOptions([]); return }
+    fetch(`/api/search/geo?level=communities&municipality=${encodeURIComponent(filters.municipality)}`)
+      .then(r => r.json())
+      .then((data: string[]) => setCommunityOptions(data))
+      .catch(() => {})
+  }, [filters.municipality])
 
   const fetchResults = useCallback(async (currentFilters: typeof filters, currentPage: number) => {
     setLoading(true)
@@ -130,9 +163,29 @@ function ListingsContent() {
               onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
               className="min-w-[240px]"
             />
-            <Input placeholder="City" value={filters.city} onChange={e => setFilters(f => ({ ...f, city: e.target.value }))} className="w-36" />
-            <Input placeholder="Municipality" value={filters.municipality} onChange={e => setFilters(f => ({ ...f, municipality: e.target.value }))} className="w-36" />
-            <Input placeholder="Neighbourhood" value={filters.community} onChange={e => setFilters(f => ({ ...f, community: e.target.value }))} className="w-40" />
+            <Select
+              options={areaOptions.map(a => ({ value: a, label: a }))}
+              placeholder="Area"
+              value={filters.city}
+              onChange={e => setFilters(f => ({ ...f, city: e.target.value, municipality: '', community: '' }))}
+              className="w-40 bg-white"
+            />
+            <Select
+              options={municipalityOptions.map(m => ({ value: m, label: m }))}
+              placeholder="Municipality"
+              value={filters.municipality}
+              onChange={e => setFilters(f => ({ ...f, municipality: e.target.value, community: '' }))}
+              className="w-44 bg-white"
+              disabled={!filters.city || municipalityOptions.length === 0}
+            />
+            <Select
+              options={communityOptions.map(c => ({ value: c, label: c }))}
+              placeholder="Community"
+              value={filters.community}
+              onChange={e => setFilters(f => ({ ...f, community: e.target.value }))}
+              className="w-44 bg-white"
+              disabled={!filters.municipality || communityOptions.length === 0}
+            />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
             <Select options={propertyTypeOptions} placeholder="Property Type" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-44 bg-white" />
@@ -146,6 +199,7 @@ function ListingsContent() {
               <Input type="number" placeholder="Min Price" value={filters.minPrice} onChange={e => setFilters(f => ({ ...f, minPrice: e.target.value }))} className="w-36" />
               <Input type="number" placeholder="Max Price" value={filters.maxPrice} onChange={e => setFilters(f => ({ ...f, maxPrice: e.target.value }))} className="w-36" />
               <Select options={[1,2,3,4,5].map(n => ({ value: String(n), label: `${n}+ Beds` }))} placeholder="Beds" value={filters.minBeds} onChange={e => setFilters(f => ({ ...f, minBeds: e.target.value }))} className="w-32 bg-white" />
+              <Input placeholder="Postal Code" value={filters.postalCode} onChange={e => setFilters(f => ({ ...f, postalCode: e.target.value.toUpperCase() }))} className="w-36" />
             </div>
           )}
         </Container>

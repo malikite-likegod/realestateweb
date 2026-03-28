@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     city:         searchParams.get('city') ?? undefined,
     community:    searchParams.get('community') ?? undefined,
     municipality: searchParams.get('municipality') ?? undefined,
+    postalCode:   searchParams.get('postalCode') ?? undefined,
     keyword:      searchParams.get('keyword') ?? undefined,
     propertyClass: searchParams.get('propertyClass') ?? undefined,
     propertyType:  searchParams.get('propertyType') ?? undefined,

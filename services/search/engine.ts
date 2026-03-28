@@ -131,6 +131,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       propertyClass: filters.propertyClass,
       propertyType:  resolvedPropertyType,
       listingType:   filters.listingType,
+      postalCode:    filters.postalCode,
       officeKey,
       officeName,
       page:         source === 'all' ? 1    : page,
