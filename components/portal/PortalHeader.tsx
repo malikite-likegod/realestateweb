@@ -19,6 +19,7 @@ export function PortalHeader({ firstName }: Props) {
         <nav className="flex gap-4 text-sm">
           <a href="/portal" className="text-gray-600 hover:text-gray-900">Listings</a>
           <a href="/portal/saved" className="text-gray-600 hover:text-gray-900">Saved</a>
+          <a href="/portal/saved-searches" className="text-gray-600 hover:text-gray-900">Saved Searches</a>
         </nav>
       </div>
       <div className="flex items-center gap-3">

@@ -7,56 +7,102 @@ export async function GET(request: Request) {
   if (!contact) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const status    = searchParams.get('status')    // 'active'|'sold'|'expired'|null
-  const minPrice  = searchParams.get('minPrice')
-  const maxPrice  = searchParams.get('maxPrice')
-  const minBeds   = searchParams.get('minBeds')
+  const city         = searchParams.get('city')         ?? ''
+  const community    = searchParams.get('community')    ?? ''
+  const propertyType = searchParams.get('propertyType') ?? ''
+  const listingType  = searchParams.get('listingType')  ?? ''
+  const minPrice     = searchParams.get('minPrice')
+  const maxPrice     = searchParams.get('maxPrice')
+  const minBeds      = searchParams.get('minBeds')
+  const minBaths     = searchParams.get('minBaths')
+  const minGarage    = searchParams.get('minGarage')
+  const minSqft      = searchParams.get('minSqft')
+  const maxSqft      = searchParams.get('maxSqft')
+  const page         = Math.max(1, Number(searchParams.get('page') ?? '1'))
+  const pageSize     = 20
+  const skip         = (page - 1) * pageSize
 
-  // Build property filter
-  const propertyWhere: Record<string, unknown> = {}
-  const parsedMinPrice = minPrice ? Number(minPrice) : null
-  const parsedMaxPrice = maxPrice ? Number(maxPrice) : null
-  const parsedMinBeds  = minBeds  ? Number(minBeds)  : null
+  const isRelational = !process.env.DATABASE_URL?.startsWith('file:')
+  const iContains = (val: string) => isRelational
+    ? { contains: val, mode: 'insensitive' as const }
+    : { contains: val }
 
-  if (status && ['active','sold','expired'].includes(status)) {
-    propertyWhere.status = status
-  }
-  if (parsedMinPrice !== null && !isNaN(parsedMinPrice)) {
-    propertyWhere.price = { ...(propertyWhere.price as object ?? {}), gte: parsedMinPrice }
-  }
-  if (parsedMaxPrice !== null && !isNaN(parsedMaxPrice)) {
-    propertyWhere.price = { ...(propertyWhere.price as object ?? {}), lte: parsedMaxPrice }
-  }
-  if (parsedMinBeds !== null && !isNaN(parsedMinBeds)) {
-    propertyWhere.bedrooms = { gte: parsedMinBeds }
+  const where: Record<string, unknown> = { standardStatus: 'Active' }
+
+  // City — direct match
+  if (city) where.city = iContains(city)
+
+  // Community — resolve to city via Community table
+  if (community && !city) {
+    const comm = await prisma.community.findFirst({ where: { name: iContains(community) } })
+    if (comm) where.city = iContains(comm.city)
   }
 
-  const listings = await prisma.listing.findMany({
-    where:   { property: propertyWhere },
-    include: {
-      property: {
-        select: {
-          id: true, title: true, status: true, price: true,
-          bedrooms: true, bathrooms: true, sqft: true,
-          address: true, city: true, province: true, postalCode: true,
-          images: true, listedAt: true, soldAt: true,
-        },
+  // Property type
+  if (propertyType) {
+    where.OR = [
+      { propertyType:    iContains(propertyType) },
+      { propertySubType: iContains(propertyType) },
+    ]
+  }
+
+  // Listing type
+  if (listingType === 'lease') {
+    where.transactionType = iContains('lease')
+  } else if (listingType === 'sale') {
+    where.NOT = { transactionType: iContains('lease') }
+  }
+
+  // Price
+  if (minPrice || maxPrice) {
+    where.listPrice = {
+      ...(minPrice ? { gte: Number(minPrice) } : {}),
+      ...(maxPrice ? { lte: Number(maxPrice) } : {}),
+    }
+  }
+
+  // Beds / baths / garage / sqft
+  if (minBeds)   where.bedroomsTotal        = { gte: Number(minBeds) }
+  if (minBaths)  where.bathroomsTotalInteger = { gte: Number(minBaths) }
+  if (minGarage) where.garageSpaces          = { gte: Number(minGarage) }
+  if (minSqft || maxSqft) {
+    where.livingArea = {
+      ...(minSqft ? { gte: Number(minSqft) } : {}),
+      ...(maxSqft ? { lte: Number(maxSqft) } : {}),
+    }
+  }
+
+  const [total, properties] = await Promise.all([
+    prisma.resoProperty.count({ where }),
+    prisma.resoProperty.findMany({
+      where,
+      orderBy: { listingContractDate: 'desc' },
+      skip,
+      take: pageSize,
+      select: {
+        id: true, listingKey: true, standardStatus: true,
+        propertyType: true, propertySubType: true, transactionType: true,
+        listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
+        garageSpaces: true, livingArea: true, yearBuilt: true,
+        streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+        city: true, stateOrProvince: true, postalCode: true,
+        latitude: true, longitude: true,
+        publicRemarks: true, media: true,
+        listAgentFullName: true, listOfficeName: true,
       },
-      savedByContacts: {
-        where:  { contactId: contact.id },
-        select: { id: true },
-      },
-    },
-    orderBy: [{ property: { status: 'asc' } }, { property: { listedAt: 'desc' } }],
-    take: 100,
-  })
+    }),
+  ])
 
-  const data = listings.map(l => ({
-    id:        l.id,
-    slug:      l.slug,
-    property:  l.property,
-    isSaved:   l.savedByContacts.length > 0,
-  }))
+  // Saved status
+  const propertyIds = properties.map(p => p.id)
+  const saved = propertyIds.length
+    ? await prisma.contactPropertyInterest.findMany({
+        where:  { contactId: contact.id, resoPropertyId: { in: propertyIds }, source: 'portal_saved' },
+        select: { resoPropertyId: true },
+      })
+    : []
+  const savedSet = new Set(saved.map(s => s.resoPropertyId))
 
-  return NextResponse.json({ data })
+  const data = properties.map(p => ({ ...p, isSaved: savedSet.has(p.id) }))
+  return NextResponse.json({ data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) })
 }
