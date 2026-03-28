@@ -32,6 +32,7 @@ function ListingsContent() {
   const [filters, setFilters] = useState({
     keyword:       searchParams.get('keyword') ?? '',
     city:          searchParams.get('city') ?? '',
+    community:     searchParams.get('community') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
     maxPrice:      searchParams.get('maxPrice') ?? '',
     minBeds:       searchParams.get('minBeds') ?? '',
@@ -60,8 +61,8 @@ function ListingsContent() {
     setResults(data.results ?? [])
     // If the backend resolved the keyword to a city or property type, populate
     // that field and clear the keyword so the filter UI reflects what was searched.
-    if (data.resolved && currentFilters.keyword && !currentFilters.city && !currentFilters.propertyType) {
-      const { field, value } = data.resolved as { field: 'city' | 'propertyType'; value: string }
+    if (data.resolved && currentFilters.keyword && !currentFilters.city && !currentFilters.community && !currentFilters.propertyType) {
+      const { field, value } = data.resolved as { field: 'city' | 'community' | 'propertyType'; value: string }
       setFilters(f => ({ ...f, keyword: '', [field]: value }))
       setActiveFilters(f => ({ ...f, keyword: '', [field]: value }))
     }
@@ -124,6 +125,7 @@ function ListingsContent() {
               className="min-w-[240px]"
             />
             <Input placeholder="City" value={filters.city} onChange={e => setFilters(f => ({ ...f, city: e.target.value }))} className="w-36" />
+            <Input placeholder="Neighbourhood" value={filters.community} onChange={e => setFilters(f => ({ ...f, community: e.target.value }))} className="w-40" />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value }))} className="w-40 bg-white" />
             <Select options={PROPERTY_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Property" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-40 bg-white" />

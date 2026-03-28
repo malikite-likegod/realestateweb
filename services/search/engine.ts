@@ -52,9 +52,23 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
     // Resolve keyword → city / community / propertyType via cascade
     let resolvedCity         = filters.city
     let resolvedPropertyType = filters.propertyType
-    if (filters.keyword && !filters.city && !filters.propertyType) {
+    const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
+
+    // Resolve explicit community filter → city
+    if (filters.community && !filters.city) {
+      const commTerm = filters.community.trim()
+      const commOpt = isRelationalDB ? { contains: commTerm, mode: 'insensitive' as const } : { contains: commTerm }
+      const community = await prisma.community.findFirst({ where: { name: commOpt } })
+      if (community) {
+        resolvedCity = community.city
+      } else {
+        // Fall back to treating community name as city
+        resolvedCity = commTerm
+      }
+    }
+
+    if (filters.keyword && !filters.city && !filters.community && !filters.propertyType) {
       const kw = filters.keyword.trim()
-      const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
       const containsOpt = isRelationalDB ? { contains: kw, mode: 'insensitive' as const } : { contains: kw }
 
       // 1. Try as city
@@ -76,7 +90,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
           })
           if (communityCount > 0) {
             resolvedCity = communityCity
-            resolved = { field: 'city', value: kw }  // show original term in city field
+            resolved = { field: 'community', value: kw }
           }
         }
 

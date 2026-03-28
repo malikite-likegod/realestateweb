@@ -9,6 +9,7 @@ export type SearchFilters = {
   minBeds?: number
   maxBeds?: number
   minBaths?: number
+  community?: string      // neighbourhood / community name → resolved to city
   propertyClass?: string  // 'Residential' | 'Commercial'
   propertyType?: string
   listingType?: string
@@ -52,5 +53,5 @@ export type SearchResponse = {
   pageSize: number
   totalPages: number
   source: SearchSource
-  resolved?: { field: 'city' | 'propertyType'; value: string } | null
+  resolved?: { field: 'city' | 'community' | 'propertyType'; value: string } | null
 }

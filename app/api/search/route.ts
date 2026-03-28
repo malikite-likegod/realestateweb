@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     source:       (searchParams.get('source') ?? 'all') as SearchFilters['source'],
     location:     searchParams.get('location') ?? undefined,
     city:         searchParams.get('city') ?? undefined,
+    community:    searchParams.get('community') ?? undefined,
     keyword:      searchParams.get('keyword') ?? undefined,
     propertyClass: searchParams.get('propertyClass') ?? undefined,
     propertyType:  searchParams.get('propertyType') ?? undefined,
