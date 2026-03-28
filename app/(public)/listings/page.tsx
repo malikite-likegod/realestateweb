@@ -58,6 +58,13 @@ function ListingsContent() {
     const res = await fetch(`/api/search?${params}`)
     const data = await res.json()
     setResults(data.results ?? [])
+    // If the backend resolved the keyword to a city or property type, populate
+    // that field and clear the keyword so the filter UI reflects what was searched.
+    if (data.resolved && currentFilters.keyword && !currentFilters.city && !currentFilters.propertyType) {
+      const { field, value } = data.resolved as { field: 'city' | 'propertyType'; value: string }
+      setFilters(f => ({ ...f, keyword: '', [field]: value }))
+      setActiveFilters(f => ({ ...f, keyword: '', [field]: value }))
+    }
     if (searching) {
       // Cap total and pages to MAX_SEARCH_PAGES so we never show more than 100 results
       const cappedTotal = Math.min(data.total ?? 0, MAX_SEARCH_PAGES * PAGE_SIZE)

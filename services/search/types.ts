@@ -52,4 +52,5 @@ export type SearchResponse = {
   pageSize: number
   totalPages: number
   source: SearchSource
+  resolved?: { field: 'city' | 'propertyType'; value: string } | null
 }

@@ -12,6 +12,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
 
   let results: SearchResult[] = []
   let total = 0
+  let resolved: SearchResponse['resolved'] = null
 
   if (source === 'manual' || source === 'all') {
     const where = buildPropertyWhere(filters)
@@ -62,6 +63,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       })
       if (cityCount > 0) {
         resolvedCity = kw
+        resolved = { field: 'city', value: kw }
       } else {
         // 2. Try as community name → search by that community's city
         const community = await prisma.community.findFirst({
@@ -72,7 +74,10 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
           const communityCount = await prisma.resoProperty.count({
             where: { standardStatus: 'Active', city: isRelationalDB ? { contains: communityCity, mode: 'insensitive' } : { contains: communityCity } },
           })
-          if (communityCount > 0) resolvedCity = communityCity
+          if (communityCount > 0) {
+            resolvedCity = communityCity
+            resolved = { field: 'city', value: kw }  // show original term in city field
+          }
         }
 
         // 3. If still no city match, try as property type
@@ -80,7 +85,10 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
           const typeCount = await prisma.resoProperty.count({
             where: { standardStatus: 'Active', propertySubType: containsOpt },
           })
-          if (typeCount > 0) resolvedPropertyType = kw
+          if (typeCount > 0) {
+            resolvedPropertyType = kw
+            resolved = { field: 'propertyType', value: kw }
+          }
         }
       }
     }
@@ -155,5 +163,6 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
     pageSize,
     totalPages: Math.ceil(total / pageSize),
     source,
+    resolved,
   }
 }
