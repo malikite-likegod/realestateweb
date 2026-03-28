@@ -60,7 +60,8 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       const commOpt = isRelationalDB ? { contains: commTerm, mode: 'insensitive' as const } : { contains: commTerm }
       const community = await prisma.community.findFirst({ where: { name: commOpt } })
       if (community) {
-        resolvedCity = community.city
+        // municipality matches RESO city field; fall back to city if municipality not set
+        resolvedCity = community.municipality ?? community.city
       } else {
         resolvedCity = commTerm  // fall back to treating community name as city
       }
@@ -99,7 +100,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
           where: { name: containsOpt },
         })
         if (community) {
-          const communityCity = community.city
+          const communityCity = community.municipality ?? community.city
           const communityCount = await prisma.resoProperty.count({
             where: { standardStatus: 'Active', city: isRelationalDB ? { contains: communityCity, mode: 'insensitive' } : { contains: communityCity } },
           })

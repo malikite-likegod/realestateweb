@@ -5,10 +5,10 @@ import { prisma } from '@/lib/prisma'
  * Cascading geography endpoint for the listings search.
  *
  * GET /api/search/geo?level=areas
- *   → distinct city values that have active RESO listings
+ *   → distinct municipality values from the Community table (area = municipality in TRREB)
  *
  * GET /api/search/geo?level=communities&area=Toronto
- *   → community names from the Community table for that area/city
+ *   → community names from the Community table where municipality = area
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -16,21 +16,22 @@ export async function GET(request: Request) {
   const area  = searchParams.get('area') ?? undefined
 
   if (level === 'areas') {
-    const rows = await prisma.resoProperty.findMany({
-      where:    { standardStatus: 'Active' },
-      select:   { city: true },
-      distinct: ['city'],
-      orderBy:  { city: 'asc' },
+    // Areas = distinct municipality values from the Community table
+    const rows = await prisma.community.findMany({
+      where:    { municipality: { not: null } },
+      select:   { municipality: true },
+      distinct: ['municipality'],
+      orderBy:  { municipality: 'asc' },
     })
-    const cities = rows.map(r => r.city).filter(Boolean).sort()
-    return NextResponse.json(cities)
+    const areas = rows.map(r => r.municipality).filter(Boolean).sort() as string[]
+    return NextResponse.json(areas)
   }
 
   if (level === 'communities' && area) {
     const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
     const rows = await prisma.community.findMany({
       where: {
-        city: isRelationalDB
+        municipality: isRelationalDB
           ? { equals: area, mode: 'insensitive' }
           : { equals: area },
       },
