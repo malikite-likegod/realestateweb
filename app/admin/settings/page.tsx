@@ -11,12 +11,13 @@ import { TwoFactorCard } from '@/components/admin/TwoFactorCard'
 import { LeadCaptureSettingsCard } from '@/components/admin/LeadCaptureSettingsCard'
 import { BlurModeSettingsCard } from '@/components/admin/BlurModeSettingsCard'
 import { MlsSyncSettingsCard } from '@/components/admin/MlsSyncSettingsCard'
+import { HotBrowserAlertCard } from '@/components/admin/HotBrowserAlertCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -30,6 +31,7 @@ export default async function SettingsPage() {
     prisma.siteSettings.findMany({ where: { key: { in: ['listing_gate_limit', 'listing_gate_enabled'] } } }),
     prisma.resoProperty.count({ where: { standardStatus: 'Active' } }),
     prisma.siteSettings.findUnique({ where: { key: 'mls_sync_interval_minutes' } }),
+    prisma.siteSettings.findMany({ where: { key: { in: ['hot_browser_alert_enabled', 'hot_browser_alert_views', 'hot_browser_alert_hours'] } } }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
   const totpEnabled = tfaUser?.totpEnabled ?? false
@@ -51,6 +53,12 @@ export default async function SettingsPage() {
   const gateEnabled = (gateSettingsMap['listing_gate_enabled'] ?? 'true') === 'true'
 
   const mlsSyncInterval = parseInt(mlsSyncIntervalRow?.value ?? '60', 10)
+
+  const hotAlertMap: Record<string, string> = {}
+  for (const r of hotAlertRows) hotAlertMap[r.key] = r.value
+  const hotAlertEnabled = (hotAlertMap['hot_browser_alert_enabled'] ?? 'false') === 'true'
+  const hotAlertViews   = parseInt(hotAlertMap['hot_browser_alert_views'] ?? '5', 10)
+  const hotAlertHours   = parseInt(hotAlertMap['hot_browser_alert_hours'] ?? '24', 10)
 
   function toSyncInfo(log: typeof idxSync) {
     return log ? {
@@ -84,6 +92,12 @@ export default async function SettingsPage() {
         <TwoFactorCard initialEnabled={totpEnabled} userEmail={session.email} />
 
         <LeadCaptureSettingsCard initialLimit={gateLimit} initialEnabled={gateEnabled} />
+
+        <HotBrowserAlertCard
+          initialEnabled={hotAlertEnabled}
+          initialViews={hotAlertViews}
+          initialHours={hotAlertHours}
+        />
 
         <BlurModeSettingsCard />
 

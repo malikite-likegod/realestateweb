@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
-import { Bell, MessageSquare, Mail, UserPlus, BellOff, X } from 'lucide-react'
+import { Bell, MessageSquare, Mail, UserPlus, BellOff, X, Home } from 'lucide-react'
 
-type NotificationType = 'inbound_sms' | 'inbound_email' | 'new_contact' | 'sms_unsubscribe' | 'email_unsubscribe'
+type NotificationType = 'inbound_sms' | 'inbound_email' | 'new_contact' | 'sms_unsubscribe' | 'email_unsubscribe' | 'listing_alert'
 
 interface Notification {
   id:        string
@@ -22,6 +22,7 @@ const TYPE_ICON: Record<NotificationType, ReactNode> = {
   new_contact:       <UserPlus      size={15} className="text-green-500" />,
   sms_unsubscribe:   <BellOff       size={15} className="text-amber-500" />,
   email_unsubscribe: <BellOff       size={15} className="text-amber-500" />,
+  listing_alert:     <Home          size={15} className="text-gold-500" />,
 }
 
 function timeAgo(iso: string): string {
@@ -114,18 +115,29 @@ export function NotificationBell() {
                 <p className="text-sm">All caught up</p>
               </div>
             ) : (
-              notifications.map(n => (
-                <div key={n.id} className="flex gap-3 border-b border-charcoal-50 px-4 py-3 last:border-0 hover:bg-charcoal-50 transition-colors">
-                  <div className="mt-0.5 flex-shrink-0">{TYPE_ICON[n.type]}</div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-charcoal-900 leading-snug">{n.title}</p>
-                    {n.body && (
-                      <p className="mt-0.5 text-xs text-charcoal-500 line-clamp-2">{n.body}</p>
-                    )}
-                    <p className="mt-1 text-xs text-charcoal-400">{timeAgo(n.createdAt)}</p>
+              notifications.map(n => {
+                const inner = (
+                  <>
+                    <div className="mt-0.5 flex-shrink-0">{TYPE_ICON[n.type] ?? <Bell size={15} className="text-charcoal-400" />}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-charcoal-900 leading-snug">{n.title}</p>
+                      {n.body && (
+                        <p className="mt-0.5 text-xs text-charcoal-500 line-clamp-2">{n.body}</p>
+                      )}
+                      <p className="mt-1 text-xs text-charcoal-400">{timeAgo(n.createdAt)}</p>
+                    </div>
+                  </>
+                )
+                return n.type === 'listing_alert' && n.contactId ? (
+                  <a key={n.id} href={`/admin/contacts/${n.contactId}`} className="flex gap-3 border-b border-charcoal-50 px-4 py-3 last:border-0 hover:bg-charcoal-50 transition-colors">
+                    {inner}
+                  </a>
+                ) : (
+                  <div key={n.id} className="flex gap-3 border-b border-charcoal-50 px-4 py-3 last:border-0 hover:bg-charcoal-50 transition-colors">
+                    {inner}
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
