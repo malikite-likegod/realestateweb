@@ -7,6 +7,7 @@ import { Card } from '@/components/layout'
 import { formatDate } from '@/lib/utils'
 import { Mail, User, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { EmailDetailActions } from '@/components/communications/EmailDetailActions'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -28,7 +29,7 @@ export default async function EmailDetailPage({ params }: Props) {
 
   const directionLabel = email.direction === 'inbound' ? 'Received' : 'Sent'
   const fromLabel      = email.direction === 'inbound' ? email.fromEmail : (email.sentBy?.name ?? email.fromEmail)
-  const toLabel        = email.direction === 'inbound' ? email.toEmail   : email.toEmail
+  const toLabel        = email.toEmail
 
   return (
     <DashboardLayout user={session}>
@@ -36,20 +37,28 @@ export default async function EmailDetailPage({ params }: Props) {
         title={email.subject}
         subtitle={`${directionLabel} · ${formatDate(email.sentAt, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`}
         breadcrumbs={[
-          { label: 'Dashboard',       href: '/admin/dashboard' },
-          { label: 'Communications',  href: '/admin/communications' },
+          { label: 'Dashboard',      href: '/admin/dashboard' },
+          { label: 'Communications', href: '/admin/communications' },
           { label: email.subject },
         ]}
       />
 
       <div className="max-w-3xl space-y-4">
+        {/* Action buttons */}
+        <EmailDetailActions
+          emailId={email.id}
+          fromEmail={email.fromEmail}
+          subject={email.subject}
+          body={email.body}
+        />
+
         {/* Header card */}
         <Card>
           <div className="flex items-start gap-4">
             <div className="h-10 w-10 shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
               <Mail size={18} />
             </div>
-            <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex-1 min-w-0">
               <div className="grid grid-cols-[80px_1fr] gap-x-4 gap-y-1 text-sm">
                 <span className="text-charcoal-400 font-medium">From</span>
                 <span className="text-charcoal-900">{fromLabel ?? '—'}</span>

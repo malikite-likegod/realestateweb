@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import { Phone, MessageSquare, Mail, PhoneMissed, Mic } from 'lucide-react'
 import Link from 'next/link'
+import { InboxComposeButton } from '@/components/communications/InboxComposeButton'
 
 export default async function CommunicationsPage() {
   const session = await getSession()
@@ -115,6 +116,7 @@ export default async function CommunicationsPage() {
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Communications' },
         ]}
+        actions={<InboxComposeButton />}
       />
 
       {/* Summary stats */}
