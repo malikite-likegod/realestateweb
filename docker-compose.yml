@@ -52,7 +52,9 @@ services:
       AMPRE_BROKERAGE_NAME:   ${AMPRE_BROKERAGE_NAME:-}
 
   cron:
-    image: alpine:3.19
+    build:
+      context: .
+      dockerfile: Dockerfile.cron
     restart: unless-stopped
     depends_on:
       - app
@@ -60,7 +62,6 @@ services:
       AUTOMATION_PROCESS_SECRET: ${AUTOMATION_PROCESS_SECRET:-}
     command: >
       sh -c "
-        apk add --no-cache curl &&
         echo '* * * * * curl -sf -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/automation/process > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
         echo '* * * * * curl -s -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/emails/sync > /proc/1/fd/1 2>&1' >> /etc/crontabs/root &&
         crond -f -l 8
