@@ -16,14 +16,14 @@ export async function GET(request: Request) {
   const area  = searchParams.get('area') ?? undefined
 
   if (level === 'areas') {
-    // Areas = distinct municipality values from the Community table
-    const rows = await prisma.community.findMany({
-      where:    { municipality: { not: null } },
-      select:   { municipality: true },
-      distinct: ['municipality'],
-      orderBy:  { municipality: 'asc' },
+    // Areas = distinct active city values from RESO properties
+    const rows = await prisma.resoProperty.findMany({
+      where:    { standardStatus: 'Active' },
+      select:   { city: true },
+      distinct: ['city'],
+      orderBy:  { city: 'asc' },
     })
-    const areas = rows.map(r => r.municipality).filter(Boolean).sort() as string[]
+    const areas = rows.map(r => r.city).filter(Boolean).sort() as string[]
     return NextResponse.json(areas)
   }
 
