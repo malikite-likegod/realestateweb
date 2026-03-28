@@ -3,6 +3,10 @@
     {
       "path": "/api/automation/process",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/emails/sync",
+      "schedule": "* * * * *"
     }
   ]
 }
