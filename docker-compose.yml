@@ -51,5 +51,19 @@ services:
       AMPRE_VOX_TOKEN:        ${AMPRE_VOX_TOKEN:-}
       AMPRE_BROKERAGE_NAME:   ${AMPRE_BROKERAGE_NAME:-}
 
+  cron:
+    image: alpine:3.19
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      AUTOMATION_PROCESS_SECRET: ${AUTOMATION_PROCESS_SECRET:-}
+    command: >
+      sh -c "
+        echo '* * * * * wget -qO- --header=\"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/automation/process > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
+        echo '* * * * * wget -qO- --header=\"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/emails/sync > /proc/1/fd/1 2>&1' >> /etc/crontabs/root &&
+        crond -f -l 8
+      "
+
 volumes:
   pgdata:
