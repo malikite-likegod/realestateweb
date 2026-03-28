@@ -75,7 +75,11 @@ model Contact {
   avatarUrl    String?
   source       String?  // web, referral, idx, manual
   status       String   @default("lead") // lead | prospect | client | past_client
-  leadScore    Int      @default(0)
+  leadScore       Int      @default(0)
+  classification  String   @default("cold") // hot | warm | cold
+  intentScore     Int      @default(0)
+  urgencyScore    Int      @default(0)
+  transitionScore Int      @default(0)
   birthday     DateTime?
   emailOptOut  Boolean  @default(false) // true = do not send email
   smsOptOut    Boolean  @default(false) // true = do not send SMS
@@ -113,6 +117,7 @@ model Contact {
   relationships     ContactRelationship[] @relation("ContactA")
   relatedTo         ContactRelationship[] @relation("ContactB")
   behaviorEvents    BehaviorEvent[]
+  sessions          ContactSession[]
   leadScoreHistory  LeadScore[]
   callLogs          CallLog[]
   smsMessages       SmsMessage[]
@@ -876,16 +881,34 @@ model VisitorLog {
   @@map("visitor_logs")
 }
 
+model ContactSession {
+  id          String    @id @default(cuid())
+  contactId   String
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  sessionId   String    @unique
+  startedAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  eventCount  Int       @default(0)
+  searchCount Int       @default(0)
+  listingViews Int      @default(0)
+  metadata    String?   // JSON: city, propertyType filters seen
+
+  @@index([contactId, startedAt])
+  @@map("contact_sessions")
+}
+
 model BehaviorEvent {
   id          String   @id @default(cuid())
   contactId   String?
   contact     Contact? @relation(fields: [contactId], references: [id])
   sessionId   String?
-  eventType   String   // page_view | listing_view | blog_read | form_submit | search
+  eventType   String   // page_view | listing_view | blog_read | form_submit | search | filter_change | map_interaction
   entityId    String?  // listing id, blog post id, etc.
   metadata    String?  // JSON
   occurredAt  DateTime @default(now())
 
+  @@index([contactId, eventType, occurredAt])
+  @@index([contactId, occurredAt])
   @@map("behavior_events")
 }
 

@@ -1,30 +1,73 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { cookies, headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
-import { trackBehaviorEvent } from '@/services/ai/lead-scoring'
+import { trackBehaviorEvent, trackBehaviorEventBatch } from '@/services/ai/lead-scoring'
 
-const eventSchema = z.object({
+const singleEventSchema = z.object({
   eventType: z.string(),
   entityId:  z.string().optional(),
-  contactId: z.string().optional(),
   sessionId: z.string().optional(),
   metadata:  z.record(z.unknown()).optional(),
 })
 
+const batchSchema = z.object({
+  events:    z.array(singleEventSchema).min(1).max(50),
+  sessionId: z.string().optional(),
+})
+
+async function resolveContactId(req: Request): Promise<string | undefined> {
+  try {
+    const reqHeaders  = await headers()
+    const cookieStore = await cookies()
+    // Prefer cookie set by the gate flow (verified contacts)
+    const fromCookie = cookieStore.get('re_verified')?.value
+    if (fromCookie) return fromCookie
+    // Also accept explicit contactId header (admin tooling)
+    return reqHeaders.get('x-contact-id') ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const data = eventSchema.parse(body)
+    const contactId = await resolveContactId(request)
 
-    await trackBehaviorEvent(data.eventType, data.entityId, data.contactId, data.sessionId, data.metadata)
+    // Batch path
+    if (Array.isArray(body?.events)) {
+      const { events, sessionId } = batchSchema.parse(body)
+      const hydratedEvents = events.map(e => ({ ...e, sessionId: e.sessionId ?? sessionId }))
+      await trackBehaviorEventBatch(hydratedEvents, contactId)
 
-    // When a verified contact views a listing, upsert a ContactPropertyInterest record
-    if (data.eventType === 'listing_view' && data.contactId && data.entityId) {
+      // Upsert ContactPropertyInterest for any listing_view events
+      if (contactId) {
+        const listingEvents = hydratedEvents.filter(e => e.eventType === 'listing_view' && e.entityId)
+        await Promise.all(
+          listingEvents.map(e =>
+            prisma.contactPropertyInterest.upsert({
+              where:  { contactId_resoPropertyId: { contactId, resoPropertyId: e.entityId! } },
+              update: { updatedAt: new Date() },
+              create: { contactId, resoPropertyId: e.entityId!, source: 'auto' },
+            }).catch(() => null)
+          )
+        )
+      }
+
+      return NextResponse.json({ success: true, count: events.length })
+    }
+
+    // Single event path (backwards compat)
+    const data = singleEventSchema.parse(body)
+    await trackBehaviorEvent(data.eventType, data.entityId, contactId, data.sessionId, data.metadata)
+
+    if (data.eventType === 'listing_view' && contactId && data.entityId) {
       await prisma.contactPropertyInterest.upsert({
-        where:  { contactId_resoPropertyId: { contactId: data.contactId, resoPropertyId: data.entityId } },
+        where:  { contactId_resoPropertyId: { contactId, resoPropertyId: data.entityId } },
         update: { updatedAt: new Date() },
-        create: { contactId: data.contactId, resoPropertyId: data.entityId, source: 'auto' },
-      })
+        create: { contactId, resoPropertyId: data.entityId, source: 'auto' },
+      }).catch(() => null)
     }
 
     return NextResponse.json({ success: true })

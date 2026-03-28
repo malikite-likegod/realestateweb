@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useId } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Container } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
@@ -11,6 +11,7 @@ import { Map, List, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-
 import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
+import { useBehaviorTracker } from '@/hooks/useBehaviorTracker'
 
 const PAGE_SIZE            = 20
 const MAX_SEARCH_PAGES     = 5   // caps search results at 100 (5 × 20)
@@ -21,6 +22,9 @@ function hasActiveSearch(f: Record<string, string>) {
 
 function ListingsContent() {
   const searchParams = useSearchParams()
+  const sessionId    = useId()
+  const { track }    = useBehaviorTracker({ sessionId })
+
   const [results, setResults] = useState<SearchResult[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -150,7 +154,13 @@ function ListingsContent() {
 <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
             <Select options={propertyTypeOptions} placeholder="Property Type" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-44 bg-white" />
-            <Button variant="gold" onClick={() => setActiveFilters(filters)}>Search</Button>
+            <Button variant="gold" onClick={() => {
+              setActiveFilters(filters)
+              const activeEntries = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
+              if (Object.keys(activeEntries).length > 0) {
+                track('search', undefined, activeEntries)
+              }
+            }}>Search</Button>
             <button onClick={() => setShowFilters(v => !v)} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
               <SlidersHorizontal size={16} /> More Filters
             </button>
@@ -182,7 +192,7 @@ function ListingsContent() {
           />
           <div className="flex gap-2">
             <button onClick={() => setView('grid')} className={`p-2 rounded-lg ${view === 'grid' ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-500'}`}><List size={18} /></button>
-            <button onClick={() => setView('map')} className={`p-2 rounded-lg ${view === 'map' ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-500'}`}><Map size={18} /></button>
+            <button onClick={() => { setView('map'); track('map_interaction', undefined, { action: 'open_map' }) }} className={`p-2 rounded-lg ${view === 'map' ? 'bg-charcoal-900 text-white' : 'bg-charcoal-100 text-charcoal-500'}`}><Map size={18} /></button>
           </div>
         </div>
 
