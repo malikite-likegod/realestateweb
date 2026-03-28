@@ -182,7 +182,7 @@ function ItemRow({ item }: { item: FeedItem }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-charcoal-900 leading-snug capitalize">
-          {item.kind === 'other' ? item.eventType.replace(/_/g, ' ') : item.kind}
+          {item.eventType.replace(/_/g, ' ')}
         </p>
         <p className="text-xs text-charcoal-400 mt-1">{formatDateTime(item.occurredAt)}</p>
       </div>
