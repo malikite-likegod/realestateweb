@@ -62,9 +62,11 @@ services:
       AUTOMATION_PROCESS_SECRET: ${AUTOMATION_PROCESS_SECRET:-}
     command: >
       sh -c "
-        echo '* * * * * curl -sf -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/automation/process > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
-        echo '* * * * * curl -s -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/emails/sync > /proc/1/fd/1 2>&1' >> /etc/crontabs/root &&
-        crond -f -l 8
+        while true; do
+          curl -sf -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/automation/process;
+          curl -s  -X POST -H \"x-cron-secret: $$AUTOMATION_PROCESS_SECRET\" http://app:3000/api/emails/sync;
+          sleep 60;
+        done
       "
 
 volumes:
