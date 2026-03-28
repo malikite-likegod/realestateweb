@@ -29,14 +29,11 @@ function ListingsContent() {
   const [view, setView] = useState<'grid' | 'map'>('grid')
   const [showFilters, setShowFilters] = useState(false)
 
-  // Cascading geo options
-  const [areaOptions,      setAreaOptions]      = useState<string[]>([])
-  const [communityOptions, setCommunityOptions] = useState<string[]>([])
+  const [areaOptions, setAreaOptions] = useState<string[]>([])
 
   const [filters, setFilters] = useState({
     keyword:       searchParams.get('keyword') ?? '',
     city:          searchParams.get('city') ?? '',
-    community:     searchParams.get('community') ?? '',
     postalCode:    searchParams.get('postalCode') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
     maxPrice:      searchParams.get('maxPrice') ?? '',
@@ -53,15 +50,11 @@ function ListingsContent() {
     filters.propertyClass === 'Commercial'  ? [...COMMERCIAL_PROPERTY_TYPES]  :
     [...RESIDENTIAL_PROPERTY_TYPES, ...COMMERCIAL_PROPERTY_TYPES]
 
-  // Load area and community options independently on mount
+  // Load area options on mount
   useEffect(() => {
     fetch('/api/search/geo?level=areas')
       .then(r => r.json())
       .then((data: string[]) => setAreaOptions(data))
-      .catch(() => {})
-    fetch('/api/search/geo?level=communities')
-      .then(r => r.json())
-      .then((data: string[]) => setCommunityOptions(data))
       .catch(() => {})
   }, [])
 
@@ -83,10 +76,11 @@ function ListingsContent() {
     setResults(data.results ?? [])
     // If the backend resolved the keyword to a city or property type, populate
     // that field and clear the keyword so the filter UI reflects what was searched.
-    if (data.resolved && currentFilters.keyword && !currentFilters.city && !currentFilters.community && !currentFilters.propertyType) {
+    if (data.resolved && currentFilters.keyword && !currentFilters.city && !currentFilters.propertyType) {
       const { field, value } = data.resolved as { field: 'city' | 'community' | 'propertyType'; value: string }
-      setFilters(f => ({ ...f, keyword: '', [field]: value }))
-      setActiveFilters(f => ({ ...f, keyword: '', [field]: value }))
+      const resolvedField = field === 'community' ? 'city' : field
+      setFilters(f => ({ ...f, keyword: '', [resolvedField]: value }))
+      setActiveFilters(f => ({ ...f, keyword: '', [resolvedField]: value }))
     }
     if (searching) {
       // Cap total and pages to MAX_SEARCH_PAGES so we never show more than 100 results
@@ -153,15 +147,7 @@ function ListingsContent() {
               onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}
               className="w-40 bg-white"
             />
-            <Select
-              options={communityOptions.map(c => ({ value: c, label: c }))}
-              placeholder="Community"
-              value={filters.community}
-              onChange={e => setFilters(f => ({ ...f, community: e.target.value }))}
-              className="w-44 bg-white"
-              disabled={communityOptions.length === 0}
-            />
-            <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
+<Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
             <Select options={propertyTypeOptions} placeholder="Property Type" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-44 bg-white" />
             <Button variant="gold" onClick={() => setActiveFilters(filters)}>Search</Button>
