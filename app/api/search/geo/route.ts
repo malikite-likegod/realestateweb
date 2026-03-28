@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
     const rows = await prisma.community.findMany({
       where: {
-        municipality: isRelationalDB
+        city: isRelationalDB
           ? { equals: area, mode: 'insensitive' }
           : { equals: area },
       },
