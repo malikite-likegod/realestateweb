@@ -44,7 +44,7 @@ export function Footer() {
 
             <Link href="/" aria-label={APP_NAME}>
               <Image
-                src="/uploads/LOGO_horizontal_color%20on%20transparent.png"
+                src="/uploads/LOGO_horizontal_color_on_transparent.png"
                 alt={APP_NAME}
                 width={640}
                 height={192}
