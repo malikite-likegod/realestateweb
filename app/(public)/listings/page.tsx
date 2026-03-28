@@ -53,22 +53,17 @@ function ListingsContent() {
     filters.propertyClass === 'Commercial'  ? [...COMMERCIAL_PROPERTY_TYPES]  :
     [...RESIDENTIAL_PROPERTY_TYPES, ...COMMERCIAL_PROPERTY_TYPES]
 
-  // Load area options on mount
+  // Load area and community options independently on mount
   useEffect(() => {
     fetch('/api/search/geo?level=areas')
       .then(r => r.json())
       .then((data: string[]) => setAreaOptions(data))
       .catch(() => {})
-  }, [])
-
-  // Load communities when area changes
-  useEffect(() => {
-    if (!filters.city) { setCommunityOptions([]); return }
-    fetch(`/api/search/geo?level=communities&area=${encodeURIComponent(filters.city)}`)
+    fetch('/api/search/geo?level=communities')
       .then(r => r.json())
       .then((data: string[]) => setCommunityOptions(data))
       .catch(() => {})
-  }, [filters.city])
+  }, [])
 
   const fetchResults = useCallback(async (currentFilters: typeof filters, currentPage: number) => {
     setLoading(true)
@@ -155,7 +150,7 @@ function ListingsContent() {
               options={areaOptions.map(a => ({ value: a, label: a }))}
               placeholder="Area"
               value={filters.city}
-              onChange={e => setFilters(f => ({ ...f, city: e.target.value, community: '' }))}
+              onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}
               className="w-40 bg-white"
             />
             <Select
@@ -164,7 +159,7 @@ function ListingsContent() {
               value={filters.community}
               onChange={e => setFilters(f => ({ ...f, community: e.target.value }))}
               className="w-44 bg-white"
-              disabled={!filters.city || communityOptions.length === 0}
+              disabled={communityOptions.length === 0}
             />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
