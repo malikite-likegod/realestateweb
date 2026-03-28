@@ -6,7 +6,7 @@ import { Container } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
 import { ListingMap } from '@/components/real-estate'
 import { Button, Select, Input } from '@/components/ui'
-import { PROPERTY_TYPES, LISTING_TYPES, PROPERTY_CLASSES } from '@/lib/constants'
+import { LISTING_TYPES, PROPERTY_CLASSES, RESIDENTIAL_PROPERTY_TYPES, COMMERCIAL_PROPERTY_TYPES } from '@/lib/constants'
 import { Map, List, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
@@ -43,6 +43,11 @@ function ListingsContent() {
   })
 
   const [activeFilters, setActiveFilters] = useState(filters)
+
+  const propertyTypeOptions: Array<{ value: string; label: string }> =
+    filters.propertyClass === 'Residential' ? [...RESIDENTIAL_PROPERTY_TYPES] :
+    filters.propertyClass === 'Commercial'  ? [...COMMERCIAL_PROPERTY_TYPES]  :
+    [...RESIDENTIAL_PROPERTY_TYPES, ...COMMERCIAL_PROPERTY_TYPES]
 
   const fetchResults = useCallback(async (currentFilters: typeof filters, currentPage: number) => {
     setLoading(true)
@@ -129,8 +134,8 @@ function ListingsContent() {
             <Input placeholder="Municipality" value={filters.municipality} onChange={e => setFilters(f => ({ ...f, municipality: e.target.value }))} className="w-36" />
             <Input placeholder="Neighbourhood" value={filters.community} onChange={e => setFilters(f => ({ ...f, community: e.target.value }))} className="w-40" />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
-            <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value }))} className="w-40 bg-white" />
-            <Select options={PROPERTY_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Property" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-40 bg-white" />
+            <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value, propertyType: '' }))} className="w-40 bg-white" />
+            <Select options={propertyTypeOptions} placeholder="Property Type" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-44 bg-white" />
             <Button variant="gold" onClick={() => setActiveFilters(filters)}>Search</Button>
             <button onClick={() => setShowFilters(v => !v)} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
               <SlidersHorizontal size={16} /> More Filters

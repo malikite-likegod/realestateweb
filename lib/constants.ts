@@ -6,13 +6,35 @@ export const PROPERTY_CLASSES = [
   { value: 'Commercial',  label: 'Commercial'  },
 ] as const
 
+// TRREB/RESO PropertySubType values — used with startsWith filter
+export const RESIDENTIAL_PROPERTY_TYPES = [
+  { value: 'Detached',         label: 'Detached'           },
+  { value: 'Semi-Detached',    label: 'Semi-Detached'      },
+  { value: 'Att/Row',          label: 'Townhouse / Row'    },
+  { value: 'Condo Apt',        label: 'Condo Apartment'    },
+  { value: 'Condo Townhouse',  label: 'Condo Townhouse'    },
+  { value: 'Link',             label: 'Link'               },
+  { value: 'Multiplex',        label: 'Multiplex'          },
+  { value: 'Co-Op',            label: 'Co-Op Apartment'    },
+] as const
+
+export const COMMERCIAL_PROPERTY_TYPES = [
+  { value: 'Commercial/Retail', label: 'Commercial / Retail' },
+  { value: 'Sale Of Business',  label: 'Sale of Business'    },
+  { value: 'Industrial',        label: 'Industrial'          },
+  { value: 'Office',            label: 'Office'              },
+  { value: 'Investment',        label: 'Investment'          },
+  { value: 'Land',              label: 'Land'                },
+] as const
+
+// Legacy constant kept for admin/manual-property forms
 export const PROPERTY_TYPES = [
-  { value: 'detached', label: 'Detached House' },
-  { value: 'semi', label: 'Semi-Detached' },
-  { value: 'condo', label: 'Condo' },
-  { value: 'townhouse', label: 'Townhouse' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'land', label: 'Land' },
+  { value: 'detached',   label: 'Detached House' },
+  { value: 'semi',       label: 'Semi-Detached'  },
+  { value: 'condo',      label: 'Condo'          },
+  { value: 'townhouse',  label: 'Townhouse'      },
+  { value: 'commercial', label: 'Commercial'     },
+  { value: 'land',       label: 'Land'           },
 ] as const
 
 export const LISTING_TYPES = [

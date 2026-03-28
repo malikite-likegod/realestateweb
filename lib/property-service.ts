@@ -36,12 +36,12 @@ function buildCacheKey(filters: PropertyFilters): string {
 }
 
 function buildWhere(filters: PropertyFilters) {
+  // SQLite does not support mode: 'insensitive'; PostgreSQL/MySQL require it.
+  const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
   const where: Record<string, unknown> = {
     standardStatus: filters.status ?? 'Active',
   }
   if (filters.city) {
-    // SQLite does not support mode: 'insensitive'; PostgreSQL/MySQL require it.
-    const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
     where.city = isRelationalDB
       ? { contains: filters.city, mode: 'insensitive' }
       : { contains: filters.city }
@@ -54,10 +54,18 @@ function buildWhere(filters: PropertyFilters) {
   }
   if (filters.minBeds  != null) where.bedroomsTotal         = { gte: filters.minBeds }
   if (filters.minBaths != null) where.bathroomsTotalInteger = { gte: filters.minBaths }
-  if (filters.propertyClass)    where.propertyType          = { contains: filters.propertyClass }
-  if (filters.propertyType)     where.propertySubType       = { contains: filters.propertyType }
+  if (filters.propertyClass) {
+    where.propertyType = isRelationalDB
+      ? { contains: filters.propertyClass, mode: 'insensitive' }
+      : { contains: filters.propertyClass }
+  }
+  if (filters.propertyType) {
+    // Use startsWith so "Detached" doesn't match "Semi-Detached"
+    where.propertySubType = isRelationalDB
+      ? { startsWith: filters.propertyType, mode: 'insensitive' }
+      : { startsWith: filters.propertyType }
+  }
   if (filters.listingType) {
-    const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
     if (filters.listingType === 'lease') {
       where.transactionType = isRelationalDB
         ? { contains: 'lease', mode: 'insensitive' }
