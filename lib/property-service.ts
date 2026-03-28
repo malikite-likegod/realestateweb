@@ -71,7 +71,7 @@ export const PropertyService = {
         prisma.resoProperty.count({ where }),
         prisma.resoProperty.findMany({
           where,
-          orderBy: { listingContractDate: 'desc' },
+          orderBy: [{ listingContractDate: 'desc' }, { listingKey: 'asc' }],
           skip,
           take: pageSize,
         }),

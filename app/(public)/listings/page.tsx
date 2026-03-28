@@ -76,7 +76,7 @@ function ListingsContent() {
 
   useEffect(() => {
     fetchResults(activeFilters, page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
