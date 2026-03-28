@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status: 503 })
     }
 
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // Return the actual error message to help diagnose connection issues
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

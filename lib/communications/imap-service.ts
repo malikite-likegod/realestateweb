@@ -58,8 +58,8 @@ export async function syncInbox(): Promise<SyncResult> {
     const lock = await client.getMailboxLock(mailbox)
 
     try {
-      // Search for unseen messages
-      const uids = await client.search({ seen: false })
+      // Search for unseen messages — use UID mode throughout for stability
+      const uids = await client.search({ seen: false }, { uid: true })
       if (!uids || uids.length === 0) {
         return { fetched: 0, imported: 0, skipped: 0, unmatched: 0 }
       }
@@ -68,7 +68,7 @@ export async function syncInbox(): Promise<SyncResult> {
         envelope: true,
         bodyStructure: true,
         source: true,
-      })) {
+      }, { uid: true })) {
         fetched++
 
         const envelope   = msg.envelope
@@ -120,7 +120,7 @@ export async function syncInbox(): Promise<SyncResult> {
         imported++
 
         // Mark as seen on the server
-        await client.messageFlagsAdd({ uid: msg.uid }, ['\\Seen'])
+        await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })
       }
     } finally {
       lock.release()
