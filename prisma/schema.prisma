@@ -834,7 +834,8 @@ model EmailMessage {
   clickedAt   DateTime?      // timestamp of first tracked click
   openCount   Int            @default(0)
   clickCount  Int            @default(0)
-  trackingId  String?        @unique // random token for pixel tracking
+  trackingId   String?        @unique // random token for pixel tracking
+  imapMessageId String?       @unique // IMAP Message-ID header — deduplicates inbound sync
   sentById    String?
   sentBy      User?          @relation(fields: [sentById], references: [id])
   sentAt      DateTime       @default(now())
