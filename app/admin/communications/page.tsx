@@ -166,10 +166,17 @@ export default async function CommunicationsPage() {
                   <p className="text-xs text-charcoal-500 truncate">{item.preview}</p>
                 </div>
 
-                {/* Time */}
-                <span className="text-xs text-charcoal-400 shrink-0 mt-0.5">
-                  {formatDate(item.occurredAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                </span>
+                {/* Time + optional view link */}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className="text-xs text-charcoal-400">
+                    {formatDate(item.occurredAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                  {item.channel === 'email' && (
+                    <Link href={`/admin/communications/emails/${item.id}`} className="text-xs text-gold-600 hover:underline">
+                      View
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
