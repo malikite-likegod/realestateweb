@@ -72,10 +72,15 @@ function buildWhere(filters: PropertyFilters) {
         ? { contains: 'lease', mode: 'insensitive' }
         : { contains: 'lease' }
     } else {
-      // 'sale' = transactionType does not contain 'lease' (or is null)
-      where.transactionType = isRelationalDB
-        ? { not: { contains: 'lease', mode: 'insensitive' } }
-        : { not: { contains: 'lease' } }
+      // 'sale' = transactionType does not contain 'lease'.
+      // mode:'insensitive' is only valid at the outer filter level, not inside `not`,
+      // so use a top-level NOT clause instead.
+      const notLease = { transactionType: isRelationalDB
+        ? { contains: 'lease', mode: 'insensitive' as const }
+        : { contains: 'lease' } }
+      where.NOT = Array.isArray(where.NOT)
+        ? [...(where.NOT as unknown[]), notLease]
+        : [notLease]
     }
   }
   if (filters.postalCode) {
