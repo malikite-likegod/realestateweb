@@ -4,18 +4,19 @@ import type { ResoProperty } from '@prisma/client'
 import { fetchPropertyOnDemand } from '@/services/reso/sync'
 
 export interface PropertyFilters {
-  city?:         string
-  minPrice?:     number
-  maxPrice?:     number
-  minBeds?:      number
-  minBaths?:     number
-  propertyClass?: string  // 'Residential' | 'Commercial' — maps to resoProperty.propertyType
-  propertyType?: string
-  status?:       string        // default: 'Active'
-  officeKey?:    string | null // filter by listOfficeKey
-  officeName?:   string | null // filter by listOfficeName (fallback)
-  page?:         number        // default: 1
-  pageSize?:     number        // default: 20
+  city?:          string
+  minPrice?:      number
+  maxPrice?:      number
+  minBeds?:       number
+  minBaths?:      number
+  propertyClass?: string       // 'Residential' | 'Commercial' — maps to resoProperty.propertyType
+  propertyType?:  string
+  listingType?:   string       // 'sale' | 'lease' — filters on transactionType
+  status?:        string       // default: 'Active'
+  officeKey?:     string | null
+  officeName?:    string | null
+  page?:          number       // default: 1
+  pageSize?:      number       // default: 20
 }
 
 export interface PropertyListResult {
@@ -55,6 +56,19 @@ function buildWhere(filters: PropertyFilters) {
   if (filters.minBaths != null) where.bathroomsTotalInteger = { gte: filters.minBaths }
   if (filters.propertyClass)    where.propertyType          = { contains: filters.propertyClass }
   if (filters.propertyType)     where.propertySubType       = { contains: filters.propertyType }
+  if (filters.listingType) {
+    const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
+    if (filters.listingType === 'lease') {
+      where.transactionType = isRelationalDB
+        ? { contains: 'lease', mode: 'insensitive' }
+        : { contains: 'lease' }
+    } else {
+      // 'sale' = transactionType does not contain 'lease' (or is null)
+      where.transactionType = isRelationalDB
+        ? { not: { contains: 'lease', mode: 'insensitive' } }
+        : { not: { contains: 'lease' } }
+    }
+  }
   if (filters.officeKey)        where.listOfficeKey         = filters.officeKey
   else if (filters.officeName)  where.listOfficeName        = { equals: filters.officeName, mode: 'insensitive' }
   return where

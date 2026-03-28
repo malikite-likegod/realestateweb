@@ -16,8 +16,7 @@ export const PROPERTY_TYPES = [
 ] as const
 
 export const LISTING_TYPES = [
-  { value: 'sale', label: 'For Sale' },
-  { value: 'rent', label: 'For Rent' },
+  { value: 'sale',  label: 'For Sale'  },
   { value: 'lease', label: 'For Lease' },
 ] as const
 

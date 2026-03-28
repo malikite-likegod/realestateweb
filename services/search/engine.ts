@@ -62,8 +62,23 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       if (community) {
         resolvedCity = community.city
       } else {
-        // Fall back to treating community name as city
-        resolvedCity = commTerm
+        resolvedCity = commTerm  // fall back to treating community name as city
+      }
+    }
+
+    // Resolve explicit municipality filter → city
+    // Municipality names (e.g. "Toronto", "Mississauga") typically match RESO city values directly.
+    // If no direct city match, look up communities by municipality to find their cities.
+    if (filters.municipality && !filters.city && !filters.community) {
+      const munTerm = filters.municipality.trim()
+      const munOpt  = isRelationalDB ? { contains: munTerm, mode: 'insensitive' as const } : { contains: munTerm }
+      const cityCount = await prisma.resoProperty.count({ where: { standardStatus: 'Active', city: munOpt } })
+      if (cityCount > 0) {
+        resolvedCity = munTerm
+      } else {
+        const munCommunity = await prisma.community.findFirst({ where: { municipality: munOpt } })
+        if (munCommunity) resolvedCity = munCommunity.city
+        else resolvedCity = munTerm  // best-effort fallback
       }
     }
 
@@ -115,6 +130,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       minBaths:      filters.minBaths,
       propertyClass: filters.propertyClass,
       propertyType:  resolvedPropertyType,
+      listingType:   filters.listingType,
       officeKey,
       officeName,
       page:         source === 'all' ? 1    : page,

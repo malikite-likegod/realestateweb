@@ -15,7 +15,7 @@ import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 const PAGE_SIZE            = 20
 const MAX_SEARCH_PAGES     = 5   // caps search results at 100 (5 × 20)
 
-function hasActiveSearch(f: { keyword: string; city: string; minPrice: string; maxPrice: string; minBeds: string; propertyType: string; listingType: string }) {
+function hasActiveSearch(f: Record<string, string>) {
   return Object.values(f).some(v => v !== '')
 }
 
@@ -32,6 +32,7 @@ function ListingsContent() {
   const [filters, setFilters] = useState({
     keyword:       searchParams.get('keyword') ?? '',
     city:          searchParams.get('city') ?? '',
+    municipality:  searchParams.get('municipality') ?? '',
     community:     searchParams.get('community') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
     maxPrice:      searchParams.get('maxPrice') ?? '',
@@ -125,6 +126,7 @@ function ListingsContent() {
               className="min-w-[240px]"
             />
             <Input placeholder="City" value={filters.city} onChange={e => setFilters(f => ({ ...f, city: e.target.value }))} className="w-36" />
+            <Input placeholder="Municipality" value={filters.municipality} onChange={e => setFilters(f => ({ ...f, municipality: e.target.value }))} className="w-36" />
             <Input placeholder="Neighbourhood" value={filters.community} onChange={e => setFilters(f => ({ ...f, community: e.target.value }))} className="w-40" />
             <Select options={LISTING_TYPES as unknown as Array<{value:string;label:string}>} placeholder="Type" value={filters.listingType} onChange={e => setFilters(f => ({ ...f, listingType: e.target.value }))} className="w-36 bg-white" />
             <Select options={PROPERTY_CLASSES as unknown as Array<{value:string;label:string}>} placeholder="Class" value={filters.propertyClass} onChange={e => setFilters(f => ({ ...f, propertyClass: e.target.value }))} className="w-40 bg-white" />

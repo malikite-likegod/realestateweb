@@ -9,7 +9,8 @@ export type SearchFilters = {
   minBeds?: number
   maxBeds?: number
   minBaths?: number
-  community?: string      // neighbourhood / community name → resolved to city
+  community?:    string   // neighbourhood / community name → resolved to city
+  municipality?: string   // municipality name → resolved to city
   propertyClass?: string  // 'Residential' | 'Commercial'
   propertyType?: string
   listingType?: string

@@ -4,7 +4,8 @@ import type { Prisma } from '@prisma/client'
 export function buildPropertyWhere(f: SearchFilters): Prisma.PropertyWhereInput {
   const where: Prisma.PropertyWhereInput = { status: 'active' }
 
-  if (f.city) where.city = { contains: f.city }
+  if (f.city)         where.city = { contains: f.city }
+  if (f.municipality) where.city = { contains: f.municipality }  // municipality maps to city for manual props
   if (f.location) {
     where.OR = [
       { city: { contains: f.location } },
