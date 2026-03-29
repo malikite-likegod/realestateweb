@@ -11,6 +11,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=3072"
+
+# NEXT_PUBLIC_ vars must be present at build time so Next.js can inline them
+ARG NEXT_PUBLIC_GOOGLE_MAPS_KEY
+ARG NEXT_PUBLIC_GOOGLE_MAPS_ID
+ENV NEXT_PUBLIC_GOOGLE_MAPS_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_KEY
+ENV NEXT_PUBLIC_GOOGLE_MAPS_ID=$NEXT_PUBLIC_GOOGLE_MAPS_ID
+
 RUN npx prisma generate
 RUN npm run build
 
