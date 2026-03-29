@@ -11,7 +11,7 @@ interface SearchBarProps {
   variant?: 'hero' | 'compact'
 }
 
-export function SearchBar({ placeholder = 'Search by location, MLS#, or keyword…', className, variant = 'compact' }: SearchBarProps) {
+export function SearchBar({ placeholder = 'Search by location', className, variant = 'compact' }: SearchBarProps) {
   const [query, setQuery] = useState('')
   const router = useRouter()
 
