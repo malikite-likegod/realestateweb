@@ -19,7 +19,7 @@ export function SelectionBar({ count, onSend, onSaveSearch, onClear }: Props) {
           Save Search for Contact
         </Button>
         <Button variant="gold" onClick={onSend}>Send to Contact</Button>
-        <button onClick={onClear} className="text-charcoal-400 hover:text-white text-sm ml-2">Clear selection</button>
+        <Button variant="ghost" size="sm" onClick={onClear} className="text-charcoal-400 hover:text-white ml-2">Clear selection</Button>
       </div>
     </div>
   )

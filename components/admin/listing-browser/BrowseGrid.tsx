@@ -1,20 +1,6 @@
 'use client'
 
-interface ResoListing {
-  listingKey:            string
-  streetNumber:          string | null
-  streetName:            string | null
-  streetSuffix:          string | null
-  unitNumber:            string | null
-  city:                  string | null
-  listPrice:             number | null
-  bedroomsTotal:         number | null
-  bathroomsTotalInteger: number | null
-  livingArea:            number | null
-  propertyType:          string | null
-  media:                 string | null
-  standardStatus:        string | null
-}
+import type { ResoListing } from './types'
 
 interface Props {
   listings:  ResoListing[]
@@ -27,7 +13,7 @@ function getFirstPhoto(media: string | null): string {
 }
 
 function formatPrice(price: number | null): string {
-  if (!price) return 'Price on request'
+  if (price == null) return 'Price on request'
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(price)
 }
 
@@ -46,7 +32,11 @@ export function BrowseGrid({ listings, selected, onToggle }: Props) {
         return (
           <div
             key={l.listingKey}
+            role="checkbox"
+            aria-checked={isSelected}
+            tabIndex={0}
             onClick={() => onToggle(l.listingKey)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(l.listingKey) } }}
             className={`relative cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${isSelected ? 'border-gold-500 ring-2 ring-gold-300' : 'border-charcoal-100 hover:border-charcoal-300'}`}
           >
             <div className={`absolute top-2 right-2 w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-gold-500 border-gold-500' : 'bg-white border-charcoal-300'}`}>
