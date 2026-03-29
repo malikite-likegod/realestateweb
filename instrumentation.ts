@@ -20,10 +20,11 @@ export async function register() {
 
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
 
-  const { processPendingJobs }      = await import('./lib/automation/job-queue')
-  const { syncInbox }               = await import('./lib/communications/imap-service')
+  const { processPendingJobs }       = await import('./lib/automation/job-queue')
+  const { syncInbox }                = await import('./lib/communications/imap-service')
   const { geocodeMissingProperties } = await import('./services/reso/geocode')
-  const { prisma } = await import('./lib/prisma')
+  const { prisma }                   = await import('./lib/prisma')
+  const { getMlsSyncInterval }       = await import('./lib/site-settings')
 
   // Guard against multiple registrations in dev (hot reload can call register() more than once)
   const key = Symbol.for('automation_runner_started')
@@ -68,5 +69,33 @@ export async function register() {
     } catch (err: unknown) {
       console.error('[geocode] Error geocoding properties:', err)
     }
+
+    try {
+      await runMlsSyncIfDue()
+    } catch (err: unknown) {
+      console.error('[mls-sync] Error running scheduled sync:', err)
+    }
   }, intervalMs)
+
+  async function runMlsSyncIfDue() {
+    const [lastSync, intervalMinutes] = await Promise.all([
+      prisma.resoSyncLog.findFirst({
+        where:   { syncType: 'idx_property' },
+        orderBy: { syncedAt: 'desc' },
+      }),
+      getMlsSyncInterval(),
+    ])
+
+    if (lastSync) {
+      const elapsedMs  = Date.now() - lastSync.syncedAt.getTime()
+      const intervalMs = intervalMinutes * 60 * 1000
+      if (elapsedMs < intervalMs) return
+    }
+
+    console.log('[mls-sync] Interval elapsed — running scheduled sync')
+    const { syncIdxProperty, syncDlaProperty, syncVoxMember, syncVoxOffice, syncIdxMedia } = await import('./services/reso/sync')
+    await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
+    await Promise.all([syncDlaProperty(), syncIdxMedia()])
+    console.log('[mls-sync] Scheduled sync complete')
+  }
 }
