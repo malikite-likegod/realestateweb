@@ -26,8 +26,9 @@ export async function GET(
   const properties  = await prisma.resoProperty.findMany({
     where: { listingKey: { in: listingKeys } },
     select: {
-      listingKey: true, unparsedAddress: true, city: true,
-      listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
+      listingKey: true,
+      streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+      city: true, listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
       livingArea: true, media: true, standardStatus: true,
     },
   })

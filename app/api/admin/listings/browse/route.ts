@@ -21,10 +21,9 @@ export async function GET(request: Request) {
 
   const where: Record<string, unknown> = { standardStatus: 'Active' }
 
-  if (city)         where.city          = { contains: city,         mode: 'insensitive' }
-  if (community)    where.communityName = { contains: community,    mode: 'insensitive' }
-  if (propertyType) where.propertyType  = { contains: propertyType, mode: 'insensitive' }
-  if (listingType)  where.listingType   = listingType
+  if (city)         where.city         = { contains: city,         mode: 'insensitive' }
+  if (community)    where.city         = { contains: community,    mode: 'insensitive' }
+  if (propertyType) where.propertyType = { contains: propertyType, mode: 'insensitive' }
   if (minBeds)      where.bedroomsTotal = { gte: minBeds }
   if (minPrice || maxPrice) {
     where.listPrice = {}
@@ -41,14 +40,16 @@ export async function GET(request: Request) {
       take: pageSize,
       select: {
         listingKey: true,
-        unparsedAddress: true,
+        streetNumber: true,
+        streetName: true,
+        streetSuffix: true,
+        unitNumber: true,
         city: true,
         listPrice: true,
         bedroomsTotal: true,
         bathroomsTotalInteger: true,
         livingArea: true,
         propertyType: true,
-        listingType: true,
         media: true,
         standardStatus: true,
       },

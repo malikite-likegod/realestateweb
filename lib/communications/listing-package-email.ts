@@ -10,7 +10,10 @@ interface SendPackageEmailInput {
       id:         string
       listingKey: string
       property?: {
-        unparsedAddress:       string | null
+        streetNumber:          string | null
+        streetName:            string | null
+        streetSuffix:          string | null
+        unitNumber:            string | null
         city:                  string | null
         listPrice:             number | null
         bedroomsTotal:         number | null
@@ -46,7 +49,8 @@ function buildListingCard(
 ): string {
   const p       = item.property
   const photo   = p ? getFirstPhoto(p.media) : ''
-  const address = p?.unparsedAddress ?? 'Address unavailable'
+  const addressParts = [p?.streetNumber, p?.streetName, p?.streetSuffix, p?.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
+  const address = addressParts.length > 0 ? addressParts.join(' ') : 'Address unavailable'
   const city    = p?.city ?? ''
   const price   = formatPrice(p?.listPrice ?? null)
   const beds    = p?.bedroomsTotal ?? '—'
@@ -80,12 +84,17 @@ export async function sendListingPackageEmail({ pkg, contact }: SendPackageEmail
   const properties     = await prisma.resoProperty.findMany({
     where: { listingKey: { in: listingKeys } },
     select: {
-      listingKey: true, unparsedAddress: true, city: true,
-      listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
+      listingKey: true,
+      streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+      city: true, listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
       livingArea: true, media: true,
     },
   })
-  const propMap        = Object.fromEntries(properties.map(p => [p.listingKey, p]))
+  const propMap        = Object.fromEntries(properties.map(p => [p.listingKey, {
+    streetNumber: p.streetNumber, streetName: p.streetName, streetSuffix: p.streetSuffix, unitNumber: p.unitNumber,
+    city: p.city, listPrice: p.listPrice, bedroomsTotal: p.bedroomsTotal,
+    bathroomsTotalInteger: p.bathroomsTotalInteger, livingArea: p.livingArea, media: p.media,
+  }]))
   const itemsWithProps = pkg.items.map(i => ({ ...i, property: i.property ?? propMap[i.listingKey] ?? null }))
   const listingCards   = itemsWithProps.map(item => buildListingCard(item, baseUrl, pkg.magicToken)).join('')
 

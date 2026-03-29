@@ -10,7 +10,7 @@ export interface PkgSession {
 }
 
 export async function setPackageSessionCookie(session: PkgSession): Promise<void> {
-  const token = await new SignJWT(session)
+  const token = await new SignJWT(session as unknown as Record<string, string>)
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
     .sign(secret)
