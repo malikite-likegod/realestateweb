@@ -1,53 +1,48 @@
 /**
  * SMS Service
  *
- * Provider-agnostic SMS layer. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
- * and TWILIO_FROM_NUMBER in .env to activate live sending. Until then all
- * outbound messages are stored with status "sent" (simulated) and a warning
- * is logged to the console.
+ * Uses the official Twilio Node.js SDK. Supports two auth methods:
+ *   - API Key (preferred): set TWILIO_ACCOUNT_SID + TWILIO_API_KEY + TWILIO_API_SECRET
+ *   - Auth Token (fallback): set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN
+ *
+ * Also set TWILIO_FROM_NUMBER to activate live sending.
  *
  * Incoming messages are handled by parseTwilioWebhook() called from
  * app/api/sms/webhook/route.ts.
  */
 
+import twilio from 'twilio'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 
-// ─── Provider stub ──────────────────────────────────────────────────────────
+// ─── Twilio client ───────────────────────────────────────────────────────────
+
+function getTwilioClient() {
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_API_KEY, TWILIO_API_SECRET } = process.env
+  if (!TWILIO_ACCOUNT_SID) return null
+
+  // API Key auth: twilio(apiKeySid, apiKeySecret, { accountSid })
+  if (TWILIO_API_KEY && TWILIO_API_SECRET) {
+    return twilio(TWILIO_API_KEY, TWILIO_API_SECRET, { accountSid: TWILIO_ACCOUNT_SID })
+  }
+
+  // Auth Token fallback: twilio(accountSid, authToken)
+  if (TWILIO_AUTH_TOKEN) {
+    return twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+  }
+
+  return null
+}
 
 async function sendViaTwilio(to: string, from: string, body: string): Promise<string | null> {
-  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_API_KEY, TWILIO_API_SECRET } = process.env
-  if (!TWILIO_ACCOUNT_SID) {
+  const client = getTwilioClient()
+  if (!client) {
     console.warn('[sms-service] Twilio not configured — message not sent to carrier.')
     return null
   }
 
-  // Prefer API Key auth (SK... + secret) over Account SID + Auth Token
-  const authUser   = TWILIO_API_KEY    ?? TWILIO_ACCOUNT_SID
-  const authPass   = TWILIO_API_SECRET ?? TWILIO_AUTH_TOKEN ?? ''
-  if (!authPass) {
-    console.warn('[sms-service] Twilio auth credentials missing — message not sent to carrier.')
-    return null
-  }
-
-  // Twilio REST API call (uses fetch, no SDK required)
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`
-  const res = await fetch(url, {
-    method:  'POST',
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`${authUser}:${authPass}`).toString('base64'),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({ To: to, From: from, Body: body }).toString(),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Twilio error ${res.status}: ${err}`)
-  }
-
-  const json = await res.json() as { sid: string }
-  return json.sid
+  const message = await client.messages.create({ to, from, body })
+  return message.sid
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
