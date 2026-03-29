@@ -12,6 +12,7 @@ import { Bed, Bath, Square, MapPin, Calendar } from 'lucide-react'
 import type { Metadata } from 'next'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
+import { BackButton } from '@/components/public/BackButton'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -73,6 +74,9 @@ export default async function ListingDetailPage({ params }: Props) {
 
       <div className={showGate || showPending ? 'blur-sm pointer-events-none select-none' : ''}>
         <Container className="py-8">
+          <div className="mb-4">
+            <BackButton />
+          </div>
           <PropertyGallery images={images} title={address} />
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
