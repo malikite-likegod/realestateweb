@@ -20,6 +20,7 @@ interface ListingMapProps {
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? ''
+const MAP_ID  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID  ?? 'listing-map'
 
 function MapContent({ markers, center, zoom }: { markers: MapMarker[]; center: { lat: number; lng: number }; zoom: number }) {
   const [activeMarker, setActiveMarker] = useState<number | null>(null)
@@ -28,7 +29,7 @@ function MapContent({ markers, center, zoom }: { markers: MapMarker[]; center: {
     <Map
       defaultCenter={center}
       defaultZoom={zoom}
-      mapId="listing-map"
+      mapId={MAP_ID}
       gestureHandling="greedy"
       disableDefaultUI={false}
     >
