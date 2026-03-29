@@ -16,9 +16,17 @@ import { createNotification } from '@/lib/notifications'
 // ─── Provider stub ──────────────────────────────────────────────────────────
 
 async function sendViaTwilio(to: string, from: string, body: string): Promise<string | null> {
-  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN } = process.env
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_API_KEY, TWILIO_API_SECRET } = process.env
+  if (!TWILIO_ACCOUNT_SID) {
     console.warn('[sms-service] Twilio not configured — message not sent to carrier.')
+    return null
+  }
+
+  // Prefer API Key auth (SK... + secret) over Account SID + Auth Token
+  const authUser   = TWILIO_API_KEY    ?? TWILIO_ACCOUNT_SID
+  const authPass   = TWILIO_API_SECRET ?? TWILIO_AUTH_TOKEN ?? ''
+  if (!authPass) {
+    console.warn('[sms-service] Twilio auth credentials missing — message not sent to carrier.')
     return null
   }
 
@@ -27,7 +35,7 @@ async function sendViaTwilio(to: string, from: string, body: string): Promise<st
   const res = await fetch(url, {
     method:  'POST',
     headers: {
-      Authorization: 'Basic ' + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64'),
+      Authorization: 'Basic ' + Buffer.from(`${authUser}:${authPass}`).toString('base64'),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({ To: to, From: from, Body: body }).toString(),

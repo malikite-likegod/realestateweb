@@ -33,6 +33,8 @@ ENV HOSTNAME="0.0.0.0"
 # Runtime secrets — supply via docker-compose environment or --env-file
 ENV TWILIO_ACCOUNT_SID=""
 ENV TWILIO_AUTH_TOKEN=""
+ENV TWILIO_API_KEY=""
+ENV TWILIO_API_SECRET=""
 ENV TWILIO_FROM_NUMBER=""
 ENV ZEROBOUNCE_API_KEY=""
 

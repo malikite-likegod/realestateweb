@@ -10,6 +10,8 @@ export async function GET() {
   const vars = [
     'TWILIO_ACCOUNT_SID',
     'TWILIO_AUTH_TOKEN',
+    'TWILIO_API_KEY',
+    'TWILIO_API_SECRET',
     'TWILIO_FROM_NUMBER',
     'SMTP_HOST',
     'SMTP_USER',
