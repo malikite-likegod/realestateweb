@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { PortalHeader } from '@/components/portal/PortalHeader'
 import { PortalSaveButton } from '@/components/portal/PortalSaveButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
+import { PackageViewTracker } from '@/components/portal/PackageViewTracker'
 
 function getAddress(p: {
   streetNumber: string | null; streetName: string | null;
@@ -28,8 +29,17 @@ function isLease(transactionType: string | null) {
   return (transactionType ?? '').toLowerCase().includes('lease')
 }
 
-export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function PropertyDetailPage({
+  params,
+  searchParams,
+}: {
+  params:       Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const { id }          = await params
+  const resolvedParams  = await searchParams
+  const packageItemId   = resolvedParams.packageItemId as string | undefined
+  const token           = resolvedParams.token         as string | undefined
   const contact = await getContactSession()
   if (!contact) redirect('/portal/login')
 
@@ -50,6 +60,9 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
   return (
     <>
       <PortalHeader firstName={contact.firstName} />
+      {packageItemId && token && (
+        <PackageViewTracker token={token} packageItemId={packageItemId} />
+      )}
       <main className="max-w-5xl mx-auto px-4 py-8">
 
         {/* Back link */}
