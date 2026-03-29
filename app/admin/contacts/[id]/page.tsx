@@ -12,6 +12,7 @@ import {
   CommOptLogPanel,
 } from '@/components/crm'
 import { PropertyInterestsPanel } from '@/components/admin/contacts/PropertyInterestsPanel'
+import { ContactListingsTab } from '@/components/admin/ContactListingsTab'
 import { ContactActivityFeed } from '@/components/admin/contacts/ContactActivityFeed'
 import { SavedSearchesTab } from '@/components/admin/contacts/SavedSearchesTab'
 import { PortalInviteButton } from '@/components/admin/contacts/PortalInviteButton'
@@ -450,6 +451,16 @@ export default async function ContactDetailPage({ params }: Props) {
                     },
                   }))}
                   availableCampaigns={activeCampaigns}
+                />
+              ),
+            },
+            {
+              id:      'listings',
+              label:   'Listings',
+              content: (
+                <ContactListingsTab
+                  contactId={contact.id}
+                  contactName={[contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.email || 'Contact'}
                 />
               ),
             },
