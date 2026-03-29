@@ -129,6 +129,7 @@ model Contact {
   notifications     Notification[]
   savedListings     ContactSavedListing[]
   securityAuditLogs SecurityAuditLog[]
+  listingPackages   ListingPackage[]
 
   @@map("contacts")
 }
@@ -1158,4 +1159,48 @@ model BlockedIp {
 
   @@index([expiresAt])
   @@map("blocked_ips")
+}
+
+// ─── Listing Packages ─────────────────────────────────────────────────────────
+
+model ListingPackage {
+  id         String               @id @default(cuid())
+  contactId  String
+  contact    Contact              @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  title      String
+  message    String?
+  magicToken String               @unique @default(uuid())
+  sentAt     DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  items      ListingPackageItem[]
+
+  @@index([contactId])
+  @@map("listing_packages")
+}
+
+model ListingPackageItem {
+  id         String               @id @default(cuid())
+  packageId  String
+  package    ListingPackage       @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  listingKey String
+  addedAt    DateTime             @default(now())
+  views      ListingPackageView[]
+
+  @@index([packageId])
+  @@unique([packageId, listingKey])
+  @@map("listing_package_items")
+}
+
+model ListingPackageView {
+  id          String             @id @default(cuid())
+  itemId      String
+  item        ListingPackageItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  contactId   String
+  viewedAt    DateTime           @default(now())
+  durationSec Int?
+
+  @@index([itemId])
+  @@index([contactId])
+  @@map("listing_package_views")
 }
