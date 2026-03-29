@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { Badge, Button } from '@/components/ui'
 import { formatPrice, parseJsonSafe } from '@/lib/utils'
-import { Plus, Edit } from 'lucide-react'
+import { Plus, Edit, Search } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -25,9 +25,14 @@ export default async function ListingsManagerPage() {
         subtitle={`${properties.length} properties`}
         breadcrumbs={[{ label: 'Dashboard', href: '/admin/dashboard' }, { label: 'Listings' }]}
         actions={
-          <Button variant="primary" leftIcon={<Plus size={16} />} asChild>
-            <Link href="/admin/listings/new">Add Listing</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" leftIcon={<Search size={16} />} asChild>
+              <Link href="/admin/listings/browse">Browse MLS</Link>
+            </Button>
+            <Button variant="primary" leftIcon={<Plus size={16} />} asChild>
+              <Link href="/admin/listings/new">Add Listing</Link>
+            </Button>
+          </div>
         }
       />
       <div className="overflow-x-auto rounded-xl border border-charcoal-100">
