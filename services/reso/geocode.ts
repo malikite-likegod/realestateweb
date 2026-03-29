@@ -30,23 +30,19 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
 export async function geocodeMissingProperties(): Promise<void> {
   if (!API_KEY) return
 
-  const listings = await prisma.resoProperty.findMany({
-    where: {
-      latitude:  null,
-      // Only geocode listings that have enough address data
-      NOT: [{ streetNumber: null }, { city: null }],
-    },
+  const listings = (await prisma.resoProperty.findMany({
+    where: { latitude: null },
     select: {
-      id:            true,
-      streetNumber:  true,
-      streetName:    true,
-      streetSuffix:  true,
-      city:          true,
+      id:              true,
+      streetNumber:    true,
+      streetName:      true,
+      streetSuffix:    true,
+      city:            true,
       stateOrProvince: true,
-      postalCode:    true,
+      postalCode:      true,
     },
-    take: BATCH_SIZE,
-  })
+    take: BATCH_SIZE * 4, // over-fetch since we filter below
+  })).filter(l => l.streetNumber && l.city).slice(0, BATCH_SIZE)
 
   if (listings.length === 0) return
 
