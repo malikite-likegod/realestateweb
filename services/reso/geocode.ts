@@ -34,8 +34,7 @@ export async function geocodeMissingProperties(): Promise<void> {
     where: {
       latitude:  null,
       // Only geocode listings that have enough address data
-      streetNumber: { not: null },
-      city:         { not: null },
+      NOT: [{ streetNumber: null }, { city: null }],
     },
     select: {
       id:            true,
