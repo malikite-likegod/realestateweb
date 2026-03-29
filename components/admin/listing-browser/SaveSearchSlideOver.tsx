@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button, Input } from '@/components/ui'
 import type { BrowseFilterValues } from './BrowseFilters'
 
@@ -20,6 +20,8 @@ export function SaveSearchSlideOver({ filters, preContactId, preContactName, onC
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   async function searchContacts(q: string) {
     if (q.length < 2) return
     const res  = await fetch(`/api/contacts?search=${encodeURIComponent(q)}&pageSize=8`)
@@ -27,20 +29,33 @@ export function SaveSearchSlideOver({ filters, preContactId, preContactName, onC
     setSearchResults(json.data ?? [])
   }
 
+  function handleSearchInput(q: string) {
+    setSearchQuery(q)
+    if (contactName) setContactName('') // clear previous selection when typing again
+    if (q.length < 2) { setSearchResults([]); return }
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => searchContacts(q), 300)
+  }
+
   async function handleSave() {
     if (!contactId) { setError('Please select a contact'); return }
     if (!name)      { setError('Please enter a name'); return }
     setLoading(true)
     setError('')
-    const res = await fetch(`/api/admin/contacts/${contactId}/saved-searches`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name, filters }),
-    })
-    const json = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(json.error ?? 'Failed to save'); return }
-    onSaved()
+    try {
+      const res = await fetch(`/api/admin/contacts/${contactId}/saved-searches`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, filters }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError(json.error ?? 'Failed to save'); return }
+      onSaved()
+    } catch {
+      setError('Network error — please try again')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const activeFilters = Object.entries(filters).filter(([, v]) => v)
@@ -58,7 +73,7 @@ export function SaveSearchSlideOver({ filters, preContactId, preContactName, onC
               <Input
                 label="Search Contact"
                 value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); searchContacts(e.target.value) }}
+                onChange={e => handleSearchInput(e.target.value)}
                 placeholder="Name or email..."
               />
               {searchResults.length > 0 && (

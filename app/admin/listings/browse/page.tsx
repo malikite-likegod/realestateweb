@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BrowseFilters, type BrowseFilterValues } from '@/components/admin/listing-browser/BrowseFilters'
 import { BrowseGrid } from '@/components/admin/listing-browser/BrowseGrid'
@@ -13,7 +13,7 @@ const emptyFilters: BrowseFilterValues = {
   city: '', propertyType: '', minPrice: '', maxPrice: '', minBeds: '', minBaths: '',
 }
 
-export default function BrowsePage() {
+function BrowsePageInner() {
   const searchParams   = useSearchParams()
   const preContactId   = searchParams.get('contactId')   ?? undefined
   const preContactName = searchParams.get('contactName') ?? undefined
@@ -37,12 +37,17 @@ export default function BrowsePage() {
     if (f.maxPrice)     params.set('maxPrice',     f.maxPrice)
     if (f.minBeds)      params.set('minBeds',      f.minBeds)
     if (f.minBaths)     params.set('minBaths',     f.minBaths)
-    const res  = await fetch(`/api/admin/listings/browse?${params}`)
-    const json = await res.json()
-    setListings(json.data ?? [])
-    setTotalPages(json.totalPages ?? 0)
-    setTotal(json.total ?? 0)
-    setLoading(false)
+    try {
+      const res  = await fetch(`/api/admin/listings/browse?${params}`)
+      const json = await res.json()
+      setListings(json.data ?? [])
+      setTotalPages(json.totalPages ?? 0)
+      setTotal(json.total ?? 0)
+    } catch {
+      // network error — leave previous results in place
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   function handleSearch() {
@@ -124,5 +129,13 @@ export default function BrowsePage() {
         />
       )}
     </div>
+  )
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-charcoal-400">Loading...</div>}>
+      <BrowsePageInner />
+    </Suspense>
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button, Input, Textarea } from '@/components/ui'
 
 interface Props {
@@ -20,6 +20,8 @@ export function SendToContactSlideOver({ listingKeys, preContactId, preContactNa
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   async function searchContacts(q: string) {
     if (q.length < 2) return
     const res  = await fetch(`/api/contacts?search=${encodeURIComponent(q)}&pageSize=8`)
@@ -27,20 +29,33 @@ export function SendToContactSlideOver({ listingKeys, preContactId, preContactNa
     setSearchResults(json.data ?? [])
   }
 
+  function handleSearchInput(q: string) {
+    setSearchQuery(q)
+    if (contactName) setContactName('') // clear previous selection when typing again
+    if (q.length < 2) { setSearchResults([]); return }
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => searchContacts(q), 300)
+  }
+
   async function handleSend() {
     if (!contactId) { setError('Please select a contact'); return }
     if (!title)     { setError('Please enter a title'); return }
     setLoading(true)
     setError('')
-    const res = await fetch('/api/listing-packages', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ contactId, title, message, listingKeys, send: true }),
-    })
-    const json = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(json.error ?? 'Failed to send'); return }
-    onSent()
+    try {
+      const res = await fetch('/api/listing-packages', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ contactId, title, message, listingKeys, send: true }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError(json.error ?? 'Failed to send'); return }
+      onSent()
+    } catch {
+      setError('Network error — please try again')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -56,7 +71,7 @@ export function SendToContactSlideOver({ listingKeys, preContactId, preContactNa
               <Input
                 label="Search Contact"
                 value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); searchContacts(e.target.value) }}
+                onChange={e => handleSearchInput(e.target.value)}
                 placeholder="Name or email..."
               />
               {searchResults.length > 0 && (
