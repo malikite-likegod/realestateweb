@@ -86,6 +86,13 @@ export async function POST(request: Request) {
       })
     }
 
+    // Save message as a note on the contact
+    if (parsed.message?.trim()) {
+      await prisma.note.create({
+        data: { contactId: contact.id, body: `Contact form message: ${parsed.message.trim()}` },
+      })
+    }
+
     // Webhook + automation rules
     await sendWebhook('new_lead', { contactId: contact.id, source: parsed.source })
     await enqueueJob('evaluate_rules', { trigger: 'new_lead', contactId: contact.id })
