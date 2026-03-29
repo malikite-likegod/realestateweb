@@ -46,9 +46,12 @@ model ListingPackageItem {
   views      ListingPackageView[]
 
   @@index([packageId])
+  @@unique([packageId, listingKey])   // prevent duplicate listings in same package
   @@map("listing_package_items")
 }
 ```
+
+`POST /api/listing-packages/[id]/items` must respond with 409 if the `listingKey` already exists in the package.
 
 ### New: `ListingPackageView`
 Tracks when and how long a contact views a listing from a package.
@@ -58,17 +61,19 @@ model ListingPackageView {
   id          String             @id @default(cuid())
   itemId      String
   item        ListingPackageItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  contactId   String
+  contactId   String             // copied from the package's contactId at insert time
   viewedAt    DateTime           @default(now())
-  durationSec Int?               // recorded on page exit via beacon
+  durationSec Int?               // filled in by PATCH from sendBeacon on exit
 
   @@index([itemId])
   @@map("listing_package_views")
 }
 ```
 
+`contactId` is resolved server-side by looking up `item.package.contactId` — it is never trusted from the client.
+
 ### Existing: `SavedSearch`
-Already has `contactId` — no schema changes needed. Admin can create saved searches on behalf of a contact from the listing browser.
+Already has `contactId`. Admin-created searches for contacts use a new admin-only endpoint (see API Routes below) — not the existing `/api/saved-searches` endpoint which only accepts contact session auth.
 
 ### `Contact` relation additions
 Add `listingPackages ListingPackage[]` to the Contact model.
@@ -78,6 +83,8 @@ Add `listingPackages ListingPackage[]` to the Contact model.
 ## Admin Features
 
 ### `/admin/listings/browse` — RESO Listing Browser
+A new page alongside the existing `/admin/listings` (listing management) page. The existing page is for managing manually-entered custom listings; this new page browses MLS/RESO data.
+
 - Full RESO property browser using the same filter set as the public side (city, community, property type, listing type, price range, beds, baths)
 - No record cap — paginated at 24 per page, unlimited pages
 - Checkbox multi-select on listing cards
@@ -85,7 +92,7 @@ Add `listingPackages ListingPackage[]` to the Contact model.
   - **Send to Contact** — slide-over: contact search picker, package title, message textarea, listing preview, Send button
   - **Save Search for Contact** — slide-over: contact search picker, search name input, Save button
   - **Clear selection**
-- When reached from a contact profile's "Browse & Send" button, the contact is pre-filled and the picker is skipped
+- When reached from a contact profile's "Browse & Send" button (`/admin/listings/browse?contactId=xxx`), the contact is pre-filled and the picker is skipped
 
 ### Contact Profile — "Listings" Tab
 New tab added to the contact detail page alongside existing tabs (Notes, Activity, etc.).
@@ -98,6 +105,7 @@ New tab added to the contact detail page alongside existing tabs (Notes, Activit
 **Saved Searches section:**
 - List of saved searches for this contact: name, filter summary, last run date
 - Run (opens browser with filters applied), Edit, Delete actions
+- "Add Search" opens the same slide-over as the listing browser's "Save Search for Contact"
 
 **Activity Feed section:**
 - Chronological list of all listing interactions: package views, self-discovered saves, portal property visits
@@ -110,34 +118,49 @@ New tab added to the contact detail page alongside existing tabs (Notes, Activit
 | Method | Route | Purpose |
 |--------|-------|---------|
 | GET | `/api/admin/listings/browse` | RESO search, no cap, admin-auth |
-| POST | `/api/listing-packages` | Create package + items, send email |
-| GET | `/api/listing-packages?contactId=` | List packages for a contact |
-| GET | `/api/listing-packages/[id]` | Package detail with view stats |
-| POST | `/api/listing-packages/[id]/items` | Add items to existing package |
-| DELETE | `/api/listing-packages/[id]/items/[itemId]` | Remove item |
-| POST | `/api/portal/packages/[token]/view` | Record a listing view (called from portal) |
-| GET | `/api/portal/packages/[token]` | Resolve token → package data (portal-auth) |
-
-Saved search creation for contacts reuses the existing `/api/saved-searches` endpoint (already accepts `contactId`).
+| POST | `/api/listing-packages` | Create package + items, send email — admin-auth |
+| GET | `/api/listing-packages?contactId=` | List packages for a contact — admin-auth |
+| GET | `/api/listing-packages/[id]` | Package detail with view stats — admin-auth |
+| POST | `/api/listing-packages/[id]/items` | Add items to existing package — admin-auth; 409 on duplicate listingKey |
+| DELETE | `/api/listing-packages/[id]/items/[itemId]` | Remove item — admin-auth |
+| POST | `/api/portal/packages/[token]/view` | Create view row on listing open — token-auth; returns `{ viewId }` |
+| PATCH | `/api/portal/packages/[token]/view/[viewId]` | Update `durationSec` from sendBeacon on exit — token-auth |
+| GET | `/api/portal/packages/[token]` | Resolve token → package data, sets portal session — public |
+| POST | `/api/admin/contacts/[id]/saved-searches` | Create saved search for a contact — admin-auth |
+| DELETE | `/api/admin/contacts/[id]/saved-searches/[searchId]` | Delete saved search — admin-auth |
 
 ---
 
 ## Portal
 
+### Magic-Link Session
+The existing `getContactSession()` requires `accountStatus === 'active'`, which many leads will not have. The token-resolution handler at `GET /api/portal/packages/[token]` (or the `/portal/packages/[token]` page server action) bypasses this check:
+
+1. Look up `ListingPackage` by `magicToken` — 404 if not found
+2. Load the associated `Contact`
+3. Set a short-lived `portal_pkg_session` cookie: `{ contactId, packageId, expiresAt: +7days }`  signed with `JWT_SECRET`
+4. Portal package pages and view-tracking endpoints validate this cookie directly — they do not call `getContactSession()`
+
+This keeps the magic-link flow entirely separate from the full portal account system.
+
 ### `/portal/packages/[token]`
 - Token resolved server-side → loads `ListingPackage` with items and `ResoProperty` data
-- Sets portal session cookie for the contact (magic-link login — no password required)
+- Sets `portal_pkg_session` cookie (see above)
 - Renders:
   - Agent photo + name header
   - Package title and agent message
   - "View All [N] Listings" anchor link to listing grid below
   - Listing cards: photo, address, price, beds/baths, "View Listing" CTA
-- Each "View Listing" CTA links to `/portal/properties/[listingKey]?packageItemId=[id]`
-- `packageItemId` query param tells the property page to record a `ListingPackageView` on load and on exit (navigator.sendBeacon for duration)
+- Each "View Listing" CTA links to `/portal/properties/[listingKey]?packageItemId=[itemId]&token=[token]`
+- The property page reads `packageItemId` + `token`, verifies `item.package.magicToken === token` (ownership check), then records the view
 
 ### View Tracking
-- On portal property page load: POST `/api/portal/packages/[token]/view` with `{ itemId, viewedAt }`
-- On page exit (beforeunload / visibilitychange): sendBeacon with `{ itemId, durationSec }`
+- On portal property page load: `POST /api/portal/packages/[token]/view` with `{ itemId }`
+  - Server verifies `item.package.magicToken === token` before inserting
+  - `contactId` copied from `item.package.contactId` — never from client
+  - Returns `{ viewId }`
+- On page exit (beforeunload / visibilitychange): `sendBeacon` to `PATCH /api/portal/packages/[token]/view/[viewId]` with `{ durationSec }`
+  - Updates the existing row — does not create a new one
 - Self-discovered portal browsing continues to use existing `ContactPropertyInterest` tracking
 
 ---
@@ -146,11 +169,13 @@ Saved search creation for contacts reuses the existing `/api/saved-searches` end
 
 Sent via existing SMTP stack using a new `sendListingPackageEmail()` function.
 
+**Before sending:** check `contact.emailOptOut` — if true, abort and return an error to the admin ("This contact has opted out of email").
+
 **Template structure:**
 1. Agent photo + name + brokerage
 2. Personalised intro message (written by admin)
 3. Prominent CTA button: "View All [N] Listings in Your Portal" → magic link to `/portal/packages/[token]`
-4. Listing cards (one per item): property photo, address, price, beds/baths/sqft, "View This Listing" button → magic link with `?open=[listingKey]` so portal auto-scrolls to that card
+4. Listing cards (one per item): property photo, address, price, beds/baths/sqft, "View This Listing" button → magic link to `/portal/packages/[token]?open=[listingKey]` so portal auto-scrolls to that card
 5. Standard footer with unsubscribe / contact info
 
 ---
@@ -160,6 +185,8 @@ Sent via existing SMTP stack using a new `sendListingPackageEmail()` function.
 - **Expired / invalid magic token:** portal shows a friendly "This link has expired — contact your agent" page
 - **SMTP failure on send:** package is saved with `sentAt = null` (draft state), admin sees error toast, can retry send from the Listings tab on the contact
 - **Missing RESO property (delisted):** item renders as "Listing no longer available" card in portal and admin view
+- **Duplicate listing in package:** `POST /items` returns 409; UI shows "Already in this package"
+- **emailOptOut contact:** send is blocked server-side; admin sees an inline error before the email is attempted
 
 ---
 
