@@ -47,8 +47,11 @@ export function BrowseGrid({ listings, selected, onToggle }: Props) {
           <div
             key={l.listingKey}
             onClick={() => onToggle(l.listingKey)}
-            className={`cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${isSelected ? 'border-gold-500 ring-2 ring-gold-300' : 'border-charcoal-100 hover:border-charcoal-300'}`}
+            className={`relative cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${isSelected ? 'border-gold-500 ring-2 ring-gold-300' : 'border-charcoal-100 hover:border-charcoal-300'}`}
           >
+            <div className={`absolute top-2 right-2 w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-gold-500 border-gold-500' : 'bg-white border-charcoal-300'}`}>
+              {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+            </div>
             {photo
               ? <img src={photo} alt="" className="w-full h-40 object-cover" />
               : <div className="w-full h-40 bg-charcoal-100 flex items-center justify-center text-charcoal-400 text-xs">No photo</div>

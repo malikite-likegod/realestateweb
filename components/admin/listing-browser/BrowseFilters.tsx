@@ -7,6 +7,7 @@ export interface BrowseFilterValues {
   minPrice:     string
   maxPrice:     string
   minBeds:      string
+  minBaths:     string
 }
 
 interface Props {
@@ -21,10 +22,12 @@ export function BrowseFilters({ filters, onChange, onSearch }: Props) {
 
   return (
     <div className="flex flex-wrap gap-3 items-end p-4 bg-white border-b border-charcoal-100">
-      <Input label="City"      value={filters.city}     onChange={set('city')}     className="w-36" />
-      <Input label="Min Price" value={filters.minPrice} onChange={set('minPrice')} className="w-28" type="number" />
-      <Input label="Max Price" value={filters.maxPrice} onChange={set('maxPrice')} className="w-28" type="number" />
-      <Input label="Min Beds"  value={filters.minBeds}  onChange={set('minBeds')}  className="w-20" type="number" />
+      <Input label="City"          value={filters.city}         onChange={set('city')}         className="w-36" />
+      <Input label="Property Type" value={filters.propertyType} onChange={set('propertyType')} className="w-36" />
+      <Input label="Min Price"     value={filters.minPrice}     onChange={set('minPrice')}     className="w-28" type="number" />
+      <Input label="Max Price"     value={filters.maxPrice}     onChange={set('maxPrice')}     className="w-28" type="number" />
+      <Input label="Min Beds"      value={filters.minBeds}      onChange={set('minBeds')}      className="w-20" type="number" />
+      <Input label="Min Baths"     value={filters.minBaths}     onChange={set('minBaths')}     className="w-20" type="number" />
       <Button variant="primary" onClick={onSearch} className="self-end">Search</Button>
     </div>
   )
