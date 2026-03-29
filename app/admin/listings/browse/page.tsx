@@ -1,7 +1,7 @@
 'use client'
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { BrowseFilters, type BrowseFilterValues } from '@/components/admin/listing-browser/BrowseFilters'
+import { BrowseFilters, EMPTY_FILTERS, type BrowseFilterValues } from '@/components/admin/listing-browser/BrowseFilters'
 import { BrowseGrid } from '@/components/admin/listing-browser/BrowseGrid'
 import { SelectionBar } from '@/components/admin/listing-browser/SelectionBar'
 import { SendToContactSlideOver } from '@/components/admin/listing-browser/SendToContactSlideOver'
@@ -9,9 +9,7 @@ import { SaveSearchSlideOver } from '@/components/admin/listing-browser/SaveSear
 import { Button } from '@/components/ui'
 import type { ResoListing } from '@/components/admin/listing-browser/types'
 
-const emptyFilters: BrowseFilterValues = {
-  city: '', propertyType: '', minPrice: '', maxPrice: '', minBeds: '', minBaths: '',
-}
+const emptyFilters: BrowseFilterValues = EMPTY_FILTERS
 
 function BrowsePageInner() {
   const searchParams   = useSearchParams()
@@ -32,11 +30,16 @@ function BrowsePageInner() {
     setLoading(true)
     const params = new URLSearchParams({ page: String(p) })
     if (f.city)         params.set('city',         f.city)
+    if (f.community)    params.set('community',    f.community)
     if (f.propertyType) params.set('propertyType', f.propertyType)
+    if (f.listingType)  params.set('listingType',  f.listingType)
     if (f.minPrice)     params.set('minPrice',     f.minPrice)
     if (f.maxPrice)     params.set('maxPrice',     f.maxPrice)
     if (f.minBeds)      params.set('minBeds',      f.minBeds)
     if (f.minBaths)     params.set('minBaths',     f.minBaths)
+    if (f.minGarage)    params.set('minGarage',    f.minGarage)
+    if (f.minSqft)      params.set('minSqft',      f.minSqft)
+    if (f.maxSqft)      params.set('maxSqft',      f.maxSqft)
     try {
       const res  = await fetch(`/api/admin/listings/browse?${params}`)
       const json = await res.json()
@@ -49,6 +52,11 @@ function BrowsePageInner() {
       setLoading(false)
     }
   }, [])
+
+  // Auto-load on mount
+  useEffect(() => {
+    fetchListings(emptyFilters, 1)
+  }, [fetchListings])
 
   function handleSearch() {
     setPage(1)

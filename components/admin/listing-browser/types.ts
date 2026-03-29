@@ -8,8 +8,11 @@ export interface ResoListing {
   listPrice:             number | null
   bedroomsTotal:         number | null
   bathroomsTotalInteger: number | null
+  garageSpaces:          number | null
   livingArea:            number | null
   propertyType:          string | null
+  propertySubType:       string | null
+  transactionType:       string | null
   media:                 string | null
   standardStatus:        string | null
 }
