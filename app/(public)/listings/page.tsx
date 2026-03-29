@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, Suspense, useId } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Container } from '@/components/layout'
 import { PropertyGrid } from '@/components/real-estate'
 import { ListingMap } from '@/components/real-estate'
@@ -22,6 +22,7 @@ function hasActiveSearch(f: Record<string, string>) {
 
 function ListingsContent() {
   const searchParams = useSearchParams()
+  const router       = useRouter()
   const sessionId    = useId()
   const { track }    = useBehaviorTracker({ sessionId })
 
@@ -156,6 +157,10 @@ function ListingsContent() {
             <Select options={propertyTypeOptions} placeholder="Property Type" value={filters.propertyType} onChange={e => setFilters(f => ({ ...f, propertyType: e.target.value }))} className="w-44 bg-white" />
             <Button variant="gold" onClick={() => {
               setActiveFilters(filters)
+              // Write filters to URL so back navigation restores the same results
+              const params = new URLSearchParams()
+              Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
+              router.push(`/listings?${params.toString()}`, { scroll: false })
               const activeEntries = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
               if (Object.keys(activeEntries).length > 0) {
                 track('search', undefined, activeEntries)
