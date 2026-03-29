@@ -23,7 +23,7 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
     const { officeKey, officeName } = await getBrokerageFilter()
 
     const where: Record<string, unknown> = { standardStatus: 'Active' }
-    if (officeKey)       where.listOfficeKey  = officeKey
+    if (officeKey) where.listOfficeKey = officeKey
     else if (officeName) where.listOfficeName = { equals: officeName, mode: 'insensitive' }
 
     const properties = await prisma.resoProperty.findMany({
@@ -49,23 +49,23 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
       const listingType = txType.includes('lease') ? 'lease' : 'sale'
 
       return {
-        id:                p.id,
-        title:             addressParts.join(' ') || p.city,
-        price:             p.listPrice ?? 0,
-        bedrooms:          p.bedroomsTotal,
-        bathrooms:         p.bathroomsTotalInteger,
-        sqft:              p.livingArea,
-        address:           addressParts.join(' ') || '',
-        city:              p.city,
-        propertyType:      p.propertyType ?? 'Residential',
+        id: p.id,
+        title: addressParts.join(' ') || p.city,
+        price: p.listPrice ?? 0,
+        bedrooms: p.bedroomsTotal,
+        bathrooms: p.bathroomsTotalInteger,
+        sqft: p.livingArea,
+        address: addressParts.join(' ') || '',
+        city: p.city,
+        propertyType: p.propertyType ?? 'Residential',
         listingType,
-        status:            p.standardStatus.toLowerCase(),
+        status: p.standardStatus.toLowerCase(),
         images,
-        latitude:          p.latitude,
-        longitude:         p.longitude,
-        listedAt:          p.listingContractDate,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        listedAt: p.listingContractDate,
         listAgentFullName: p.listAgentFullName,
-        listOfficeName:    p.listOfficeName,
+        listOfficeName: p.listOfficeName,
       }
     })
   } catch {
@@ -147,7 +147,7 @@ export default async function HomePage() {
             phone="(416) 888-8352"
             email="miketaylor.realty@gmail.com"
             bio="With over 19 years of experience in The Greater Toronto Area's real estate market, Michael has built a reputation for exceptional results and unparalleled client service. His deep market knowledge and strategic approach consistently deliver above-market outcomes for his clients."
-            photo="/images/test.png"
+            photo="/images/office_crop.png"
             stats={[
               { value: '100+', label: 'Transactions' },
               { value: '$50M+', label: 'In Sales' },
@@ -170,7 +170,7 @@ export default async function HomePage() {
       {/* Buying section */}
       <Section background="light" padding="lg">
         <Container>
-          <SplitSection image="https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=900&q=80" imagePosition="right">
+          <SplitSection image="/images/JAC0012.jpg" imagePosition="right">
             <ContentBlock
               eyebrow="Buying a Home"
               title="Your Journey Starts Here"
