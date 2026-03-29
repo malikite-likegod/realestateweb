@@ -30,6 +30,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Runtime secrets — supply via docker-compose environment or --env-file
+ENV TWILIO_ACCOUNT_SID=""
+ENV TWILIO_AUTH_TOKEN=""
+ENV TWILIO_FROM_NUMBER=""
+ENV ZEROBOUNCE_API_KEY=""
+
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 --ingroup nodejs nextjs && \
     mkdir -p .next/cache && chown -R nextjs:nodejs .next
