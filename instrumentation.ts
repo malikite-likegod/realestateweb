@@ -20,8 +20,9 @@ export async function register() {
 
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
 
-  const { processPendingJobs } = await import('./lib/automation/job-queue')
-  const { syncInbox }          = await import('./lib/communications/imap-service')
+  const { processPendingJobs }      = await import('./lib/automation/job-queue')
+  const { syncInbox }               = await import('./lib/communications/imap-service')
+  const { geocodeMissingProperties } = await import('./services/reso/geocode')
   const { prisma } = await import('./lib/prisma')
 
   // Guard against multiple registrations in dev (hot reload can call register() more than once)
@@ -60,6 +61,12 @@ export async function register() {
       }
     } catch (err: unknown) {
       console.error('[imap] Sync error:', err)
+    }
+
+    try {
+      await geocodeMissingProperties()
+    } catch (err: unknown) {
+      console.error('[geocode] Error geocoding properties:', err)
     }
   }, intervalMs)
 }
