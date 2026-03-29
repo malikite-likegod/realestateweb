@@ -71,7 +71,10 @@ export async function POST(request: Request) {
 
     // Upsert by email
     let contact
+    let isNew = true
     if (parsed.email) {
+      const existing = await prisma.contact.findUnique({ where: { email: parsed.email } })
+      isNew = !existing
       contact = await prisma.contact.upsert({
         where: { email: parsed.email },
         update: { phone: parsed.phone ?? undefined, source: parsed.source ?? undefined },
@@ -90,8 +93,10 @@ export async function POST(request: Request) {
     const name = [firstName, lastName].filter(Boolean).join(' ') || parsed.email || 'Unknown'
     await createNotification({
       type:      'new_contact',
-      title:     `New contact: ${name}`,
-      body:      parsed.source ? `Source: ${parsed.source}` : undefined,
+      title:     isNew ? `New contact: ${name}` : `Returning contact: ${name}`,
+      body:      isNew
+        ? (parsed.source ? `Source: ${parsed.source}` : undefined)
+        : `Already in the database — submitted the contact form again${parsed.source ? ` (${parsed.source})` : ''}`,
       contactId: contact.id,
     })
 
