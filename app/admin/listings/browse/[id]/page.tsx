@@ -5,6 +5,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { ListingMap } from '@/components/real-estate/ListingMap'
+import { PhotoGallery } from '@/components/real-estate/PhotoGallery'
 
 function getAddress(p: {
   streetNumber: string | null; streetName: string | null;
@@ -95,36 +96,12 @@ export default async function AdminListingDetailPage({
         Back to Browse
       </Link>
 
-      {/* Hero photo */}
-      <div className="relative w-full h-96 rounded-2xl overflow-hidden bg-charcoal-100 mb-3">
-        <img src={images[0]} alt={address} className="w-full h-full object-cover" />
-        <span className={`absolute top-4 left-4 text-xs font-semibold px-3 py-1.5 rounded-full shadow ${
-          lease ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-        }`}>
-          {lease ? 'For Lease' : 'For Sale'}
-        </span>
-        {images.length > 1 && (
-          <span className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full">
-            1 / {images.length} photos
-          </span>
-        )}
-      </div>
-
-      {/* Thumbnail strip */}
-      {images.length > 1 && (
-        <div className="grid grid-cols-6 gap-1.5 mb-8">
-          {images.slice(1, 7).map((url, i) => (
-            <div key={i} className="relative h-20 bg-charcoal-100 rounded-lg overflow-hidden">
-              <img src={url} alt={`Photo ${i + 2}`} className="w-full h-full object-cover" />
-              {i === 5 && images.length > 7 && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-white text-xs font-semibold">+{images.length - 7} more</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <PhotoGallery
+        images={images}
+        address={address}
+        badge={lease ? 'For Lease' : 'For Sale'}
+        badgeVariant={lease ? 'blue' : 'green'}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left: main info */}
