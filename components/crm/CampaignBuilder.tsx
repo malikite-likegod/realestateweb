@@ -13,7 +13,7 @@ import { Button } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
 import { FilePicker } from '@/components/admin/FilePicker'
 
-type StepType    = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign'
+type StepType    = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign' | 'send_portal_invite'
 type TriggerType = 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual'
 type DelayUnit   = 'minutes' | 'days'
 
@@ -59,12 +59,13 @@ interface CampaignBuilderProps {
 }
 
 const STEP_LABELS: Record<StepType, string> = {
-  send_email:         'Send Email',
-  send_sms:           'Send SMS',
-  create_task:        'Create Task',
-  wait:               'Wait / Delay',
-  update_lead_score:  'Update Lead Score',
-  transfer_campaign:  'Transfer to Campaign',
+  send_email:          'Send Email',
+  send_sms:            'Send SMS',
+  create_task:         'Create Task',
+  wait:                'Wait / Delay',
+  update_lead_score:   'Update Lead Score',
+  transfer_campaign:   'Transfer to Campaign',
+  send_portal_invite:  'Send Portal Invite',
 }
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -81,7 +82,8 @@ function defaultConfig(type: StepType): Record<string, string | number> {
     case 'create_task':       return { title: '', description: '', priority: 'normal' }
     case 'wait':              return {}
     case 'update_lead_score': return { delta: 5 }
-    case 'transfer_campaign': return { targetSequenceId: '', targetSequenceName: '', startAtStep: 0 }
+    case 'transfer_campaign':  return { targetSequenceId: '', targetSequenceName: '', startAtStep: 0 }
+    case 'send_portal_invite': return {}
   }
 }
 
@@ -412,6 +414,14 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
       )
     case 'wait':
       return <p className="text-xs text-charcoal-400">This step pauses the sequence for the delay above.</p>
+
+    case 'send_portal_invite':
+      return (
+        <p className="text-xs text-charcoal-400">
+          Sends the contact a portal registration invitation by email so they can log in and browse MLS listings.
+          Skipped automatically if the contact has no email or already has an active portal account.
+        </p>
+      )
 
     case 'transfer_campaign': {
       const available = (allCampaigns ?? []).filter(c => c.id !== currentCampaignId)

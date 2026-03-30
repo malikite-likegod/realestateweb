@@ -13,6 +13,7 @@
  *   execute_campaign_step   → advances a campaign enrollment one step
  *   evaluate_rules          → fires automation rules for a given trigger+contact
  *   bulk_email_send         → sends one email to a bulk-send recipient via email-service
+ *   send_portal_invite_job  → sends a portal registration invitation to a contact
  */
 
 import { prisma } from '@/lib/prisma'
@@ -25,6 +26,7 @@ export type JobType =
   | 'execute_campaign_step'
   | 'evaluate_rules'
   | 'bulk_email_send'
+  | 'send_portal_invite_job'
 
 /**
  * Add a job to the queue.
@@ -178,6 +180,12 @@ async function runJob(type: JobType, payload: Record<string, unknown>): Promise<
         toEmail:    payload.toEmail    as string,
         templateId: payload.templateId as string | undefined,
       })
+      break
+    }
+
+    case 'send_portal_invite_job': {
+      const { sendPortalInvite } = await import('@/lib/communications/email-service')
+      await sendPortalInvite(payload.contactId as string)
       break
     }
 

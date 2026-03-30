@@ -264,6 +264,10 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
         break
       }
 
+      case 'send_portal_invite':
+        await enqueueJob('send_portal_invite_job', { contactId: enrollment.contactId })
+        break
+
       case 'wait':
         // 'wait' steps just pause; the delay is handled by nextRunAt below
         break
