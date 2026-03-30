@@ -11,8 +11,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const page        = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
   const pageSize    = 24
-  const city         = searchParams.get('city')         ?? ''
-  const community    = searchParams.get('community')    ?? ''
+  const area         = searchParams.get('area')         ?? ''
   const propertyType = searchParams.get('propertyType') ?? ''
   const listingType  = searchParams.get('listingType')  ?? ''
   const minPrice     = searchParams.get('minPrice')     ? parseInt(searchParams.get('minPrice')!)    : undefined
@@ -30,12 +29,7 @@ export async function GET(request: Request) {
 
   const where: Record<string, unknown> = { standardStatus: 'Active' }
 
-  if (city) where.city = iContains(city)
-
-  if (community && !city) {
-    const comm = await prisma.community.findFirst({ where: { name: iContains(community) } })
-    if (comm) where.city = iContains(comm.city)
-  }
+  if (area) where.city = iContains(area)
 
   if (propertyType) {
     where.OR = [

@@ -33,7 +33,7 @@ function BrowsePageInner() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.city) {
-          setFilters(f => ({ ...f, city: data.city }))
+          setFilters(f => ({ ...f, area: data.city }))
         }
       })
       .catch(() => {})
@@ -42,8 +42,7 @@ function BrowsePageInner() {
   const fetchListings = useCallback(async (f: BrowseFilterValues, p: number) => {
     setLoading(true)
     const params = new URLSearchParams({ page: String(p) })
-    if (f.city)         params.set('city',         f.city)
-    if (f.community)    params.set('community',    f.community)
+    if (f.area)         params.set('area',         f.area)
     if (f.propertyType) params.set('propertyType', f.propertyType)
     if (f.listingType)  params.set('listingType',  f.listingType)
     if (f.minPrice)     params.set('minPrice',     f.minPrice)

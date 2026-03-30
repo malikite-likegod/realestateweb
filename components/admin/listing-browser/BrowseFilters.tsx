@@ -1,11 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
-import { Input, Button } from '@/components/ui'
+import { Button, Input, AutocompleteInput } from '@/components/ui'
 
 export interface BrowseFilterValues {
-  city:         string
-  community:    string
+  area:         string
   propertyType: string
   listingType:  string
   minPrice:     string
@@ -18,7 +17,7 @@ export interface BrowseFilterValues {
 }
 
 export const EMPTY_FILTERS: BrowseFilterValues = {
-  city: '', community: '', propertyType: '', listingType: '',
+  area: '', propertyType: '', listingType: '',
   minPrice: '', maxPrice: '', minBeds: '', minBaths: '',
   minGarage: '', minSqft: '', maxSqft: '',
 }
@@ -41,7 +40,15 @@ interface Props {
 }
 
 export function BrowseFilters({ filters, onChange, onSearch }: Props) {
-  const [showMore, setShowMore] = useState(false)
+  const [showMore,     setShowMore]     = useState(false)
+  const [areaOptions,  setAreaOptions]  = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/search/geo?level=areas')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: string[]) => setAreaOptions(data))
+      .catch(() => {})
+  }, [])
 
   const set = (key: keyof BrowseFilterValues) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -53,8 +60,16 @@ export function BrowseFilters({ filters, onChange, onSearch }: Props) {
     <div className="p-4 bg-white border-b border-charcoal-100 space-y-3">
       {/* Primary row */}
       <div className="flex flex-wrap gap-3 items-end">
-        <Input label="City"      value={filters.city}      onChange={set('city')}      className="w-36" />
-        <Input label="Community" value={filters.community} onChange={set('community')} className="w-36" />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-charcoal-700">Area / City</label>
+          <AutocompleteInput
+            options={areaOptions}
+            value={filters.area}
+            onChange={v => onChange({ ...filters, area: v })}
+            placeholder="e.g. Toronto"
+            className="w-48"
+          />
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-charcoal-700">Property Type</label>
