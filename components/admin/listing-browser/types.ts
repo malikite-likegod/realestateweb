@@ -1,4 +1,5 @@
 export interface ResoListing {
+  id:                    string
   listingKey:            string
   streetNumber:          string | null
   streetName:            string | null

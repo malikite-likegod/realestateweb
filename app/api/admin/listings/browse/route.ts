@@ -75,6 +75,7 @@ export async function GET(request: Request) {
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
+        id:                    true,
         listingKey:            true,
         streetNumber:          true,
         streetName:            true,

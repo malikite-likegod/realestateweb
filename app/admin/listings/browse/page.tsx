@@ -26,6 +26,19 @@ function BrowsePageInner() {
   const [showSend,   setShowSend]   = useState(false)
   const [showSearch, setShowSearch] = useState(false)
 
+  // Auto-fill city from contact profile when contactId is present
+  useEffect(() => {
+    if (!preContactId) return
+    fetch(`/api/admin/contacts/${preContactId}/profile`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.city) {
+          setFilters(f => ({ ...f, city: data.city }))
+        }
+      })
+      .catch(() => {})
+  }, [preContactId])
+
   const fetchListings = useCallback(async (f: BrowseFilterValues, p: number) => {
     setLoading(true)
     const params = new URLSearchParams({ page: String(p) })
