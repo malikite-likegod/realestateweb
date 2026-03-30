@@ -14,6 +14,7 @@
 import twilio from 'twilio'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
+import { renderTemplate } from '@/lib/communications/email-service'
 
 // ─── Twilio client ───────────────────────────────────────────────────────────
 
@@ -57,18 +58,33 @@ export type SendSmsInput = {
 }
 
 export async function sendSms(input: SendSmsInput) {
-  // Block delivery for opted-out contacts — record the attempt without sending
-  const contactPref = await prisma.contact.findUnique({
+  // Fetch contact for opt-out check and merge-tag resolution
+  const contact = await prisma.contact.findUnique({
     where:  { id: input.contactId },
-    select: { smsOptOut: true },
+    select: { firstName: true, lastName: true, email: true, phone: true, smsOptOut: true },
   })
-  if (contactPref?.smsOptOut) {
+
+  // Resolve {{merge tags}} in the body using contact and agent data
+  const mergeVars: Record<string, string> = {
+    firstName:  contact?.firstName ?? '',
+    lastName:   contact?.lastName  ?? '',
+    fullName:   [contact?.firstName, contact?.lastName].filter(Boolean).join(' '),
+    email:      contact?.email     ?? '',
+    phone:      contact?.phone     ?? '',
+    agentName:  process.env.AGENT_NAME  ?? '',
+    agentEmail: process.env.AGENT_EMAIL ?? '',
+    agentPhone: process.env.AGENT_PHONE ?? '',
+  }
+  const resolvedBody = renderTemplate(input.body, mergeVars)
+
+  // Block delivery for opted-out contacts — record the attempt without sending
+  if (contact?.smsOptOut) {
     return prisma.smsMessage.create({
       data: {
         contactId:  input.contactId,
         direction:  'outbound',
         status:     'opted_out',
-        body:       input.body,
+        body:       resolvedBody,
         fromNumber: process.env.TWILIO_FROM_NUMBER ?? null,
         toNumber:   input.toNumber,
         sentById:   input.sentById ?? null,
@@ -85,7 +101,7 @@ export async function sendSms(input: SendSmsInput) {
 
   let twilioSid: string | null = null
   if (fromNumber && input.toNumber) {
-    twilioSid = await sendViaTwilio(input.toNumber, fromNumber, input.body)
+    twilioSid = await sendViaTwilio(input.toNumber, fromNumber, resolvedBody)
   }
 
   return prisma.smsMessage.create({
@@ -93,7 +109,7 @@ export async function sendSms(input: SendSmsInput) {
       contactId:  input.contactId,
       direction:  'outbound',
       status:     'sent', // updated to 'delivered' via Twilio status-callback webhook
-      body:       input.body,
+      body:       resolvedBody,
       fromNumber: fromNumber,
       toNumber:   input.toNumber,
       mediaUrls:  input.mediaUrls ? JSON.stringify(input.mediaUrls) : null,

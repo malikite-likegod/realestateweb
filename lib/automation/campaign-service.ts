@@ -69,6 +69,7 @@ export async function enrollContact(sequenceId: string, contactId: string, start
   // so the agent sees it on their calendar right away with dueAt = nextRunAt.
   if (entryStep.type === 'create_task') {
     const taskConfig  = JSON.parse(entryStep.config) as Record<string, unknown>
+    const taskTitle   = taskConfig.title as string | undefined
     const taskDesc    = taskConfig.description as string | undefined
     const campaignTag = `Campaign: ${sequence.name}`
     const contactRec  = await prisma.contact.findUnique({
@@ -78,9 +79,12 @@ export async function enrollContact(sequenceId: string, contactId: string, start
     const contactName = contactRec
       ? `${contactRec.firstName} ${contactRec.lastName}`.trim()
       : null
+    const resolvedTitle = taskTitle
+      ? (contactName ? `${taskTitle} — ${contactName}` : taskTitle)
+      : (contactName ? `Call ${contactName}` : 'Call')
     await prisma.task.create({
       data: {
-        title:       contactName ? `Call ${contactName}` : 'Call',
+        title:       resolvedTitle,
         description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
         priority:    (taskConfig.priority as string) ?? 'normal',
         taskTypeId:  'tasktype_call',
@@ -227,12 +231,16 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
         break
 
       case 'create_task': {
+        const taskTitle   = config.title as string | undefined
         const taskDesc    = config.description as string | undefined
         const campaignTag = `Campaign: ${enrollment.sequence.name}`
         const contactName = `${enrollment.contact.firstName} ${enrollment.contact.lastName}`.trim()
+        const resolvedTitle = taskTitle
+          ? `${taskTitle} — ${contactName}`
+          : `Call ${contactName}`
         await prisma.task.create({
           data: {
-            title:       `Call ${contactName}`,
+            title:       resolvedTitle,
             description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (config.priority as string) ?? 'normal',
             taskTypeId:  'tasktype_call',
@@ -318,12 +326,16 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
       // and task list right away; dueAt tells them when the call is due.
       if (nextStep.type === 'create_task') {
         const taskConfig  = JSON.parse(nextStep.config) as Record<string, unknown>
+        const taskTitle   = taskConfig.title as string | undefined
         const taskDesc    = taskConfig.description as string | undefined
         const campaignTag = `Campaign: ${enrollment.sequence.name}`
         const contactName = `${enrollment.contact.firstName} ${enrollment.contact.lastName}`.trim()
+        const resolvedTitle = taskTitle
+          ? `${taskTitle} — ${contactName}`
+          : `Call ${contactName}`
         await prisma.task.create({
           data: {
-            title:       `Call ${contactName}`,
+            title:       resolvedTitle,
             description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (taskConfig.priority as string) ?? 'normal',
             taskTypeId:  'tasktype_call',

@@ -61,7 +61,7 @@ interface CampaignBuilderProps {
 const STEP_LABELS: Record<StepType, string> = {
   send_email:         'Send Email',
   send_sms:           'Send SMS',
-  create_task:        'Call',
+  create_task:        'Create Task',
   wait:               'Wait / Delay',
   update_lead_score:  'Update Lead Score',
   transfer_campaign:  'Transfer to Campaign',
@@ -78,7 +78,7 @@ function defaultConfig(type: StepType): Record<string, string | number> {
   switch (type) {
     case 'send_email':        return { subject: '', body: '' }
     case 'send_sms':          return { body: '' }
-    case 'create_task':       return { title: '', priority: 'normal' }
+    case 'create_task':       return { title: '', description: '', priority: 'normal' }
     case 'wait':              return {}
     case 'update_lead_score': return { delta: 5 }
     case 'transfer_campaign': return { targetSequenceId: '', targetSequenceName: '', startAtStep: 0 }
@@ -377,19 +377,27 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
       )
     case 'send_sms':
       return (
-        <textarea placeholder="SMS message (max 160 chars)" rows={2} value={config.body as string}
-          onChange={e => onChange('body', e.target.value)}
-          className={`${inputCls} resize-none`} maxLength={160} />
+        <div className="flex flex-col gap-2">
+          <MergeTagPicker textareaRef={bodyRef} value={config.body as string} onChange={v => onChange('body', v)} />
+          <textarea ref={bodyRef} placeholder="SMS message" rows={2} value={config.body as string}
+            onChange={e => onChange('body', e.target.value)}
+            className={`${inputCls} resize-none`} />
+        </div>
       )
     case 'create_task':
       return (
-        <div className="flex gap-2">
-          <input type="text" placeholder="Task title" value={config.title as string}
-            onChange={e => onChange('title', e.target.value)} className={`${inputCls} flex-1`} />
-          <select value={config.priority as string} onChange={e => onChange('priority', e.target.value)}
-            className={`${inputCls} w-28`}>
-            {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <input type="text" placeholder="Task title" value={config.title as string}
+              onChange={e => onChange('title', e.target.value)} className={`${inputCls} flex-1`} />
+            <select value={config.priority as string} onChange={e => onChange('priority', e.target.value)}
+              className={`${inputCls} w-28`}>
+              {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <textarea placeholder="Description (optional)" rows={2} value={(config.description ?? '') as string}
+            onChange={e => onChange('description', e.target.value)}
+            className={`${inputCls} resize-none`} />
         </div>
       )
     case 'update_lead_score':
