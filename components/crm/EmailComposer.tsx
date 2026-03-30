@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/utils'
 import { sanitizeContent } from '@/lib/sanitize'
 import { Button, useToast } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
+import { FilePicker, type PickedFile } from '@/components/admin/FilePicker'
 
 type EmailTemplate = {
   id:      string
@@ -49,13 +50,13 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
   const [subject, setSubject]     = useState('')
   const [body, setBody]           = useState('')
   const [templateId, setTemplateId] = useState('')
-  const [attachments, setAttachments] = useState<File[]>([])
-  const [expanded, setExpanded]   = useState<string | null>(null)
-  const [sending, setSending]     = useState(false)
-  const [sentEmails, setSentEmails] = useState<EmailEntry[]>(emails)
-  const { toast }                 = useToast()
-  const fileInputRef              = useRef<HTMLInputElement>(null)
-  const bodyRef                   = useRef<HTMLTextAreaElement>(null)
+  const [attachments, setAttachments] = useState<PickedFile[]>([])
+  const [showPicker,  setShowPicker]  = useState(false)
+  const [expanded,    setExpanded]    = useState<string | null>(null)
+  const [sending,     setSending]     = useState(false)
+  const [sentEmails,  setSentEmails]  = useState<EmailEntry[]>(emails)
+  const { toast }                     = useToast()
+  const bodyRef                       = useRef<HTMLTextAreaElement>(null)
 
   // Load templates on mount
   useEffect(() => {
@@ -74,13 +75,6 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
     setBody(tmpl.body)
   }
 
-  function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    setAttachments(prev => [...prev, ...files])
-    // reset so same file can be picked again if removed
-    e.target.value = ''
-  }
-
   function removeAttachment(index: number) {
     setAttachments(prev => prev.filter((_, i) => i !== index))
   }
@@ -96,7 +90,11 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
       formData.append('body',      body.trim())
       formData.append('toEmail',   contactEmail)
       if (templateId) formData.append('templateId', templateId)
-      for (const file of attachments) formData.append('attachments', file)
+      // Send existing-file references by URL — API reads them from disk
+      attachments.forEach((a, i) => {
+        formData.append(`existingAttachmentUrl_${i}`,  a.url)
+        formData.append(`existingAttachmentName_${i}`, a.name)
+      })
 
       const res = await fetch('/api/emails', { method: 'POST', body: formData })
       if (!res.ok) throw new Error('Failed to send')
@@ -168,16 +166,9 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
 
           {/* Attachments */}
           <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFilePick}
-              className="hidden"
-            />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setShowPicker(true)}
               className="flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
             >
               <Paperclip size={13} />
@@ -189,7 +180,6 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
                   <li key={i} className="flex items-center gap-2 text-xs text-charcoal-700">
                     <Paperclip size={11} className="text-charcoal-400 shrink-0" />
                     <span className="truncate flex-1">{f.name}</span>
-                    <span className="text-charcoal-400 shrink-0">({(f.size / 1024).toFixed(0)} KB)</span>
                     <button type="button" onClick={() => removeAttachment(i)} className="text-charcoal-400 hover:text-red-500 transition-colors">
                       <X size={12} />
                     </button>
@@ -207,6 +197,14 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
             <p className="text-xs text-charcoal-400">Add an email address to this contact to send emails.</p>
           )}
         </form>
+      )}
+
+      {showPicker && (
+        <FilePicker
+          multiple
+          onSelect={picked => { setAttachments(prev => [...prev, ...picked.filter(p => !prev.some(a => a.url === p.url))]); setShowPicker(false) }}
+          onClose={() => setShowPicker(false)}
+        />
       )}
 
       {/* Email history */}

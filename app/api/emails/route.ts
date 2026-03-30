@@ -3,6 +3,8 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { join, basename } from 'path'
+import { readFile } from 'fs/promises'
 import { getSession } from '@/lib/auth'
 import { sendEmail, getEmailThread } from '@/lib/communications/email-service'
 
@@ -42,12 +44,35 @@ export async function POST(request: Request) {
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
+      // Collect existingAttachment url/name pairs keyed by index
+      const existingUrls:  Record<string, string> = {}
+      const existingNames: Record<string, string> = {}
+
       for (const [key, value] of formData.entries()) {
         if (value instanceof File) {
           const buffer = Buffer.from(await value.arrayBuffer())
           attachments.push({ filename: value.name, content: buffer })
         } else {
+          const urlMatch  = key.match(/^existingAttachmentUrl_(\d+)$/)
+          const nameMatch = key.match(/^existingAttachmentName_(\d+)$/)
+          if (urlMatch)  { existingUrls[urlMatch[1]]   = value; continue }
+          if (nameMatch) { existingNames[nameMatch[1]] = value; continue }
           fields[key] = value
+        }
+      }
+
+      // Load existing files from disk
+      const indices = Object.keys(existingUrls)
+      for (const idx of indices) {
+        const url      = existingUrls[idx]
+        const name     = existingNames[idx] ?? basename(url)
+        const safeName = basename(url)  // prevent path traversal
+        const filePath = join(process.cwd(), 'public', 'uploads', safeName)
+        try {
+          const content = await readFile(filePath)
+          attachments.push({ filename: name, content })
+        } catch {
+          // file missing — skip silently
         }
       }
     } else {

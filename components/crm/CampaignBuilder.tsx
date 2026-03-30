@@ -11,6 +11,7 @@ import { useState, useRef } from 'react'
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
+import { FilePicker } from '@/components/admin/FilePicker'
 
 type StepType    = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign'
 type TriggerType = 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual'
@@ -319,35 +320,9 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
   allCampaigns?:      CampaignSummary[]
   currentCampaignId?: string
 }) {
-  const [uploading, setUploading]     = useState(false)
-  const [uploadError, setUploadError] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const bodyRef      = useRef<HTMLTextAreaElement>(null)
+  const [showPicker, setShowPicker] = useState(false)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
-
-  async function handleAttachmentPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    setUploadError('')
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/uploads', { method: 'POST', body: fd })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { error?: string }).error ?? 'Upload failed')
-      }
-      const { data } = await res.json()
-      onChange('attachmentUrl',  data.url)
-      onChange('attachmentName', data.originalName)
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
-  }
 
   function clearAttachment() {
     onChange('attachmentUrl',  '')
@@ -366,8 +341,6 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
             className={`${inputCls} resize-none font-mono`} />
 
           {/* Attachment */}
-          <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachmentPick} />
-          {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
           {config.attachmentName ? (
             <div className="flex items-center gap-2 text-xs text-charcoal-700">
               <Paperclip size={11} className="text-charcoal-400 shrink-0" />
@@ -379,13 +352,26 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
           ) : (
             <button
               type="button"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors disabled:opacity-50"
+              onClick={() => setShowPicker(true)}
+              className="flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
             >
               <Paperclip size={13} />
-              {uploading ? 'Uploading…' : 'Attach a file'}
+              Attach a file
             </button>
+          )}
+
+          {showPicker && (
+            <FilePicker
+              multiple={false}
+              onSelect={([picked]) => {
+                if (picked) {
+                  onChange('attachmentUrl',  picked.url)
+                  onChange('attachmentName', picked.name)
+                }
+                setShowPicker(false)
+              }}
+              onClose={() => setShowPicker(false)}
+            />
           )}
         </div>
       )
