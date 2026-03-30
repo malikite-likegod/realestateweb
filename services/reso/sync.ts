@@ -47,7 +47,7 @@ function combineFilters(...filters: (string | null)[]): string {
 const IDX_SELECT = [
   'ListingKey', 'ListingId', 'StandardStatus', 'PropertyType', 'PropertySubType',
   'ListPrice', 'OriginalListPrice', 'ClosePrice', 'BedroomsTotal', 'BathroomsTotalInteger',
-  'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
+  'BathroomsPartial', 'BuildingAreaTotal', 'ApproximateSquareFootage', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
   'StreetNumber', 'StreetName', 'StreetSuffix', 'UnitNumber', 'TransactionType',
   'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
   'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
@@ -60,11 +60,11 @@ const IDX_SELECT = [
   'ExteriorFeatures', 'Roof', 'FoundationDetails', 'ParkingFeatures', 'PoolFeatures',
   'FrontingOn', 'LotDepth', 'LotFront', 'WaterFrontType',
   // Building description
-  'ArchitecturalStyle', 'StoriesTotal', 'ApproximateAge', 'ConstructionMaterials', 'Sewer', 'Water',
+  'ArchitecturalStyle', 'StoriesTotal', 'ApproximateAge', 'ConstructionMaterials', 'Sewer', 'Water', 'OwnershipType',
   // Community
-  'Community', 'Municipality', 'CrossStreet',
+  'Community', 'Municipality', 'CrossStreet', 'NearbyAmenities',
   // Taxes & fees
-  'TaxAnnualAmount', 'TaxYear', 'AssociationFee', 'AssociationFeeIncludes', 'AssessmentYear',
+  'TaxAnnualAmount', 'TaxYear', 'AssociationFee', 'AssociationFeeIncludes', 'AssessmentYear', 'Inclusions', 'Exclusions',
 ].join(',')
 
 export async function syncIdxProperty(): Promise<ResoSyncResult> {
@@ -112,7 +112,9 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             closePrice:            r.ClosePrice            ?? null,
             bedroomsTotal:         r.BedroomsTotal         ?? null,
             bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
+            bathroomsPartial:      r.BathroomsPartial      ?? null,
             livingArea:            r.BuildingAreaTotal     ?? null,
+            sqftRange:             r.ApproximateSquareFootage ?? null,
             lotSizeSquareFeet:     r.LotSizeArea           ?? null,
             yearBuilt:             r.YearBuilt             ?? null,
             streetNumber:          r.StreetNumber          ?? null,
@@ -164,16 +166,20 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             constructionMaterials: r.ConstructionMaterials ?? null,
             sewer:                 r.Sewer                 ?? null,
             water:                 r.Water                 ?? null,
+            ownershipType:         r.OwnershipType         ?? null,
             // Community
             community:             r.Community             ?? null,
             municipality:          r.Municipality          ?? null,
             crossStreet:           r.CrossStreet           ?? null,
+            amenities:             r.NearbyAmenities       ?? null,
             // Taxes & fees
             taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
             taxYear:               r.TaxYear               ?? null,
             maintenanceFee:        r.AssociationFee        ?? null,
             maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
             assessmentYear:        r.AssessmentYear        ?? null,
+            inclusions:            r.Inclusions            ?? null,
+            exclusions:            r.Exclusions            ?? null,
           }
           // Don't overwrite media on update — it's fetched separately by syncIdxMedia
           const { media: _media, ...updateData } = data
@@ -643,7 +649,9 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       closePrice:            r.ClosePrice            ?? null,
       bedroomsTotal:         r.BedroomsTotal         ?? null,
       bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
+      bathroomsPartial:      r.BathroomsPartial      ?? null,
       livingArea:            r.BuildingAreaTotal     ?? null,
+      sqftRange:             r.ApproximateSquareFootage ?? null,
       lotSizeSquareFeet:     r.LotSizeArea           ?? null,
       yearBuilt:             r.YearBuilt             ?? null,
       streetNumber:          r.StreetNumber          ?? null,
@@ -696,16 +704,20 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       constructionMaterials: r.ConstructionMaterials ?? null,
       sewer:                 r.Sewer                 ?? null,
       water:                 r.Water                 ?? null,
+      ownershipType:         r.OwnershipType         ?? null,
       // Community
       community:             r.Community             ?? null,
       municipality:          r.Municipality          ?? null,
       crossStreet:           r.CrossStreet           ?? null,
+      amenities:             r.NearbyAmenities       ?? null,
       // Taxes & fees
       taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
       taxYear:               r.TaxYear               ?? null,
       maintenanceFee:        r.AssociationFee        ?? null,
       maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
       assessmentYear:        r.AssessmentYear        ?? null,
+      inclusions:            r.Inclusions            ?? null,
+      exclusions:            r.Exclusions            ?? null,
     }
 
     await prisma.resoProperty.upsert({

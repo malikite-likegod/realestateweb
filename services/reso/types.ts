@@ -9,7 +9,9 @@ export interface ResoPropertyRaw {
   ClosePrice?:           number
   BedroomsTotal?:        number
   BathroomsTotalInteger?: number
+  BathroomsPartial?:     number
   LivingArea?:           number
+  ApproximateSquareFootage?: string
   BuildingAreaTotal?:    number
   LotSizeArea?:          number
   LotSizeUnits?:         string
@@ -63,16 +65,20 @@ export interface ResoPropertyRaw {
   ConstructionMaterials?:    string
   Sewer?:                    string
   Water?:                    string
+  OwnershipType?:            string
   // Community
   Community?:                string
   Municipality?:             string
   CrossStreet?:              string
+  NearbyAmenities?:          string
   // Taxes & fees
   TaxAnnualAmount?:          number
   TaxYear?:                  number
   AssociationFee?:           number
   AssociationFeeIncludes?:   string
   AssessmentYear?:           number
+  Inclusions?:               string
+  Exclusions?:               string
   // DLA-enriched fields
   MlsStatus?:                string
   ContractStatus?:           string

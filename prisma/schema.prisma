@@ -355,10 +355,12 @@ model ResoProperty {
   closeDate             DateTime?
   bedroomsTotal         Int?
   bathroomsTotalInteger Int?
+  bathroomsPartial      Int?      // half/partial bathrooms
   garageSpaces          Int?
   parkingTotal          Int?
   poolPrivateYN         Boolean   @default(false)
   livingArea            Float?
+  sqftRange             String?   // e.g. "3000-3500" sqft range from MLS
   lotSizeSquareFeet     Float?
   lotDepth              Float?    // lot depth in feet
   lotFront              Float?    // lot frontage in feet
@@ -391,11 +393,13 @@ model ResoProperty {
   constructionMaterials String?   // exterior construction material
   sewer                 String?   // e.g. "Sewers", "Septic"
   water                 String?   // e.g. "Municipal"
+  ownershipType         String?   // e.g. "Freehold", "Condominium", "Leasehold"
 
   // Community
   community             String?   // neighbourhood / community name
   municipality          String?   // municipality
   crossStreet           String?   // nearest cross street
+  amenities             String?   // nearby amenities e.g. "Golf Nearby, Hospital, Park"
 
   // Taxes & fees
   taxAnnualAmount       Float?    // annual property tax
@@ -403,6 +407,8 @@ model ResoProperty {
   maintenanceFee        Float?    // condo/strata maintenance fee
   maintenanceFeeIncludes String?  // what the maintenance fee covers
   assessmentYear        Int?      // MPAC assessment year
+  inclusions            String?   // items included in the sale
+  exclusions            String?   // items excluded from the sale
 
   streetNumber          String?
   streetName            String?

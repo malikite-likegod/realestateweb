@@ -105,6 +105,8 @@ export default async function AdminListingDetailPage({
     row('Bedrooms Plus',     property.bedroomsPlus),
     totalBedrooms > 0 ? { label: 'Total Bedrooms', value: totalBedrooms } : null,
     row('Washrooms',         property.bathroomsTotalInteger),
+    row('Partial Bathrooms', property.bathroomsPartial),
+    row('Square Footage',    property.sqftRange ? `${property.sqftRange} sqft` : null),
     row('Garage Spaces',     property.garageSpaces),
     row('Parking Total',     property.parkingTotal),
     row('Basement',          property.basement),
@@ -134,6 +136,7 @@ export default async function AdminListingDetailPage({
 
   const tabBuilding: DetailRow[] = [
     row('Style',             property.style ?? property.propertySubType),
+    row('Ownership',         property.ownershipType),
     row('Storeys',           property.storiesTotal),
     row('Approximate Age',   property.approximateAge),
     row('Sewer',             property.sewer),
@@ -147,6 +150,7 @@ export default async function AdminListingDetailPage({
     row('City',              property.city),
     row('Province',          property.stateOrProvince),
     row('Postal Code',       property.postalCode),
+    row('Amenities',         property.amenities),
   ].filter((d): d is DetailRow => d !== null)
 
   const tabTaxes: DetailRow[] = [
@@ -155,6 +159,8 @@ export default async function AdminListingDetailPage({
     property.maintenanceFee != null  ? { label: 'Maintenance Fee', value: `$${property.maintenanceFee.toLocaleString()}/mo` } : null,
     row('Fee Includes',      property.maintenanceFeeIncludes),
     row('Assessment Year',   property.assessmentYear),
+    row('Inclusions',        property.inclusions),
+    row('Exclusions',        property.exclusions),
   ].filter((d): d is DetailRow => d !== null)
 
   return (
