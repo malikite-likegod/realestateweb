@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { ListingMap } from '@/components/real-estate/ListingMap'
 import { PhotoGallery } from '@/components/real-estate/PhotoGallery'
+import { PropertyDetailTabs, type DetailRow } from '@/components/real-estate/PropertyDetailTabs'
 
 function getAddress(p: {
   streetNumber: string | null; streetName: string | null;
@@ -87,6 +88,74 @@ export default async function AdminListingDetailPage({
     property.listAgentFullName     ? { label: 'Listing Agent',    value: property.listAgentFullName }                                    : null,
     property.listOfficeName        ? { label: 'Listing Office',   value: property.listOfficeName }                                      : null,
   ] as (DetailRow | null)[]).filter((d): d is DetailRow => d !== null)
+
+  // ── Full Property Details tab data ──────────────────────────────────────────
+  function row(label: string, value: string | number | null | undefined): DetailRow | null {
+    return value != null && value !== '' ? { label, value } : null
+  }
+  function yn(label: string, value: boolean | null | undefined, ifTrue = 'Yes', ifFalse = 'No'): DetailRow | null {
+    return value != null ? { label, value: value ? ifTrue : ifFalse } : null
+  }
+
+  const totalBedrooms = (property.bedroomsTotal ?? 0) + (property.bedroomsPlus ?? 0)
+  const totalKitchens = (property.kitchensTotal ?? 0) + (property.kitchensPlusTotal ?? 0)
+
+  const tabInterior: DetailRow[] = [
+    row('Bedrooms',          property.bedroomsTotal),
+    row('Bedrooms Plus',     property.bedroomsPlus),
+    totalBedrooms > 0 ? { label: 'Total Bedrooms', value: totalBedrooms } : null,
+    row('Washrooms',         property.bathroomsTotalInteger),
+    row('Garage Spaces',     property.garageSpaces),
+    row('Parking Total',     property.parkingTotal),
+    row('Basement',          property.basement),
+    row('Heating Source',    property.heatSource),
+    row('Heating Fuel',      property.heatType),
+    row('Air Conditioning',  property.airConditioning),
+    row('Family Room',       property.familyRoom),
+    row('Kitchens',          property.kitchensTotal),
+    row('Kitchens Plus',     property.kitchensPlusTotal),
+    totalKitchens > 0 ? { label: 'Total Kitchens', value: totalKitchens } : null,
+    row('Fireplace Features', property.fireplaceFeatures),
+    yn('Pool',               property.poolPrivateYN),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabExterior: DetailRow[] = [
+    row('Exterior',          property.exteriorFeatures),
+    row('Construction',      property.constructionMaterials),
+    row('Roof',              property.roof),
+    row('Foundation',        property.foundationDetails),
+    row('Parking Features',  property.parkingFeatures),
+    row('Pool Features',     property.poolFeatures),
+    row('Fronting On',       property.frontingOn),
+    property.lotFront != null ? row('Lot Frontage', `${property.lotFront} ft`) : null,
+    property.lotDepth != null ? row('Lot Depth',    `${property.lotDepth} ft`) : null,
+    row('Waterfront',        property.waterFrontType),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabBuilding: DetailRow[] = [
+    row('Style',             property.style ?? property.propertySubType),
+    row('Storeys',           property.storiesTotal),
+    row('Approximate Age',   property.approximateAge),
+    row('Sewer',             property.sewer),
+    row('Water',             property.water),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabCommunity: DetailRow[] = [
+    row('Community',         property.community),
+    row('Municipality',      property.municipality),
+    row('Cross Street',      property.crossStreet),
+    row('City',              property.city),
+    row('Province',          property.stateOrProvince),
+    row('Postal Code',       property.postalCode),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabTaxes: DetailRow[] = [
+    property.taxAnnualAmount != null ? { label: 'Annual Taxes',    value: `$${property.taxAnnualAmount.toLocaleString()}` } : null,
+    row('Tax Year',          property.taxYear),
+    property.maintenanceFee != null  ? { label: 'Maintenance Fee', value: `$${property.maintenanceFee.toLocaleString()}/mo` } : null,
+    row('Fee Includes',      property.maintenanceFeeIncludes),
+    row('Assessment Year',   property.assessmentYear),
+  ].filter((d): d is DetailRow => d !== null)
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -266,7 +335,18 @@ export default async function AdminListingDetailPage({
         </div>
       </div>
 
-      <div className="mt-10"><MlsDisclaimer variant="vow" /></div>
+      {/* Full property details — tabbed section */}
+      <div className="mt-10">
+        <PropertyDetailTabs
+          interior={tabInterior}
+          exterior={tabExterior}
+          building={tabBuilding}
+          community={tabCommunity}
+          taxes={tabTaxes}
+        />
+      </div>
+
+      <div className="mt-8"><MlsDisclaimer variant="vow" /></div>
     </div>
   )
 }

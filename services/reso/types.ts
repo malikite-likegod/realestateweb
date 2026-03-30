@@ -33,6 +33,46 @@ export interface ResoPropertyRaw {
   ListOfficeName?:       string
   ListingContractDate?:  string
   ModificationTimestamp?: string
+  // Interior details
+  GarageSpaces?:             number
+  ParkingTotal?:             number
+  PoolPrivateYN?:            boolean
+  BedroomsPlus?:             number
+  KitchensTotal?:            number
+  KitchensPlusTotal?:        number
+  Basement?:                 string
+  HeatSource?:               string
+  HeatType?:                 string
+  AirConditioning?:          string
+  FamilyRoom?:               string
+  FireplaceFeatures?:        string
+  // Exterior details
+  ExteriorFeatures?:         string
+  Roof?:                     string
+  FoundationDetails?:        string
+  ParkingFeatures?:          string
+  PoolFeatures?:             string
+  FrontingOn?:               string
+  LotDepth?:                 number
+  LotFront?:                 number
+  WaterFrontType?:           string
+  // Building description
+  ArchitecturalStyle?:       string
+  StoriesTotal?:             number
+  ApproximateAge?:           string
+  ConstructionMaterials?:    string
+  Sewer?:                    string
+  Water?:                    string
+  // Community
+  Community?:                string
+  Municipality?:             string
+  CrossStreet?:              string
+  // Taxes & fees
+  TaxAnnualAmount?:          number
+  TaxYear?:                  number
+  AssociationFee?:           number
+  AssociationFeeIncludes?:   string
+  AssessmentYear?:           number
   // DLA-enriched fields
   MlsStatus?:                string
   ContractStatus?:           string

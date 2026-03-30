@@ -356,10 +356,54 @@ model ResoProperty {
   bedroomsTotal         Int?
   bathroomsTotalInteger Int?
   garageSpaces          Int?
+  parkingTotal          Int?
   poolPrivateYN         Boolean   @default(false)
   livingArea            Float?
   lotSizeSquareFeet     Float?
+  lotDepth              Float?    // lot depth in feet
+  lotFront              Float?    // lot frontage in feet
   yearBuilt             Int?
+
+  // Interior details
+  bedroomsPlus          Int?      // dens/offices countable as bedrooms
+  kitchensTotal         Int?      // above-grade kitchens
+  kitchensPlusTotal     Int?      // below-grade (basement) kitchens
+  basement              String?   // e.g. "Finished with Walk-Out"
+  heatSource            String?   // e.g. "Gas", "Electric"
+  heatType              String?   // e.g. "Forced Air", "Radiant"
+  airConditioning       String?   // e.g. "Central Air", "None"
+  familyRoom            String?   // "Yes" / "No"
+  fireplaceFeatures     String?   // "Yes" or description
+
+  // Exterior details
+  exteriorFeatures      String?   // e.g. "Brick", "Stone"
+  roof                  String?   // e.g. "Asphalt Shingle"
+  foundationDetails     String?   // e.g. "Poured Concrete"
+  parkingFeatures       String?   // e.g. "Attached, Private Double"
+  poolFeatures          String?   // pool description
+  frontingOn            String?   // compass direction (N/S/E/W)
+  waterFrontType        String?   // waterfront description
+
+  // Building description
+  style                 String?   // architectural style e.g. "2-Storey"
+  storiesTotal          String?   // number of storeys
+  approximateAge        String?   // age range e.g. "16-30 Years"
+  constructionMaterials String?   // exterior construction material
+  sewer                 String?   // e.g. "Sewers", "Septic"
+  water                 String?   // e.g. "Municipal"
+
+  // Community
+  community             String?   // neighbourhood / community name
+  municipality          String?   // municipality
+  crossStreet           String?   // nearest cross street
+
+  // Taxes & fees
+  taxAnnualAmount       Float?    // annual property tax
+  taxYear               Int?      // tax year assessed
+  maintenanceFee        Float?    // condo/strata maintenance fee
+  maintenanceFeeIncludes String?  // what the maintenance fee covers
+  assessmentYear        Int?      // MPAC assessment year
+
   streetNumber          String?
   streetName            String?
   streetSuffix          String?

@@ -52,6 +52,19 @@ const IDX_SELECT = [
   'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
   'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
   'ListingContractDate', 'ModificationTimestamp',
+  // Interior details
+  'GarageSpaces', 'ParkingTotal', 'PoolPrivateYN',
+  'BedroomsPlus', 'KitchensTotal', 'KitchensPlusTotal',
+  'Basement', 'HeatSource', 'HeatType', 'AirConditioning', 'FamilyRoom', 'FireplaceFeatures',
+  // Exterior details
+  'ExteriorFeatures', 'Roof', 'FoundationDetails', 'ParkingFeatures', 'PoolFeatures',
+  'FrontingOn', 'LotDepth', 'LotFront', 'WaterFrontType',
+  // Building description
+  'ArchitecturalStyle', 'StoriesTotal', 'ApproximateAge', 'ConstructionMaterials', 'Sewer', 'Water',
+  // Community
+  'Community', 'Municipality', 'CrossStreet',
+  // Taxes & fees
+  'TaxAnnualAmount', 'TaxYear', 'AssociationFee', 'AssociationFeeIncludes', 'AssessmentYear',
 ].join(',')
 
 export async function syncIdxProperty(): Promise<ResoSyncResult> {
@@ -121,6 +134,46 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             listingContractDate:   r.ListingContractDate ? new Date(r.ListingContractDate) : null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
             lastSyncedAt:          now,
+            // Interior details
+            garageSpaces:          r.GarageSpaces          ?? null,
+            parkingTotal:          r.ParkingTotal          ?? null,
+            poolPrivateYN:         r.PoolPrivateYN         ?? false,
+            bedroomsPlus:          r.BedroomsPlus          ?? null,
+            kitchensTotal:         r.KitchensTotal         ?? null,
+            kitchensPlusTotal:     r.KitchensPlusTotal     ?? null,
+            basement:              r.Basement              ?? null,
+            heatSource:            r.HeatSource            ?? null,
+            heatType:              r.HeatType              ?? null,
+            airConditioning:       r.AirConditioning       ?? null,
+            familyRoom:            r.FamilyRoom            ?? null,
+            fireplaceFeatures:     r.FireplaceFeatures     ?? null,
+            // Exterior details
+            exteriorFeatures:      r.ExteriorFeatures      ?? null,
+            roof:                  r.Roof                  ?? null,
+            foundationDetails:     r.FoundationDetails     ?? null,
+            parkingFeatures:       r.ParkingFeatures       ?? null,
+            poolFeatures:          r.PoolFeatures          ?? null,
+            frontingOn:            r.FrontingOn            ?? null,
+            lotDepth:              r.LotDepth              ?? null,
+            lotFront:              r.LotFront              ?? null,
+            waterFrontType:        r.WaterFrontType        ?? null,
+            // Building description
+            style:                 r.ArchitecturalStyle    ?? null,
+            storiesTotal:          r.StoriesTotal != null ? String(r.StoriesTotal) : null,
+            approximateAge:        r.ApproximateAge        ?? null,
+            constructionMaterials: r.ConstructionMaterials ?? null,
+            sewer:                 r.Sewer                 ?? null,
+            water:                 r.Water                 ?? null,
+            // Community
+            community:             r.Community             ?? null,
+            municipality:          r.Municipality          ?? null,
+            crossStreet:           r.CrossStreet           ?? null,
+            // Taxes & fees
+            taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
+            taxYear:               r.TaxYear               ?? null,
+            maintenanceFee:        r.AssociationFee        ?? null,
+            maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
+            assessmentYear:        r.AssessmentYear        ?? null,
           }
           // Don't overwrite media on update — it's fetched separately by syncIdxMedia
           const { media: _media, ...updateData } = data
@@ -613,6 +666,46 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
       lastSyncedAt:          new Date(),
       onDemand:              true,
+      // Interior details
+      garageSpaces:          r.GarageSpaces          ?? null,
+      parkingTotal:          r.ParkingTotal          ?? null,
+      poolPrivateYN:         r.PoolPrivateYN         ?? false,
+      bedroomsPlus:          r.BedroomsPlus          ?? null,
+      kitchensTotal:         r.KitchensTotal         ?? null,
+      kitchensPlusTotal:     r.KitchensPlusTotal     ?? null,
+      basement:              r.Basement              ?? null,
+      heatSource:            r.HeatSource            ?? null,
+      heatType:              r.HeatType              ?? null,
+      airConditioning:       r.AirConditioning       ?? null,
+      familyRoom:            r.FamilyRoom            ?? null,
+      fireplaceFeatures:     r.FireplaceFeatures     ?? null,
+      // Exterior details
+      exteriorFeatures:      r.ExteriorFeatures      ?? null,
+      roof:                  r.Roof                  ?? null,
+      foundationDetails:     r.FoundationDetails     ?? null,
+      parkingFeatures:       r.ParkingFeatures       ?? null,
+      poolFeatures:          r.PoolFeatures          ?? null,
+      frontingOn:            r.FrontingOn            ?? null,
+      lotDepth:              r.LotDepth              ?? null,
+      lotFront:              r.LotFront              ?? null,
+      waterFrontType:        r.WaterFrontType        ?? null,
+      // Building description
+      style:                 r.ArchitecturalStyle    ?? null,
+      storiesTotal:          r.StoriesTotal != null ? String(r.StoriesTotal) : null,
+      approximateAge:        r.ApproximateAge        ?? null,
+      constructionMaterials: r.ConstructionMaterials ?? null,
+      sewer:                 r.Sewer                 ?? null,
+      water:                 r.Water                 ?? null,
+      // Community
+      community:             r.Community             ?? null,
+      municipality:          r.Municipality          ?? null,
+      crossStreet:           r.CrossStreet           ?? null,
+      // Taxes & fees
+      taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
+      taxYear:               r.TaxYear               ?? null,
+      maintenanceFee:        r.AssociationFee        ?? null,
+      maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
+      assessmentYear:        r.AssessmentYear        ?? null,
     }
 
     await prisma.resoProperty.upsert({
