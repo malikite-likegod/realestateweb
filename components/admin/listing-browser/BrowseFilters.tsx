@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { SlidersHorizontal, X, Building2 } from 'lucide-react'
 import { Button, Input, AutocompleteInput } from '@/components/ui'
 
 export interface BrowseFilterValues {
@@ -34,14 +34,16 @@ const selectClass =
   'focus:outline-none focus:ring-2 focus:ring-charcoal-900 focus:border-transparent transition-colors'
 
 interface Props {
-  filters:  BrowseFilterValues
-  onChange: (f: BrowseFilterValues) => void
-  onSearch: () => void
+  filters:          BrowseFilterValues
+  onChange:         (f: BrowseFilterValues) => void
+  onSearch:         () => void
+  officeOnly:       boolean
+  onOfficeOnlyChange: (v: boolean) => void
 }
 
-export function BrowseFilters({ filters, onChange, onSearch }: Props) {
-  const [showMore,     setShowMore]     = useState(false)
-  const [areaOptions,  setAreaOptions]  = useState<string[]>([])
+export function BrowseFilters({ filters, onChange, onSearch, officeOnly, onOfficeOnlyChange }: Props) {
+  const [showMore,    setShowMore]    = useState(false)
+  const [areaOptions, setAreaOptions] = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/search/geo?level=areas')
@@ -60,6 +62,21 @@ export function BrowseFilters({ filters, onChange, onSearch }: Props) {
     <div className="p-4 bg-white border-b border-charcoal-100 space-y-3">
       {/* Primary row */}
       <div className="flex flex-wrap gap-3 items-end">
+
+        {/* My Office toggle */}
+        <button
+          type="button"
+          onClick={() => onOfficeOnlyChange(!officeOnly)}
+          className={`self-end flex items-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+            officeOnly
+              ? 'border-gold-500 bg-gold-50 text-gold-700'
+              : 'border-charcoal-200 text-charcoal-500 hover:border-charcoal-400'
+          }`}
+        >
+          <Building2 size={14} />
+          My Office
+        </button>
+
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-charcoal-700">Area / City</label>
           <AutocompleteInput

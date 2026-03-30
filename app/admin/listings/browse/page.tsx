@@ -16,17 +16,18 @@ function BrowsePageInner() {
   const preContactId   = searchParams.get('contactId')   ?? undefined
   const preContactName = searchParams.get('contactName') ?? undefined
 
-  const [filters,    setFilters]    = useState<BrowseFilterValues>(emptyFilters)
-  const [listings,   setListings]   = useState<ResoListing[]>([])
-  const [page,       setPage]       = useState(1)
-  const [totalPages, setTotalPages] = useState(0)
-  const [total,      setTotal]      = useState(0)
-  const [loading,    setLoading]    = useState(false)
-  const [selected,   setSelected]   = useState<Set<string>>(new Set())
-  const [showSend,   setShowSend]   = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
+  const [filters,     setFilters]     = useState<BrowseFilterValues>(emptyFilters)
+  const [officeOnly,  setOfficeOnly]  = useState(true)
+  const [listings,    setListings]    = useState<ResoListing[]>([])
+  const [page,        setPage]        = useState(1)
+  const [totalPages,  setTotalPages]  = useState(0)
+  const [total,       setTotal]       = useState(0)
+  const [loading,     setLoading]     = useState(false)
+  const [selected,    setSelected]    = useState<Set<string>>(new Set())
+  const [showSend,    setShowSend]    = useState(false)
+  const [showSearch,  setShowSearch]  = useState(false)
 
-  // Auto-fill city from contact profile when contactId is present
+  // Auto-fill area from contact profile when contactId is present
   useEffect(() => {
     if (!preContactId) return
     fetch(`/api/admin/contacts/${preContactId}/profile`)
@@ -39,7 +40,7 @@ function BrowsePageInner() {
       .catch(() => {})
   }, [preContactId])
 
-  const fetchListings = useCallback(async (f: BrowseFilterValues, p: number) => {
+  const fetchListings = useCallback(async (f: BrowseFilterValues, p: number, oo: boolean) => {
     setLoading(true)
     const params = new URLSearchParams({ page: String(p) })
     if (f.area)         params.set('area',         f.area)
@@ -52,6 +53,7 @@ function BrowsePageInner() {
     if (f.minGarage)    params.set('minGarage',    f.minGarage)
     if (f.minSqft)      params.set('minSqft',      f.minSqft)
     if (f.maxSqft)      params.set('maxSqft',      f.maxSqft)
+    if (oo)             params.set('officeOnly',   'true')
     try {
       const res  = await fetch(`/api/admin/listings/browse?${params}`)
       const json = await res.json()
@@ -67,12 +69,18 @@ function BrowsePageInner() {
 
   // Auto-load on mount
   useEffect(() => {
-    fetchListings(emptyFilters, 1)
+    fetchListings(emptyFilters, 1, true)
   }, [fetchListings])
 
   function handleSearch() {
     setPage(1)
-    fetchListings(filters, 1)
+    fetchListings(filters, 1, officeOnly)
+  }
+
+  function handleOfficeOnlyChange(v: boolean) {
+    setOfficeOnly(v)
+    setPage(1)
+    fetchListings(filters, 1, v)
   }
 
   function toggleListing(key: string) {
@@ -94,7 +102,13 @@ function BrowsePageInner() {
         <a href="/admin/listings" className="text-sm text-charcoal-500 hover:text-charcoal-900">&#8592; Back to Listings</a>
       </div>
 
-      <BrowseFilters filters={filters} onChange={setFilters} onSearch={handleSearch} />
+      <BrowseFilters
+        filters={filters}
+        onChange={setFilters}
+        onSearch={handleSearch}
+        officeOnly={officeOnly}
+        onOfficeOnlyChange={handleOfficeOnlyChange}
+      />
 
       <div className="flex-1 overflow-y-auto pb-24">
         {loading
@@ -106,7 +120,7 @@ function BrowsePageInner() {
             <Button
               variant="outline"
               disabled={page <= 1}
-              onClick={() => { const p = page - 1; setPage(p); fetchListings(filters, p) }}
+              onClick={() => { const p = page - 1; setPage(p); fetchListings(filters, p, officeOnly) }}
             >
               Previous
             </Button>
@@ -114,7 +128,7 @@ function BrowsePageInner() {
             <Button
               variant="outline"
               disabled={page >= totalPages}
-              onClick={() => { const p = page + 1; setPage(p); fetchListings(filters, p) }}
+              onClick={() => { const p = page + 1; setPage(p); fetchListings(filters, p, officeOnly) }}
             >
               Next
             </Button>

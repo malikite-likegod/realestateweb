@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getBrokerageFilter } from '@/lib/site-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const page        = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
   const pageSize    = 24
+  const officeOnly   = searchParams.get('officeOnly') === 'true'
   const area         = searchParams.get('area')         ?? ''
   const propertyType = searchParams.get('propertyType') ?? ''
   const listingType  = searchParams.get('listingType')  ?? ''
@@ -28,6 +30,12 @@ export async function GET(request: Request) {
     : { contains: val }
 
   const where: Record<string, unknown> = { standardStatus: 'Active' }
+
+  if (officeOnly) {
+    const { officeKey, officeName } = await getBrokerageFilter()
+    if (officeKey)        where.listOfficeKey  = officeKey
+    else if (officeName)  where.listOfficeName = iContains(officeName)
+  }
 
   if (area) where.city = iContains(area)
 
