@@ -50,7 +50,10 @@ export function FilePicker({ multiple = false, onSelect, onClose }: Props) {
 
   useEffect(() => {
     fetch('/api/uploads')
-      .then(r => r.ok ? r.json() : { data: [] })
+      .then(async r => {
+        const text = await r.text()
+        try { return JSON.parse(text) } catch { return { data: [] } }
+      })
       .then(json => setFiles(json.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -85,8 +88,11 @@ export function FilePicker({ multiple = false, onSelect, onClose }: Props) {
       const fd = new FormData()
       fd.append('file', file)
       const res  = await fetch('/api/uploads', { method: 'POST', body: fd })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Upload failed')
+      const text = await res.text()
+      let json: { data?: { url: string; originalName?: string }; error?: string }
+      try { json = JSON.parse(text) } catch { throw new Error(`Upload failed (${res.status})`) }
+      if (!res.ok) throw new Error(json.error ?? `Upload failed (${res.status})`)
+      if (!json.data?.url) throw new Error('Upload failed — unexpected response')
       const { url, originalName } = json.data
       const ext = url.slice(url.lastIndexOf('.')).toLowerCase()
       const newFile: UploadedFile = {
