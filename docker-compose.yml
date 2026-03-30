@@ -29,6 +29,8 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    volumes:
+      - uploads:/app/public/uploads
     environment:
       NODE_ENV:     production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -66,3 +68,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

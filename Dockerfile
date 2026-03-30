@@ -45,7 +45,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Standalone server + static assets
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Ensure uploads directory exists and is writable
+RUN mkdir -p ./public/uploads && chown -R nextjs:nodejs ./public/uploads
 
 # Prisma schema + generated client
 COPY --from=builder /app/prisma ./prisma
