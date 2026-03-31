@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { verifyJwt } from './lib/jwt'
+import { isSecureContext } from './lib/auth'
 import { publicSearchLimit, portalLimit, loginLimit, authLimit, forgotPassLimit, aiLimit, publicLeadLimit } from '@/lib/rate-limit'
 
 // ── Blocked IP cache ────────────────────────────────────────────────────────
@@ -187,6 +188,7 @@ export async function middleware(request: NextRequest) {
       response.cookies.set('re_session', sessionId, {
         maxAge:   365 * 24 * 60 * 60,
         httpOnly: true,
+        secure:   isSecureContext,
         sameSite: 'lax',
         path:     '/',
       })

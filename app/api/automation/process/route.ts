@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { getSession, verifySecret } from '@/lib/auth'
 import { processPendingJobs } from '@/lib/automation/job-queue'
 
 export async function POST(request: Request) {
@@ -20,12 +20,12 @@ export async function POST(request: Request) {
   //   1. x-cron-secret header (generic external cron services)
   //   2. Authorization: Bearer <secret> (Vercel Cron — uses CRON_SECRET env var)
   //   3. Authenticated admin session (manual trigger from the UI)
-  const validSecret       = process.env.AUTOMATION_PROCESS_SECRET
   const xCronSecret       = request.headers.get('x-cron-secret')
   const authHeader        = request.headers.get('authorization') ?? ''
   const bearerSecret      = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
 
-  const hasValidSecret = validSecret && (xCronSecret === validSecret || bearerSecret === validSecret)
+  const hasValidSecret = verifySecret(xCronSecret, process.env.AUTOMATION_PROCESS_SECRET) ||
+                         verifySecret(bearerSecret, process.env.AUTOMATION_PROCESS_SECRET)
 
   if (!hasValidSecret) {
     const session = await getSession()

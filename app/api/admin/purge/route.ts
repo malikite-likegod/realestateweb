@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { getSession, verifySecret } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import {
   purgeOldBehaviorEvents,
@@ -9,7 +9,7 @@ import {
 } from '@/services/data-lifecycle'
 
 function isCronRequest(request: Request): boolean {
-  return request.headers.get('x-cron-secret') === process.env.RESO_SYNC_SECRET
+  return verifySecret(request.headers.get('x-cron-secret'), process.env.RESO_SYNC_SECRET)
 }
 
 export async function POST(request: Request) {

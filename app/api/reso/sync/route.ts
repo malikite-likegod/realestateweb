@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { getSession, verifySecret } from '@/lib/auth'
 import { syncIdxProperty, syncIdxMedia, syncDlaProperty, syncVoxMember, syncVoxOffice } from '@/services/reso/sync'
 import { prisma } from '@/lib/prisma'
 import { getMlsSyncInterval } from '@/lib/site-settings'
@@ -15,7 +15,7 @@ function runInBackground(fn: () => Promise<unknown>) {
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   const cronSecret = request.headers.get('x-cron-secret')
-  const isCron = !!cronSecret && cronSecret === process.env.RESO_SYNC_SECRET
+  const isCron = verifySecret(cronSecret, process.env.RESO_SYNC_SECRET)
 
   if (!isCron) {
     const session = await getSession()
