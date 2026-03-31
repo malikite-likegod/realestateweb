@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck, X } from 'lucide-react'
 import { ResoListingCard, type ResoProperty } from './ResoListingCard'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
+import { AutocompleteInput } from '@/components/ui/AutocompleteInput'
 
 interface Filters {
   city:         string
@@ -72,6 +73,14 @@ export function PortalListings({ firstName, agentEmail }: Props) {
   const [loading,     setLoading]     = useState(true)
   const [showMore,    setShowMore]    = useState(false)
   const [capped,      setCapped]      = useState(false)
+
+  const [cityOptions,      setCityOptions]      = useState<string[]>([])
+  const [communityOptions, setCommunityOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/search/geo?level=areas').then(r => r.json()).then(d => setCityOptions(d ?? []))
+    fetch('/api/search/geo?level=communities').then(r => r.json()).then(d => setCommunityOptions(d ?? []))
+  }, [])
 
   // Save search state
   const [saveOpen,    setSaveOpen]    = useState(false)
@@ -207,11 +216,11 @@ export function PortalListings({ firstName, agentEmail }: Props) {
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[160px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">City</label>
-            <input value={filters.city} onChange={e => update('city', e.target.value)} placeholder="e.g. Toronto" className={inputCls} />
+            <AutocompleteInput options={cityOptions} value={filters.city} onChange={v => update('city', v)} placeholder="e.g. Toronto" />
           </div>
           <div className="flex-1 min-w-[160px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">Community / Neighbourhood</label>
-            <input value={filters.community} onChange={e => update('community', e.target.value)} placeholder="e.g. The Beaches" className={inputCls} />
+            <AutocompleteInput options={communityOptions} value={filters.community} onChange={v => update('community', v)} placeholder="e.g. The Beaches" />
           </div>
           <div className="w-44">
             <label className="block text-xs font-medium text-gray-500 mb-1">Property Type</label>
