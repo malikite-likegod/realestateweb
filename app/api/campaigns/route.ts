@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma'
 
 const stepSchema = z.object({
   order:        z.number().int().min(0),
-  type:         z.enum(['send_email', 'send_sms', 'create_task', 'wait', 'update_lead_score', 'transfer_campaign']),
+  type:         z.enum(['send_email', 'send_sms', 'create_task', 'wait', 'update_lead_score', 'transfer_campaign', 'send_portal_invite']),
   config:       z.record(z.unknown()),    // { subject, body, templateId, title, delta, etc. }
   delayMinutes: z.number().int().min(0).default(0),
 })
