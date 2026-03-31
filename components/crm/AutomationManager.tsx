@@ -291,9 +291,10 @@ export function AutomationManager({ initialCampaigns, initialRules, initialJobSt
                     currentCampaignId={c.id}
                     allCampaigns={campaigns}
                     initialData={{
-                      name:        c.name,
-                      description: c.description ?? '',
-                      trigger:     c.trigger as 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual',
+                      name:          c.name,
+                      description:   c.description ?? '',
+                      trigger:       c.trigger as 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual',
+                      triggerTagId:  (c as Record<string, unknown>).triggerTagId as string | null | undefined,
                       steps:       c.steps.map(s => ({
                         order:        s.order,
                         type:         s.type as 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign',

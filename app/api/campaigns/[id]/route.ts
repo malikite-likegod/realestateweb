@@ -15,9 +15,10 @@ const stepSchema = z.object({
 })
 
 const patchSchema = z.object({
-  name:        z.string().min(1).optional(),
-  description: z.string().optional(),
-  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']).optional(),
+  name:           z.string().min(1).optional(),
+  description:    z.string().optional(),
+  trigger:        z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']).optional(),
+  triggerTagId:   z.string().nullable().optional(),
   isActive:       z.boolean().optional(),
   repeatAnnually: z.boolean().optional(),
   /** When provided, replaces all existing steps */

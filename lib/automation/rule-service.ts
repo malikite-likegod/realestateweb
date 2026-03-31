@@ -98,7 +98,6 @@ export async function evaluateRulesForTrigger(
   const rules = await prisma.automationRule.findMany({
     where: { trigger, isActive: true },
   })
-  if (rules.length === 0) return
 
   const contact = contactId
     ? await prisma.contact.findUnique({ where: { id: contactId } })
@@ -118,6 +117,29 @@ export async function evaluateRulesForTrigger(
       where: { id: rule.id },
       data:  { runCount: { increment: 1 }, lastRunAt: new Date() },
     })
+  }
+
+  // Auto-enroll contact in active sequences whose trigger matches this event
+  // (sequences with manual/special_event triggers are excluded — they are enrolled explicitly)
+  if (contactId && trigger !== 'manual' && trigger !== 'special_event') {
+    const sequences = await prisma.automationSequence.findMany({
+      where: { trigger, isActive: true },
+      select: { id: true, triggerTagId: true },
+    })
+
+    if (sequences.length > 0) {
+      const { enrollContact } = await import('./campaign-service')
+      for (const seq of sequences) {
+        if (seq.triggerTagId) {
+          // Only enroll if the contact has the required tag
+          const hasTag = await prisma.contactTag.findUnique({
+            where: { contactId_tagId: { contactId, tagId: seq.triggerTagId } },
+          })
+          if (!hasTag) continue
+        }
+        await enrollContact(seq.id, contactId)
+      }
+    }
   }
 }
 

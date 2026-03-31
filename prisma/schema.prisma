@@ -182,6 +182,7 @@ model Tag {
   name      String       @unique
   color     String       @default("#6366f1")
   contacts  ContactTag[]
+  automationSequences AutomationSequence[]
 
   @@map("tags")
 }
@@ -718,6 +719,8 @@ model AutomationSequence {
   name           String
   description    String?
   trigger        String   // new_lead | deal_stage_change | showing_scheduled | manual | special_event
+  triggerTagId   String?  // optional: only auto-enroll contacts that have this tag
+  triggerTag     Tag?     @relation(fields: [triggerTagId], references: [id], onDelete: SetNull)
   isActive       Boolean  @default(true)
   repeatAnnually Boolean  @default(false)
   steps          AutomationStep[]

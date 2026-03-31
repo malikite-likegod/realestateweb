@@ -14,11 +14,12 @@ const stepSchema = z.object({
 })
 
 const createSchema = z.object({
-  name:        z.string().min(1),
-  description: z.string().optional(),
-  trigger:     z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']),
-  isActive:    z.boolean().default(true),
-  steps:       z.array(stepSchema).min(1),
+  name:          z.string().min(1),
+  description:   z.string().optional(),
+  trigger:       z.enum(['new_lead', 'deal_stage_change', 'showing_scheduled', 'manual', 'special_event']),
+  triggerTagId:  z.string().nullable().optional(),
+  isActive:      z.boolean().default(true),
+  steps:         z.array(stepSchema).min(1),
 })
 
 export async function GET(request: Request) {
@@ -54,10 +55,11 @@ export async function POST(request: Request) {
 
     const campaign = await prisma.automationSequence.create({
       data: {
-        name:        parsed.name,
-        description: parsed.description ?? null,
-        trigger:     parsed.trigger,
-        isActive:    parsed.isActive,
+        name:         parsed.name,
+        description:  parsed.description ?? null,
+        trigger:      parsed.trigger,
+        triggerTagId: parsed.triggerTagId ?? null,
+        isActive:     parsed.isActive,
         steps: {
           create: parsed.steps.map(s => ({
             order:        s.order,

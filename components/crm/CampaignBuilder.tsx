@@ -7,7 +7,7 @@
  * number of steps. Each step defines channel, delay (minutes or days), and content.
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
@@ -31,10 +31,17 @@ interface StepForm {
   config:       Record<string, string | number>
 }
 
+interface TagOption {
+  id:    string
+  name:  string
+  color: string
+}
+
 interface InitialCampaignData {
-  name:        string
-  description: string
-  trigger:     TriggerType
+  name:          string
+  description:   string
+  trigger:       TriggerType
+  triggerTagId?: string | null
   steps: Array<{
     order:        number
     type:         StepType
@@ -105,16 +112,22 @@ function initialStepForm(s: InitialCampaignData['steps'][number]): StepForm {
 export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData, allCampaigns, currentCampaignId }: CampaignBuilderProps) {
   const isEditMode = Boolean(campaignId)
 
-  const [name,        setName]        = useState(initialData?.name        ?? '')
-  const [description, setDescription] = useState(initialData?.description ?? '')
-  const [trigger,     setTrigger]     = useState<TriggerType>(initialData?.trigger ?? 'new_lead')
-  const [steps,       setSteps]       = useState<StepForm[]>(
+  const [name,          setName]          = useState(initialData?.name        ?? '')
+  const [description,   setDescription]   = useState(initialData?.description ?? '')
+  const [trigger,       setTrigger]       = useState<TriggerType>(initialData?.trigger ?? 'new_lead')
+  const [triggerTagId,  setTriggerTagId]  = useState<string>(initialData?.triggerTagId ?? '')
+  const [tags,          setTags]          = useState<TagOption[]>([])
+  const [steps,         setSteps]         = useState<StepForm[]>(
     initialData?.steps?.length
       ? initialData.steps.map(initialStepForm)
       : [{ order: 0, type: 'send_email', delayMinutes: 0, delayUnit: 'minutes', config: defaultConfig('send_email') }]
   )
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
+
+  useEffect(() => {
+    fetch('/api/tags').then(r => r.json()).then(d => setTags(d.data ?? [])).catch(() => {})
+  }, [])
 
   function addStep() {
     setSteps(prev => [
@@ -182,7 +195,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, description, trigger, steps: apiSteps }),
+        body:    JSON.stringify({ name, description, trigger, triggerTagId: triggerTagId || null, steps: apiSteps }),
       })
       if (!res.ok) {
         let message = `Failed to ${isEditMode ? 'update' : 'create'} campaign`
@@ -231,6 +244,20 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
             className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
           />
         </div>
+        {trigger !== 'manual' && trigger !== 'special_event' && (
+          <div className="col-span-2">
+            <label className="text-xs text-charcoal-500 mb-1 block">
+              Tag Filter <span className="text-charcoal-400">(optional — leave blank to enroll any contact)</span>
+            </label>
+            <select value={triggerTagId} onChange={e => setTriggerTagId(e.target.value)}
+              className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900">
+              <option value="">Any contact</option>
+              {tags.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Steps */}
