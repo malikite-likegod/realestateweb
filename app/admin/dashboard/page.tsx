@@ -10,6 +10,7 @@ import {
   TodayCalendarWidget,
   CommunicationsWidget,
   PipelineSummaryWidget,
+  RecentPortalLoginsWidget,
 } from '@/components/dashboard'
 import { Users, Briefcase, Building2, CheckSquare } from 'lucide-react'
 import type { ContactWithTags } from '@/types'
@@ -17,6 +18,8 @@ import type { ContactWithTags } from '@/types'
 export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
+
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
 
   const [
     contactCount,
@@ -29,6 +32,7 @@ export default async function DashboardPage() {
     inboundSms,
     missedCalls,
     inboundEmails,
+    recentPortalLogins,
   ] = await Promise.all([
     prisma.contact.count(),
     prisma.deal.count(),
@@ -70,9 +74,28 @@ export default async function DashboardPage() {
       take: 5,
       include: { contact: { select: { id: true, firstName: true, lastName: true } } },
     }),
+    prisma.securityAuditLog.findMany({
+      where: {
+        event:     'portal_login_success',
+        createdAt: { gte: threeDaysAgo },
+        contactId: { not: null },
+      },
+      distinct:  ['contactId'],
+      orderBy:   { createdAt: 'desc' },
+      take:      10,
+      include: {
+        contact: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    }),
   ])
 
   const leads = recentContacts as ContactWithTags[]
+
+  const portalLogins = recentPortalLogins.map(l => ({
+    contactId:   l.contactId!,
+    lastLoginAt: l.createdAt,
+    contact:     l.contact,
+  }))
 
   // Build inbox items sorted newest-first, capped at 8
   type InboxItem = {
@@ -138,9 +161,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Bottom row widgets */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <CommunicationsWidget items={inboxItems} />
           <PipelineSummaryWidget report={pipelineReport} />
+          <RecentPortalLoginsWidget logins={portalLogins} />
         </div>
       </div>
     </DashboardLayout>
