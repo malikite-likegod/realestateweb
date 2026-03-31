@@ -4,12 +4,13 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { trackBehaviorEvent, trackBehaviorEventBatch } from '@/services/ai/lead-scoring'
 import { getContactSession } from '@/lib/auth'
+import { verifyVerifiedContactCookie } from '@/lib/jwt'
 
 const singleEventSchema = z.object({
-  eventType: z.string(),
-  entityId:  z.string().optional(),
-  sessionId: z.string().optional(),
-  metadata:  z.record(z.unknown()).optional(),
+  eventType: z.string().max(50),
+  entityId:  z.string().max(100).optional(),
+  sessionId: z.string().max(100).optional(),
+  metadata:  z.record(z.string().max(500)).max(20).optional(),
 })
 
 const batchSchema = z.object({
@@ -20,9 +21,12 @@ const batchSchema = z.object({
 async function resolveContactId(): Promise<string | undefined> {
   try {
     const cookieStore = await cookies()
-    // Public gate flow
-    const verified = cookieStore.get('re_verified')?.value
-    if (verified) return verified
+    // Public gate flow — cookie value is a signed JWT
+    const verifiedToken = cookieStore.get('re_verified')?.value
+    if (verifiedToken) {
+      const contactId = await verifyVerifiedContactCookie(verifiedToken)
+      if (contactId) return contactId
+    }
     // Portal session (contact_token JWT)
     const contact = await getContactSession()
     return contact?.id ?? undefined

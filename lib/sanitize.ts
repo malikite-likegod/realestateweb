@@ -19,7 +19,7 @@ export function sanitizeContent(html: string): string {
     allowedAttributes: {
       'a':   ['href', 'title', 'target', 'rel'],
       'img': ['src', 'alt', 'width', 'height'],
-      '*':   ['class', 'style'],
+      '*':   ['class'],
     },
     allowedSchemes: ['http', 'https', 'mailto', 'tel'],
     // Force external links to be safe

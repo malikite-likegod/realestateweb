@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import { verifyVerifiedContactCookie } from '@/lib/jwt'
 
 interface Props { params: Promise<{ id: string }> }
 
 async function getContactId(): Promise<string | null> {
   const store = await cookies()
-  return store.get('re_verified')?.value ?? null
+  const token = store.get('re_verified')?.value
+  if (!token) return null
+  return verifyVerifiedContactCookie(token)
 }
 
 export async function DELETE(_req: Request, { params }: Props) {

@@ -89,11 +89,13 @@ export default async function EmailDetailPage({ params }: Props) {
           </div>
         </Card>
 
-        {/* Body */}
+        {/* Body — rendered in a sandboxed iframe so inbound HTML cannot run scripts */}
         <Card>
-          <div
-            className="prose prose-sm max-w-none text-charcoal-800 [&_a]:text-gold-600 [&_pre]:whitespace-pre-wrap [&_pre]:text-xs"
-            dangerouslySetInnerHTML={{ __html: sanitizeContent(email.body ?? '') }}
+          <iframe
+            srcDoc={sanitizeContent(email.body ?? '')}
+            sandbox="allow-same-origin"
+            className="w-full min-h-96 border-0 rounded"
+            title="Email content"
           />
         </Card>
 

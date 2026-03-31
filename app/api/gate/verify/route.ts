@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isSecureContext } from '@/lib/auth'
+import { signVerifiedContactCookie } from '@/lib/jwt'
 
 async function hashToken(token: string): Promise<string> {
   const data   = new TextEncoder().encode(token)
@@ -46,8 +47,9 @@ export async function GET(request: NextRequest) {
   const returnUrl = record.returnUrl ?? '/listings'
   const response  = NextResponse.redirect(new URL(returnUrl, request.url))
 
-  // Set verified cookie (Route Handler — cookie writes are permitted here)
-  response.cookies.set('re_verified', contact.id, {
+  // Set signed verified cookie — value is a JWT, not a raw DB id
+  const verifiedToken = await signVerifiedContactCookie(contact.id)
+  response.cookies.set('re_verified', verifiedToken, {
     maxAge:   365 * 24 * 60 * 60,
     httpOnly: true,
     secure:   isSecureContext,

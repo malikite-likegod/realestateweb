@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { verifyCsrfOrigin } from '@/lib/csrf'
 
 const leadSchema = z.object({
   firstName: z.string().min(1).max(100),
@@ -15,6 +16,10 @@ import { validateEmail } from '@/lib/services/zerobounce'
 import { sendEmailVerification } from '@/lib/communications/verification-service'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  if (!verifyCsrfOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { slug } = await params
 
   const page = await prisma.landingPage.findUnique({ where: { slug } })

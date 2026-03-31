@@ -6,15 +6,15 @@ import { prisma } from '@/lib/prisma'
 const VALID_STATUSES = ['lead', 'prospect', 'client', 'past_client'] as const
 
 const contactRowSchema = z.object({
-  firstName: z.string().min(1),
-  lastName:  z.string().min(1),
-  email:     z.string(),
-  phone:     z.string().optional(),
-  company:   z.string().optional(),
-  jobTitle:  z.string().optional(),
-  source:    z.string().optional(),
-  status:    z.string().optional(),
-  tags:      z.array(z.string()).optional(),
+  firstName: z.string().min(1).max(100),
+  lastName:  z.string().min(1).max(100),
+  email:     z.string().max(254),
+  phone:     z.string().max(30).optional(),
+  company:   z.string().max(200).optional(),
+  jobTitle:  z.string().max(200).optional(),
+  source:    z.string().max(100).optional(),
+  status:    z.string().max(50).optional(),
+  tags:      z.array(z.string().max(100)).max(20).optional(),
   birthday:  z.string().optional(),
   rowIndex:  z.number(),
 })

@@ -1,12 +1,17 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 
 function getSecret(): Uint8Array {
-  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable must be set in production')
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable must be set in production')
+    }
+    return new TextEncoder().encode('fallback_dev_secret_change_in_production')
   }
-  return new TextEncoder().encode(
-    process.env.JWT_SECRET ?? 'fallback_dev_secret_change_in_production'
-  )
+  if (secret.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters long')
+  }
+  return new TextEncoder().encode(secret)
 }
 
 function getExpiresIn(): string {
@@ -80,6 +85,26 @@ export async function verifyPendingContactJwt(token: string): Promise<{ contactI
     const { payload } = await jwtVerify(token, getSecret())
     if (payload.type !== 'contact_pending' || !payload.sub) return null
     return { contactId: payload.sub as string }
+  } catch {
+    return null
+  }
+}
+
+/** Signs the re_verified cookie so it carries a verifiable contact ID rather than a raw DB id. */
+export async function signVerifiedContactCookie(contactId: string): Promise<string> {
+  return new SignJWT({ sub: contactId, type: 'gate_verified' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('1y')
+    .sign(getSecret())
+}
+
+/** Verifies the re_verified cookie and returns the contact ID, or null if invalid/tampered. */
+export async function verifyVerifiedContactCookie(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret())
+    if (payload.type !== 'gate_verified' || !payload.sub) return null
+    return payload.sub as string
   } catch {
     return null
   }

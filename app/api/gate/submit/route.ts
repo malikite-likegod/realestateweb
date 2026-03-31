@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/gate-email'
 import { isSecureContext } from '@/lib/auth'
+import { verifyCsrfOrigin } from '@/lib/csrf'
 
 const schema = z.object({
   firstName: z.string().min(1),
@@ -14,6 +15,10 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   // Parse and validate first — return 400 on bad input
   let data: z.infer<typeof schema>
   try {

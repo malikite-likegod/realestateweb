@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { verifyVerifiedContactCookie } from '@/lib/jwt'
 
 async function getContactId(): Promise<string | null> {
   const store = await cookies()
-  return store.get('re_verified')?.value ?? null
+  const token = store.get('re_verified')?.value
+  if (!token) return null
+  return verifyVerifiedContactCookie(token)
 }
 
 const saveSchema = z.object({

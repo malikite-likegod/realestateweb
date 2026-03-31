@@ -51,7 +51,7 @@ export default async function BlogPostPage({ params }: Props) {
       <Section>
         <Container size="md">
           <div className="prose prose-charcoal max-w-none prose-headings:font-serif prose-a:text-gold-600">
-            <div dangerouslySetInnerHTML={{ __html: sanitizeContent(post.body.replace(/\n/g, '<br/>')) }} />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeContent(post.body).replace(/\n/g, '<br/>') }} />
           </div>
         </Container>
       </Section>
