@@ -5,7 +5,7 @@ import { PortalListings } from '@/components/portal/PortalListings'
 
 export default async function PortalPage() {
   const contact = await getContactSession()
-  if (!contact) redirect('/portal/login')
+  if (!contact) redirect('/portal/login?redirect=/portal')
 
   return (
     <>

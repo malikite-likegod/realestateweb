@@ -56,7 +56,7 @@ export default async function PropertyDetailPage({
   const packageItemId   = resolvedParams.packageItemId as string | undefined
   const token           = resolvedParams.token         as string | undefined
   const contact = await getContactSession()
-  if (!contact) redirect('/portal/login')
+  if (!contact) redirect(`/portal/login?redirect=${encodeURIComponent(`/portal/properties/${id}`)}`)
 
   const [property, saved] = await Promise.all([
     prisma.resoProperty.findUnique({ where: { id } }),

@@ -8,7 +8,7 @@ import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 
 export default async function SavedListingsPage() {
   const contact = await getContactSession()
-  if (!contact) redirect('/portal/login')
+  if (!contact) redirect('/portal/login?redirect=/portal')
 
   const saved = await prisma.contactPropertyInterest.findMany({
     where:   { contactId: contact.id, source: 'portal_saved' },
