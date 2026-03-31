@@ -237,7 +237,11 @@ export default async function PropertyDetailPage({
 
             {/* Map */}
             {property.latitude && property.longitude && (
-              <ListingMap lat={property.latitude} lng={property.longitude} address={address} />
+              <ListingMap
+                markers={[{ lat: property.latitude, lng: property.longitude, title: address }]}
+                zoom={15}
+                height="280px"
+              />
             )}
 
             {/* Full Property Details tabs */}
