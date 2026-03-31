@@ -10,7 +10,7 @@ const singleEventSchema = z.object({
   eventType: z.string().max(50),
   entityId:  z.string().max(100).optional(),
   sessionId: z.string().max(100).optional(),
-  metadata:  z.record(z.string().max(500)).max(20).optional(),
+  metadata:  z.record(z.string().max(500)).refine(v => Object.keys(v).length <= 20, { message: 'metadata cannot exceed 20 keys' }).optional(),
 })
 
 const batchSchema = z.object({
