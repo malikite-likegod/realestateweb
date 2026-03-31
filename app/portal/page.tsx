@@ -10,7 +10,7 @@ export default async function PortalPage() {
   return (
     <>
       <PortalHeader firstName={contact.firstName} />
-      <PortalListings firstName={contact.firstName} />
+      <PortalListings firstName={contact.firstName} agentEmail={process.env.AGENT_EMAIL ?? ''} />
     </>
   )
 }

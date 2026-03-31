@@ -60,9 +60,9 @@ function friendlyLabel(f: Filters): string {
   return parts.join(' · ') || 'All listings'
 }
 
-interface Props { firstName: string | null }
+interface Props { firstName: string | null; agentEmail: string }
 
-export function PortalListings({ firstName }: Props) {
+export function PortalListings({ firstName, agentEmail }: Props) {
   const [filters,     setFilters]     = useState<Filters>(EMPTY)
   const [applied,     setApplied]     = useState<Filters>(EMPTY)
   const [properties,  setProperties]  = useState<ResoProperty[]>([])
@@ -71,6 +71,7 @@ export function PortalListings({ firstName }: Props) {
   const [page,        setPage]        = useState(1)
   const [loading,     setLoading]     = useState(true)
   const [showMore,    setShowMore]    = useState(false)
+  const [capped,      setCapped]      = useState(false)
 
   // Save search state
   const [saveOpen,    setSaveOpen]    = useState(false)
@@ -86,6 +87,7 @@ export function PortalListings({ firstName }: Props) {
     setProperties(data.data ?? [])
     setTotal(data.total ?? 0)
     setTotalPages(data.totalPages ?? 1)
+    setCapped(data.capped ?? false)
     setLoading(false)
   }, [])
 
@@ -351,6 +353,20 @@ export function PortalListings({ firstName }: Props) {
             className="flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
             Next <ChevronRight size={16} />
           </button>
+        </div>
+      )}
+
+      {/* Cap notice — shown on the last page when results exceed 100 */}
+      {capped && page === totalPages && !loading && (
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-center">
+          <p className="text-sm font-medium text-amber-900">
+            Showing the first 100 results for this search.
+          </p>
+          <p className="text-sm text-amber-700 mt-1">
+            To see more listings, please{' '}
+            <a href={`mailto:${agentEmail}`} className="underline hover:text-amber-900">contact me</a>{' '}
+            and I&apos;ll help you find exactly what you&apos;re looking for.
+          </p>
         </div>
       )}
 

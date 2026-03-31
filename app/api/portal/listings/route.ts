@@ -72,7 +72,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const [total, properties] = await Promise.all([
+  const MAX_RESULTS = 100
+
+  const [rawTotal, properties] = await Promise.all([
     prisma.resoProperty.count({ where }),
     prisma.resoProperty.findMany({
       where,
@@ -103,6 +105,10 @@ export async function GET(request: Request) {
     : []
   const savedSet = new Set(saved.map(s => s.resoPropertyId))
 
+  const total      = Math.min(rawTotal, MAX_RESULTS)
+  const capped     = rawTotal > MAX_RESULTS
+  const totalPages = Math.ceil(total / pageSize)
+
   const data = properties.map(p => ({ ...p, isSaved: savedSet.has(p.id) }))
-  return NextResponse.json({ data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) })
+  return NextResponse.json({ data, total, page, pageSize, totalPages, capped })
 }
