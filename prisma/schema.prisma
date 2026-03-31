@@ -1258,3 +1258,19 @@ model ListingPackageView {
   @@index([contactId])
   @@map("listing_package_views")
 }
+
+// ─── Listing Gate View Tracking ───────────────────────────────────────────────
+// Server-side view counter keyed by the httpOnly re_session cookie.
+// Replaces the client-writable re_views cookie so the gate cannot be bypassed
+// by deleting or forging that cookie.
+
+model GateView {
+  id         String   @id @default(cuid())
+  sessionId  String
+  propertyId String
+  viewedAt   DateTime @default(now())
+
+  @@unique([sessionId, propertyId])
+  @@index([sessionId])
+  @@map("gate_views")
+}

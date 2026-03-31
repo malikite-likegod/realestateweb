@@ -162,52 +162,31 @@ export async function middleware(request: NextRequest) {
   // ── Gate cookie logic (public listing pages only) ──────────────────────────
   const listingMatch = pathname.match(LISTING_PATH_RE)
   if (listingMatch) {
-    const propertyId = listingMatch[1]
-
-    // Ensure re_session exists
+    // Ensure the visitor has an httpOnly session cookie.
+    // View counts are now stored server-side in the GateView table keyed by
+    // this session ID — the client can no longer tamper with the counter by
+    // deleting or forging the old client-writable re_views cookie.
     let sessionId = request.cookies.get('re_session')?.value
     if (!sessionId) sessionId = crypto.randomUUID()
 
-    // Read + update re_views (JSON array of property IDs)
     const isVerified  = !!request.cookies.get('re_verified')?.value
     const isPending   = !!request.cookies.get('re_pending')?.value
     const adminToken  = request.cookies.get('auth_token')?.value
     const isAdminUser = adminToken ? !!(await verifyJwt(adminToken)) : false
 
-    let views: string[] = []
-    try {
-      views = JSON.parse(request.cookies.get('re_views')?.value ?? '[]')
-      if (!Array.isArray(views)) views = []
-    } catch { views = [] }
-
-    if (!views.includes(propertyId)) views.push(propertyId)
-
     // IMPORTANT: To pass headers to the Server Component via `await headers()`,
     // we must mutate the *forwarded request headers* using NextResponse.next({ request }).
-    // Setting headers on response.headers sends them to the browser, NOT the Server Component.
     const requestHeaders = new Headers(request.headers)
-    requestHeaders.set('x-view-count', String(views.length))
     requestHeaders.set('x-session-id', sessionId)
     if (isVerified || isAdminUser) requestHeaders.set('x-gate-bypass',  'true')
     if (isPending)                 requestHeaders.set('x-gate-pending', 'true')
 
     const response = NextResponse.next({ request: { headers: requestHeaders } })
 
-    // Set cookies on the response (written to browser)
     if (!request.cookies.get('re_session')?.value) {
       response.cookies.set('re_session', sessionId, {
         maxAge:   365 * 24 * 60 * 60,
         httpOnly: true,
-        sameSite: 'lax',
-        path:     '/',
-      })
-    }
-
-    // Always write updated re_views if the array changed
-    const originalViews = request.cookies.get('re_views')?.value ?? '[]'
-    if (JSON.stringify(views) !== originalViews) {
-      response.cookies.set('re_views', JSON.stringify(views), {
-        maxAge:   30 * 24 * 60 * 60,
         sameSite: 'lax',
         path:     '/',
       })

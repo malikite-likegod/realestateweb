@@ -34,21 +34,35 @@ export default async function ListingDetailPage({ params }: Props) {
 
   // ── Gate decision ──────────────────────────────────────────────────────────
   const reqHeaders  = await headers()
+  const cookieStore = await cookies()
   const isBypass    = reqHeaders.get('x-gate-bypass')  === 'true'
   const isPending   = reqHeaders.get('x-gate-pending') === 'true'
-  const viewCount   = parseInt(reqHeaders.get('x-view-count') ?? '0', 10)
+  const sessionId   = reqHeaders.get('x-session-id') ?? cookieStore.get('re_session')?.value ?? ''
   const { limit, enabled } = await getGateSettings()
-  const showGate    = enabled && !isBypass && !isPending && viewCount >= limit
+
+  // View count is now tracked server-side in GateView — the client can no
+  // longer bypass the gate by deleting or forging the old re_views cookie.
+  let viewCount = 0
+  if (enabled && !isBypass && !isPending && sessionId) {
+    const { prisma } = await import('@/lib/prisma')
+    // Upsert this view then count all unique properties seen by this session
+    await prisma.gateView.upsert({
+      where:  { sessionId_propertyId: { sessionId, propertyId: id } },
+      update: {},
+      create: { sessionId, propertyId: id },
+    }).catch(() => null)
+    viewCount = await prisma.gateView.count({ where: { sessionId } })
+  }
+
+  const showGate    = enabled && !isBypass && !isPending && viewCount > limit
   const showPending = enabled && !isBypass && isPending
 
   // ── Track view for verified contacts ──────────────────────────────────────
   if (isBypass) {
-    const cookieStore = await cookies()
-    const contactId   = cookieStore.get('re_verified')?.value
-    const sessionId   = reqHeaders.get('x-session-id') ?? undefined
+    const contactId = cookieStore.get('re_verified')?.value
     if (contactId) {
       const { trackBehaviorEvent } = await import('@/services/ai/lead-scoring')
-      void trackBehaviorEvent('listing_view', property.id, contactId, sessionId, undefined).catch(() => null)
+      void trackBehaviorEvent('listing_view', property.id, contactId, sessionId || undefined, undefined).catch(() => null)
       const { prisma } = await import('@/lib/prisma')
       void prisma.contactPropertyInterest.upsert({
         where:  { contactId_resoPropertyId: { contactId, resoPropertyId: property.id } },

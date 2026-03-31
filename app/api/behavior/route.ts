@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { trackBehaviorEvent, trackBehaviorEventBatch } from '@/services/ai/lead-scoring'
 
@@ -16,15 +16,11 @@ const batchSchema = z.object({
   sessionId: z.string().optional(),
 })
 
-async function resolveContactId(req: Request): Promise<string | undefined> {
+async function resolveContactId(): Promise<string | undefined> {
   try {
-    const reqHeaders  = await headers()
     const cookieStore = await cookies()
-    // Prefer cookie set by the gate flow (verified contacts)
-    const fromCookie = cookieStore.get('re_verified')?.value
-    if (fromCookie) return fromCookie
-    // Also accept explicit contactId header (admin tooling)
-    return reqHeaders.get('x-contact-id') ?? undefined
+    // Only trust the httpOnly cookie set by the verified gate flow
+    return cookieStore.get('re_verified')?.value
   } catch {
     return undefined
   }
@@ -33,7 +29,7 @@ async function resolveContactId(req: Request): Promise<string | undefined> {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const contactId = await resolveContactId(request)
+    const contactId = await resolveContactId()
 
     // Batch path
     if (Array.isArray(body?.events)) {
