@@ -36,6 +36,7 @@ export interface ResoPropertyRaw {
   ListingContractDate?:  string
   ModificationTimestamp?: string
   // Interior details
+  Flooring?:                 string
   GarageSpaces?:             number
   ParkingTotal?:             number
   PoolPrivateYN?:            boolean

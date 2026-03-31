@@ -368,6 +368,7 @@ model ResoProperty {
   yearBuilt             Int?
 
   // Interior details
+  flooring              String?   // e.g. "Hardwood, Tile, Carpet"
   bedroomsPlus          Int?      // dens/offices countable as bedrooms
   kitchensTotal         Int?      // above-grade kitchens
   kitchensPlusTotal     Int?      // below-grade (basement) kitchens

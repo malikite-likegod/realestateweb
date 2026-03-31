@@ -53,7 +53,7 @@ const IDX_SELECT = [
   'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
   'ListingContractDate', 'ModificationTimestamp',
   // Interior details
-  'GarageSpaces', 'ParkingTotal', 'PoolPrivateYN',
+  'Flooring', 'GarageSpaces', 'ParkingTotal', 'PoolPrivateYN',
   'BedroomsPlus', 'KitchensTotal', 'KitchensPlusTotal',
   'Basement', 'HeatSource', 'HeatType', 'AirConditioning', 'FamilyRoom', 'FireplaceFeatures',
   // Exterior details
@@ -137,6 +137,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             modificationTimestamp: new Date(r.ModificationTimestamp!),
             lastSyncedAt:          now,
             // Interior details
+            flooring:              r.Flooring              ?? null,
             garageSpaces:          r.GarageSpaces          ?? null,
             parkingTotal:          r.ParkingTotal          ?? null,
             poolPrivateYN:         r.PoolPrivateYN         ?? false,

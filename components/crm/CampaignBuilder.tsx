@@ -238,26 +238,32 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
           </select>
         </div>
         <div>
+          <label className="text-xs text-charcoal-500 mb-1 block">
+            Tag Filter
+            <span className="ml-1 text-charcoal-400 font-normal">(optional)</span>
+          </label>
+          <select
+            value={triggerTagId}
+            onChange={e => setTriggerTagId(e.target.value)}
+            disabled={trigger === 'manual'}
+            className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <option value="">Any contact</option>
+            {tags.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          {trigger === 'manual' && (
+            <p className="text-xs text-charcoal-400 mt-1">Not applicable for manual enrollment</p>
+          )}
+        </div>
+        <div className="col-span-2">
           <label className="text-xs text-charcoal-500 mb-1 block">Description (optional)</label>
           <input type="text" value={description} onChange={e => setDescription(e.target.value)}
             placeholder="Brief description"
             className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
           />
         </div>
-        {trigger !== 'manual' && (
-          <div className="col-span-2">
-            <label className="text-xs text-charcoal-500 mb-1 block">
-              Tag Filter <span className="text-charcoal-400">(optional — leave blank to enroll any contact)</span>
-            </label>
-            <select value={triggerTagId} onChange={e => setTriggerTagId(e.target.value)}
-              className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900">
-              <option value="">Any contact</option>
-              {tags.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {/* Steps */}

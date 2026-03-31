@@ -115,6 +115,7 @@ export default async function AdminListingDetailPage({
     row('Square Footage',    property.sqftRange ? `${property.sqftRange} sqft` : null),
     row('Garage Spaces',     property.garageSpaces),
     row('Parking Total',     property.parkingTotal),
+    row('Flooring',          property.flooring),
     row('Basement',          property.basement),
     row('Heating Source',    property.heatSource),
     row('Heating Fuel',      property.heatType),
