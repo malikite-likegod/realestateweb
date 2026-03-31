@@ -1,11 +1,16 @@
+'use server'
+
 import { redirect, notFound } from 'next/navigation'
-import { Bed, Bath, Car, Ruler, MapPin, Building2, Calendar } from 'lucide-react'
+import { Bed, Bath, Car, Ruler, Calendar, MapPin, Tag, Building2, ExternalLink, ChevronLeft } from 'lucide-react'
 import { getContactSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PortalHeader } from '@/components/portal/PortalHeader'
 import { PortalSaveButton } from '@/components/portal/PortalSaveButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { PackageViewTracker } from '@/components/portal/PackageViewTracker'
+import { PhotoGallery } from '@/components/real-estate/PhotoGallery'
+import { ListingMap } from '@/components/real-estate/ListingMap'
+import { PropertyDetailTabs, type DetailRow } from '@/components/real-estate/PropertyDetailTabs'
 
 function getAddress(p: {
   streetNumber: string | null; streetName: string | null;
@@ -19,14 +24,24 @@ function getImages(media: string | null): string[] {
   try {
     const items = JSON.parse(media ?? '[]') as { url: string; order?: number }[]
     const sorted = items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map(i => i.url)
-    return sorted.length > 0 ? sorted : ['/images/minimal-light-placeholder.svg']
+    return sorted.length > 0 ? sorted : []
   } catch {
-    return ['/images/minimal-light-placeholder.svg']
+    return []
   }
 }
 
 function isLease(transactionType: string | null) {
   return (transactionType ?? '').toLowerCase().includes('lease')
+}
+
+function row(label: string, value: string | number | null | undefined): DetailRow | null {
+  if (value == null || value === '') return null
+  return { label, value }
+}
+
+function yn(label: string, value: boolean | null | undefined): DetailRow | null {
+  if (value == null) return null
+  return { label, value: value ? 'Yes' : 'No' }
 }
 
 export default async function PropertyDetailPage({
@@ -57,157 +72,240 @@ export default async function PropertyDetailPage({
   const lease   = isLease(property.transactionType)
   const isSaved = !!saved
 
+  const statusLabel = property.standardStatus ?? 'Active'
+  const badgeVariant: 'green' | 'blue' = lease ? 'blue' : 'green'
+  const badgeText = lease ? 'For Lease' : 'For Sale'
+
+  // Computed totals
+  const totalBedrooms = (property.bedroomsTotal ?? 0) + (property.bedroomsPlus ?? 0)
+  const totalKitchens = (property.kitchensTotal ?? 0) + (property.kitchensPlusTotal ?? 0)
+
+  // Tab data
+  const tabInterior: DetailRow[] = [
+    row('Bedrooms',           property.bedroomsTotal),
+    row('Bedrooms Plus',      property.bedroomsPlus),
+    totalBedrooms > 0 && property.bedroomsPlus ? { label: 'Total Bedrooms', value: totalBedrooms } : null,
+    row('Washrooms',          property.bathroomsTotalInteger),
+    row('Partial Bathrooms',  property.bathroomsPartial),
+    row('Square Footage',     property.sqftRange ? `${property.sqftRange} sqft` : null),
+    row('Garage Spaces',      property.garageSpaces),
+    row('Parking Total',      property.parkingTotal),
+    row('Basement',           property.basement),
+    row('Heating Source',     property.heatSource),
+    row('Heating Fuel',       property.heatType),
+    row('Air Conditioning',   property.airConditioning),
+    row('Family Room',        property.familyRoom),
+    row('Kitchens',           property.kitchensTotal),
+    row('Kitchens Plus',      property.kitchensPlusTotal),
+    totalKitchens > 0 && property.kitchensPlusTotal ? { label: 'Total Kitchens', value: totalKitchens } : null,
+    row('Fireplace Features', property.fireplaceFeatures),
+    yn('Pool',                property.poolPrivateYN),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabExterior: DetailRow[] = [
+    row('Exterior',           property.exteriorFeatures),
+    row('Construction',       property.constructionMaterials),
+    row('Roof',               property.roof),
+    row('Foundation',         property.foundationDetails),
+    row('Parking Features',   property.parkingFeatures),
+    row('Pool Features',      property.poolFeatures),
+    row('Fronting On',        property.frontingOn),
+    property.lotFront != null ? { label: 'Lot Frontage (ft)', value: property.lotFront } : null,
+    property.lotDepth != null ? { label: 'Lot Depth (ft)',    value: property.lotDepth } : null,
+    row('Waterfront',         property.waterFrontType),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabBuilding: DetailRow[] = [
+    row('Style',              property.style ?? property.propertySubType),
+    row('Ownership',          property.ownershipType),
+    row('Storeys',            property.storiesTotal),
+    row('Approximate Age',    property.approximateAge),
+    row('Sewer',              property.sewer),
+    row('Water',              property.water),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabCommunity: DetailRow[] = [
+    row('Community',          property.community),
+    row('Municipality',       property.municipality),
+    row('Cross Street',       property.crossStreet),
+    row('City',               property.city),
+    row('Province',           property.stateOrProvince),
+    row('Postal Code',        property.postalCode),
+    row('Amenities',          property.amenities),
+  ].filter((d): d is DetailRow => d !== null)
+
+  const tabTaxes: DetailRow[] = [
+    property.taxAnnualAmount != null ? { label: 'Annual Taxes',    value: `$${property.taxAnnualAmount.toLocaleString()}` } : null,
+    row('Tax Year',           property.taxYear),
+    property.maintenanceFee != null  ? { label: 'Maintenance Fee', value: `$${property.maintenanceFee.toLocaleString()}/mo` } : null,
+    row('Fee Includes',       property.maintenanceFeeIncludes),
+    row('Assessment Year',    property.assessmentYear),
+    row('Inclusions',         property.inclusions),
+    row('Exclusions',         property.exclusions),
+  ].filter((d): d is DetailRow => d !== null)
+
   return (
     <>
       <PortalHeader firstName={contact.firstName} />
       {packageItemId && token && (
         <PackageViewTracker token={token} packageItemId={packageItemId} />
       )}
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
 
-        {/* Back link */}
-        <a href="/portal" className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block">← Back to listings</a>
+        {/* Back */}
+        <a href="/portal" className="inline-flex items-center gap-1 text-sm text-charcoal-500 hover:text-charcoal-800">
+          <ChevronLeft size={14} /> Back to listings
+        </a>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Photo gallery */}
-          <div className="space-y-2">
-            <div className="relative rounded-xl overflow-hidden h-72 bg-gray-100">
-              <img src={images[0]} alt={address} className="w-full h-full object-cover" />
-              <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${
-                lease ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-              }`}>
-                {lease ? 'For Lease' : 'For Sale'}
-              </span>
-            </div>
-            {images.length > 1 && (
-              <div className="grid grid-cols-4 gap-1.5">
-                {images.slice(1, 5).map((url, i) => (
-                  <div key={i} className="relative h-20 bg-gray-100 rounded-lg overflow-hidden">
-                    <img src={url} alt={`${address} photo ${i + 2}`} className="w-full h-full object-cover" />
-                    {i === 3 && images.length > 5 && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="text-white text-xs font-semibold">+{images.length - 5} more</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Photo gallery */}
+        <PhotoGallery images={images} address={address} badge={badgeText} badgeVariant={badgeVariant} />
 
-          {/* Details */}
-          <div>
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h1 className="text-xl font-bold text-gray-900">{address}</h1>
-              <PortalSaveButton propertyId={property.id} initialSaved={isSaved} />
+        {/* Main content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          {/* Left — details */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Title & price */}
+            <div>
+              <h1 className="text-2xl font-bold text-charcoal-900">{address}</h1>
+              <p className="text-sm text-charcoal-500 flex items-center gap-1 mt-1">
+                <MapPin size={13} />
+                {[property.city, property.stateOrProvince, property.postalCode].filter(Boolean).join(', ')}
+              </p>
+              <p className="text-3xl font-bold text-charcoal-900 mt-3">
+                {property.listPrice
+                  ? `$${property.listPrice.toLocaleString()}${lease ? '/mo' : ''}`
+                  : 'Price N/A'}
+              </p>
+              {property.propertySubType && (
+                <p className="text-sm text-charcoal-500 capitalize mt-0.5">{property.propertySubType}</p>
+              )}
             </div>
 
-            <p className="text-sm text-gray-500 flex items-center gap-1 mb-3">
-              <MapPin size={13} />
-              {[property.city, property.stateOrProvince, property.postalCode].filter(Boolean).join(', ')}
-            </p>
-
-            <p className="text-3xl font-bold text-gray-900 mb-1">
-              {property.listPrice
-                ? `$${property.listPrice.toLocaleString()}${lease ? '/mo' : ''}`
-                : 'Price N/A'}
-            </p>
-
-            {property.propertySubType && (
-              <p className="text-sm text-gray-500 capitalize mb-4">{property.propertySubType}</p>
-            )}
-
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            {/* Key stats bar */}
+            <div className="flex flex-wrap gap-4">
               {property.bedroomsTotal != null && (
-                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                  <Bed size={16} className="text-amber-500" />
-                  <div>
-                    <p className="text-xs text-gray-500">Bedrooms</p>
-                    <p className="text-sm font-semibold text-gray-900">{property.bedroomsTotal}</p>
-                  </div>
+                <div className="flex items-center gap-1.5 text-sm text-charcoal-700">
+                  <Bed size={15} className="text-gold-500" />
+                  <span className="font-medium">{property.bedroomsTotal}</span> bed{property.bedroomsTotal !== 1 ? 's' : ''}
+                  {property.bedroomsPlus ? <span className="text-charcoal-400">+{property.bedroomsPlus}</span> : null}
                 </div>
               )}
               {property.bathroomsTotalInteger != null && (
-                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                  <Bath size={16} className="text-amber-500" />
-                  <div>
-                    <p className="text-xs text-gray-500">Bathrooms</p>
-                    <p className="text-sm font-semibold text-gray-900">{property.bathroomsTotalInteger}</p>
-                  </div>
+                <div className="flex items-center gap-1.5 text-sm text-charcoal-700">
+                  <Bath size={15} className="text-gold-500" />
+                  <span className="font-medium">{property.bathroomsTotalInteger}</span> bath{property.bathroomsTotalInteger !== 1 ? 's' : ''}
+                  {property.bathroomsPartial ? <span className="text-charcoal-400">+{property.bathroomsPartial} partial</span> : null}
                 </div>
               )}
               {property.garageSpaces != null && property.garageSpaces > 0 && (
-                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                  <Car size={16} className="text-amber-500" />
-                  <div>
-                    <p className="text-xs text-gray-500">Garage</p>
-                    <p className="text-sm font-semibold text-gray-900">{property.garageSpaces} spaces</p>
-                  </div>
+                <div className="flex items-center gap-1.5 text-sm text-charcoal-700">
+                  <Car size={15} className="text-gold-500" />
+                  <span className="font-medium">{property.garageSpaces}</span> garage
                 </div>
               )}
-              {property.livingArea != null && (
-                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                  <Ruler size={16} className="text-amber-500" />
-                  <div>
-                    <p className="text-xs text-gray-500">Living Area</p>
-                    <p className="text-sm font-semibold text-gray-900">{Math.round(property.livingArea).toLocaleString()} sqft</p>
-                  </div>
+              {(property.sqftRange || property.livingArea != null) && (
+                <div className="flex items-center gap-1.5 text-sm text-charcoal-700">
+                  <Ruler size={15} className="text-gold-500" />
+                  <span className="font-medium">
+                    {property.sqftRange ? `${property.sqftRange} sqft` : `${Math.round(property.livingArea!).toLocaleString()} sqft`}
+                  </span>
                 </div>
               )}
               {property.yearBuilt != null && (
-                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                  <Calendar size={16} className="text-amber-500" />
-                  <div>
-                    <p className="text-xs text-gray-500">Year Built</p>
-                    <p className="text-sm font-semibold text-gray-900">{property.yearBuilt}</p>
-                  </div>
+                <div className="flex items-center gap-1.5 text-sm text-charcoal-700">
+                  <Calendar size={15} className="text-gold-500" />
+                  Built <span className="font-medium">{property.yearBuilt}</span>
                 </div>
               )}
-              {property.lotSizeSquareFeet != null && (
-                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                  <Ruler size={16} className="text-amber-500" />
-                  <div>
-                    <p className="text-xs text-gray-500">Lot Size</p>
-                    <p className="text-sm font-semibold text-gray-900">{Math.round(property.lotSizeSquareFeet).toLocaleString()} sqft</p>
-                  </div>
+              {property.listingId && (
+                <div className="flex items-center gap-1.5 text-sm text-charcoal-500">
+                  <Tag size={13} />
+                  MLS® {property.listingId}
                 </div>
               )}
+            </div>
+
+            {/* Description */}
+            {property.publicRemarks && (
+              <div>
+                <h2 className="text-sm font-semibold text-charcoal-900 uppercase tracking-wide mb-2">About this property</h2>
+                <p className="text-sm text-charcoal-600 leading-relaxed whitespace-pre-line">{property.publicRemarks}</p>
+              </div>
+            )}
+
+            {/* Map */}
+            {property.latitude && property.longitude && (
+              <ListingMap lat={property.latitude} lng={property.longitude} address={address} />
+            )}
+
+            {/* Full Property Details tabs */}
+            <PropertyDetailTabs
+              interior={tabInterior}
+              exterior={tabExterior}
+              building={tabBuilding}
+              community={tabCommunity}
+              taxes={tabTaxes}
+            />
+          </div>
+
+          {/* Right sidebar */}
+          <div className="space-y-4">
+
+            {/* Save */}
+            <div className="rounded-xl border border-charcoal-200 p-4">
+              <PortalSaveButton propertyId={property.id} initialSaved={isSaved} />
+            </div>
+
+            {/* Property details card */}
+            <div className="rounded-xl border border-charcoal-200 overflow-hidden">
+              <div className="px-4 py-3 bg-charcoal-50 border-b border-charcoal-100">
+                <h2 className="text-sm font-semibold text-charcoal-900 uppercase tracking-wide">Property Details</h2>
+              </div>
+              <dl className="divide-y divide-charcoal-50 px-4">
+                {[
+                  ['Type',         property.propertyType ?? property.propertySubType],
+                  ['Sale Type',    property.transactionType],
+                  ['Status',       statusLabel],
+                  ['Ownership',    property.ownershipType],
+                  ['Style',        property.style ?? property.propertySubType],
+                  ['Bedrooms',     property.bedroomsTotal != null ? String(property.bedroomsTotal) : null],
+                  ['Bathrooms',    property.bathroomsTotalInteger != null ? String(property.bathroomsTotalInteger) : null],
+                  ['Parking',      property.parkingTotal != null ? String(property.parkingTotal) : null],
+                  ['Sqft',         property.sqftRange ? `${property.sqftRange} sqft` : (property.livingArea != null ? `${Math.round(property.livingArea).toLocaleString()} sqft` : null)],
+                  ['Lot',          property.lotSizeSquareFeet != null ? `${Math.round(property.lotSizeSquareFeet).toLocaleString()} sqft` : null],
+                  ['Year Built',   property.yearBuilt != null ? String(property.yearBuilt) : null],
+                  ['MLS®',         property.listingId],
+                  ['Listed',       property.listingContractDate ? new Date(property.listingContractDate).toLocaleDateString('en-CA') : null],
+                  ['Postal Code',  property.postalCode],
+                ].filter(([, v]) => v != null).map(([label, value]) => (
+                  <div key={label} className="flex justify-between items-baseline py-2.5 gap-3">
+                    <dt className="text-xs text-charcoal-500 shrink-0">{label}</dt>
+                    <dd className="text-xs font-medium text-charcoal-900 text-right">{value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
 
             {/* Agent / Office */}
             {(property.listAgentFullName || property.listOfficeName) && (
-              <div className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2.5 mb-4">
-                <Building2 size={16} className="text-gray-400 mt-0.5 shrink-0" />
+              <div className="rounded-xl border border-charcoal-200 p-4 flex items-start gap-2">
+                <Building2 size={15} className="text-charcoal-400 mt-0.5 shrink-0" />
                 <div>
                   {property.listAgentFullName && (
-                    <p className="text-sm text-gray-700">{property.listAgentFullName}</p>
+                    <p className="text-sm font-medium text-charcoal-800">{property.listAgentFullName}</p>
                   )}
                   {property.listOfficeName && (
-                    <p className="text-xs text-gray-500">{property.listOfficeName}</p>
+                    <p className="text-xs text-charcoal-500">{property.listOfficeName}</p>
                   )}
                 </div>
               </div>
             )}
-
-            {/* List date */}
-            {property.listDate && (
-              <p className="text-xs text-gray-400">
-                Listed {new Date(property.listDate).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}
-              </p>
-            )}
           </div>
         </div>
 
-        {/* Description */}
-        {property.publicRemarks && (
-          <div className="mt-8">
-            <h2 className="text-base font-semibold text-gray-900 mb-2">About this property</h2>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{property.publicRemarks}</p>
-          </div>
-        )}
-
-        <div className="mt-10"><MlsDisclaimer variant="vow" /></div>
+        <MlsDisclaimer variant="vow" />
       </main>
     </>
   )
