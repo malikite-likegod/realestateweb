@@ -39,6 +39,7 @@
     "eslint-config-next": "^16.2.1",
     "framer-motion": "^11.11.0",
     "imapflow": "^1.2.18",
+    "ioredis": "^5.10.1",
     "jose": "^5.9.3",
     "lru-cache": "^11.2.7",
     "lucide-react": "^0.460.0",

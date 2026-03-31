@@ -80,7 +80,7 @@ export async function middleware(request: NextRequest) {
           ?? 'unknown'
 
   if (pathname.startsWith('/api/search') || (pathname.startsWith('/api/listings') && request.method === 'GET')) {
-    const { allowed, retryAfterMs } = publicSearchLimit.check(ip)
+    const { allowed, retryAfterMs } = await publicSearchLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
@@ -91,7 +91,7 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api/portal/listings')) {
     const sessionId = request.cookies.get('contact_token')?.value ?? ip
-    const { allowed, retryAfterMs } = portalLimit.check(sessionId)
+    const { allowed, retryAfterMs } = await portalLimit.check(sessionId)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
@@ -101,7 +101,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === '/api/portal/login') {
-    const { allowed, retryAfterMs } = loginLimit.check(ip)
+    const { allowed, retryAfterMs } = await loginLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
@@ -111,7 +111,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === '/api/auth/login' || pathname === '/api/auth/2fa/verify') {
-    const { allowed, retryAfterMs } = authLimit.check(ip)
+    const { allowed, retryAfterMs } = await authLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
@@ -121,7 +121,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password') {
-    const { allowed, retryAfterMs } = forgotPassLimit.check(ip)
+    const { allowed, retryAfterMs } = await forgotPassLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
@@ -134,7 +134,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/ai/')) {
     const bearer = request.headers.get('authorization')
     const aiKey  = bearer?.startsWith('Bearer ') ? bearer.slice(7) : ip
-    const { allowed, retryAfterMs } = aiLimit.check(aiKey)
+    const { allowed, retryAfterMs } = await aiLimit.check(aiKey)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
@@ -150,7 +150,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/landing-pages/') ||
     pathname.startsWith('/api/market-reports/')
   ) {
-    const { allowed, retryAfterMs } = publicLeadLimit.check(ip)
+    const { allowed, retryAfterMs } = await publicLeadLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },

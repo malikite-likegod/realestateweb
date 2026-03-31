@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       where: { id: contact.id },
       data: {
         passwordHash,
+        passwordChangedAt:   new Date(),
         phone:               data.phone,
         address:             data.street,
         city:                data.city,

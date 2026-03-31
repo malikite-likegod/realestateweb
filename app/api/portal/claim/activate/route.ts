@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       where: { id: contactId },
       data: {
         passwordHash,
+        passwordChangedAt:     new Date(),
         phoneVerified:         true,
         accountStatus:         'active',
         phoneOtpCode:          null,

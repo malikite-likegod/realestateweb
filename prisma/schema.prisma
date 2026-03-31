@@ -94,6 +94,7 @@ model Contact {
   phoneOtpAttempts           Int       @default(0)
   phoneSessionTokenHash      String?   @unique
   passwordHash          String?
+  passwordChangedAt     DateTime?
   accountStatus         String?   // null | 'invited' | 'active'
   invitationTokenHash   String?
   invitationExpiresAt   DateTime?

@@ -78,14 +78,20 @@ export async function getContactSession() {
     const contact = await prisma.contact.findUnique({
       where:  { id: payload.contactId },
       select: {
-        id:            true,
-        firstName:     true,
-        lastName:      true,
-        email:         true,
-        accountStatus: true,
+        id:                true,
+        firstName:         true,
+        lastName:          true,
+        email:             true,
+        accountStatus:     true,
+        passwordChangedAt: true,
       },
     })
     if (!contact || contact.accountStatus !== 'active') return null
+
+    // Invalidate tokens issued before the last password change
+    if (contact.passwordChangedAt && typeof payload.iat === 'number') {
+      if (payload.iat < contact.passwordChangedAt.getTime() / 1000) return null
+    }
     return contact
   } catch {
     return null

@@ -17,6 +17,13 @@ services:
     expose:
       - "5432"
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    expose:
+      - "6379"
+
   app:
     build:
       context: .
@@ -27,6 +34,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "3000:3000"
     volumes:
@@ -64,6 +73,7 @@ services:
       TWILIO_API_SECRET:      ${TWILIO_API_SECRET:-}
       TWILIO_FROM_NUMBER:     ${TWILIO_FROM_NUMBER:-}
       ZEROBOUNCE_API_KEY:     ${ZEROBOUNCE_API_KEY:-}
+      REDIS_URL:              redis://redis:6379
 
 
 volumes:
