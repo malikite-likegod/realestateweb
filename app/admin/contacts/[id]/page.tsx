@@ -406,6 +406,7 @@ export default async function ContactDetailPage({ params, searchParams }: Props)
                   contactId={id}
                   contactEmail={contact.email}
                   emailOptOut={contact.emailOptOut}
+                  initialSubject={sendListingId ? `Check out this listing: ${sendListingAddress ?? ''}` : undefined}
                   initialBody={sendListingId
                     ? `Hi ${contact.firstName ?? ''},\n\nI thought you might be interested in this listing:\n${sendListingAddress ?? ''}\n\nYou can view the full details here:\n${process.env.NEXT_PUBLIC_APP_URL ?? ''}/portal/properties/${sendListingId}\n\nLet me know if you'd like to book a showing!`
                     : undefined}
