@@ -244,7 +244,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
             className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
           />
         </div>
-        {trigger !== 'manual' && trigger !== 'special_event' && (
+        {trigger !== 'manual' && (
           <div className="col-span-2">
             <label className="text-xs text-charcoal-500 mb-1 block">
               Tag Filter <span className="text-charcoal-400">(optional — leave blank to enroll any contact)</span>
