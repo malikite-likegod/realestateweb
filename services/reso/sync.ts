@@ -47,7 +47,7 @@ function combineFilters(...filters: (string | null)[]): string {
 const IDX_SELECT = [
   'ListingKey', 'ListingId', 'StandardStatus', 'PropertyType', 'PropertySubType',
   'ListPrice', 'OriginalListPrice', 'ClosePrice', 'BedroomsTotal', 'BathroomsTotalInteger',
-  'BathroomsPartial', 'BuildingAreaTotal', 'ApproximateSquareFootage', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
+  'BathroomsPartial', 'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
   'StreetNumber', 'StreetName', 'StreetSuffix', 'UnitNumber', 'TransactionType',
   'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
   'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
@@ -62,7 +62,7 @@ const IDX_SELECT = [
   // Building description
   'ArchitecturalStyle', 'StoriesTotal', 'ApproximateAge', 'ConstructionMaterials', 'Sewer', 'Water', 'OwnershipType',
   // Community
-  'Community', 'Municipality', 'CrossStreet', 'NearbyAmenities',
+  'Community', 'Municipality', 'CrossStreet',
   // Taxes & fees
   'TaxAnnualAmount', 'TaxYear', 'AssociationFee', 'AssociationFeeIncludes', 'AssessmentYear', 'Inclusions', 'Exclusions',
 ].join(',')
@@ -203,7 +203,9 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             }
           }
         } catch (e) {
-          result.errors.push(`Batch page ${page}: ${e instanceof Error ? e.message : String(e)}`)
+          const msg = `Batch page ${page}: ${e instanceof Error ? e.message : String(e)}`
+          console.error(`[idx_property] ${msg}`)
+          result.errors.push(msg)
         }
 
         const last = records[records.length - 1]
@@ -241,7 +243,9 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
       }
     }
   } catch (e) {
-    result.errors.push(`Sync failed: ${e instanceof Error ? e.message : String(e)}`)
+    const msg = `Sync failed: ${e instanceof Error ? e.message : String(e)}`
+    console.error(`[idx_property] ${msg}`)
+    result.errors.push(msg)
   }
 
   result.durationMs = Date.now() - start
@@ -676,6 +680,7 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       lastSyncedAt:          new Date(),
       onDemand:              true,
       // Interior details
+      flooring:              r.Flooring              ?? null,
       garageSpaces:          r.GarageSpaces          ?? null,
       parkingTotal:          r.ParkingTotal          ?? null,
       poolPrivateYN:         r.PoolPrivateYN         ?? false,
