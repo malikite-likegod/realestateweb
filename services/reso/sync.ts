@@ -53,7 +53,7 @@ const IDX_SELECT = [
   'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
   'ListingContractDate', 'ModificationTimestamp',
   // Interior details
-  'Flooring', 'GarageSpaces', 'ParkingTotal', 'PoolPrivateYN',
+  'GarageSpaces', 'ParkingTotal', 'PoolPrivateYN',
   'BedroomsPlus', 'KitchensTotal', 'KitchensPlusTotal',
   'Basement', 'HeatSource', 'HeatType', 'AirConditioning', 'FamilyRoom', 'FireplaceFeatures',
   // Exterior details
