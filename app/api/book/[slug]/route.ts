@@ -12,24 +12,48 @@ function parseWindows(raw: string): Window[] {
   try { return JSON.parse(raw) as Window[] } catch { return [] }
 }
 
-// Build HH:MM-keyed slot list for a given calendar date.
-// Returns ISO datetime strings (UTC) for start of each slot.
-function buildSlots(date: string, windows: Window[], durationMin: number, bufferMin: number): Date[] {
-  const d = new Date(date + 'T00:00:00') // treat as local midnight
-  const dow = d.getDay()                  // 0=Sun…6=Sat
+/**
+ * Convert a YYYY-MM-DD date + HH:MM time to a UTC Date, interpreting the
+ * time in the given IANA timezone (e.g. "America/Toronto").
+ *
+ * Strategy: treat the time as UTC, see what the target timezone says it is,
+ * then apply the offset to get the true UTC instant.
+ */
+function toTzDate(date: string, time: string, timezone: string): Date {
+  const tentative = new Date(`${date}T${time}:00Z`)
+  const localStr = tentative.toLocaleString('en-CA', {
+    timeZone: timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  })
+  const localAsUtc = new Date(localStr.replace(', ', 'T') + 'Z')
+  const offsetMs = tentative.getTime() - localAsUtc.getTime()
+  return new Date(tentative.getTime() + offsetMs)
+}
 
+/**
+ * Return 0=Sun…6=Sat for a YYYY-MM-DD date in the given IANA timezone.
+ * Uses noon UTC to avoid DST boundary edge cases.
+ */
+function getDayOfWeekInTz(date: string, timezone: string): number {
+  const noonUtc = new Date(date + 'T12:00:00Z')
+  const name = noonUtc.toLocaleDateString('en-CA', { timeZone: timezone, weekday: 'long' }).toLowerCase()
+  return ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(name)
+}
+
+// Build slot list for a given calendar date, respecting the schedule's timezone.
+// Window start/end times (HH:MM) are interpreted in `timezone`, not server local time.
+// Returns UTC Date objects for the start of each slot.
+function buildSlots(date: string, timezone: string, windows: Window[], durationMin: number, bufferMin: number): Date[] {
+  const dow = getDayOfWeekInTz(date, timezone)
   const dayWindows = windows.filter(w => w.dayOfWeek === dow)
   if (dayWindows.length === 0) return []
 
   const slots: Date[] = []
   for (const w of dayWindows) {
-    const [sh, sm] = w.startTime.split(':').map(Number)
-    const [eh, em] = w.endTime.split(':').map(Number)
-
-    const windowStart = new Date(d)
-    windowStart.setHours(sh, sm, 0, 0)
-    const windowEnd = new Date(d)
-    windowEnd.setHours(eh, em, 0, 0)
+    const windowStart = toTzDate(date, w.startTime, timezone)
+    const windowEnd   = toTzDate(date, w.endTime, timezone)
 
     let cursor = new Date(windowStart)
     while (cursor.getTime() + durationMin * 60_000 <= windowEnd.getTime()) {
@@ -59,23 +83,26 @@ export async function GET(
     return NextResponse.json({ error: 'Booking page not found' }, { status: 404 })
   }
 
-  // Build all theoretical slots
+  // Build all theoretical slots, interpreting window times in the schedule's timezone
   const windows  = parseWindows(schedule.windows)
-  const allSlots = buildSlots(date, windows, schedule.meetingDurationMin, schedule.bufferMinutes)
+  const allSlots = buildSlots(date, schedule.timezone, windows, schedule.meetingDurationMin, schedule.bufferMinutes)
 
   // Remove slots in the past
   const now = new Date()
   const futureSlots = allSlots.filter(s => s > now)
 
-  // Remove slots that collide with existing confirmed bookings on that date
-  const dayStart = new Date(date + 'T00:00:00')
-  const dayEnd   = new Date(date + 'T23:59:59')
+  // Remove slots that collide with existing confirmed bookings on that date.
+  // Use timezone-aware day boundaries so bookings near midnight are not missed.
+  const dayStart = toTzDate(date, '00:00', schedule.timezone)
+  const [y, mo, dy] = date.split('-').map(Number)
+  const nextDate = new Date(Date.UTC(y, mo - 1, dy + 1)).toISOString().slice(0, 10)
+  const dayEnd   = toTzDate(nextDate, '00:00', schedule.timezone)
 
   const existingBookings = await prisma.bookingEvent.findMany({
     where: {
       scheduleId: schedule.id,
       status:     { not: 'cancelled' },
-      startAt:    { gte: dayStart, lte: dayEnd },
+      startAt:    { gte: dayStart, lt: dayEnd },
     },
     select: { startAt: true, endAt: true },
   })
