@@ -39,3 +39,7 @@ export const portalLimit       = createRateLimit({ windowMs: 60_000,   max: 60, 
 export const loginLimit        = createRateLimit({ windowMs: 900_000,  max: 5,  keyPrefix: 'login'  })
 export const authLimit         = createRateLimit({ windowMs: 900_000,  max: 5,  keyPrefix: 'auth'   })
 export const forgotPassLimit   = createRateLimit({ windowMs: 3600_000, max: 3,  keyPrefix: 'forgot' })
+// AI endpoints — expensive per-call (OpenAI/Anthropic); 20 req/min per API key
+export const aiLimit           = createRateLimit({ windowMs: 60_000,   max: 20, keyPrefix: 'ai'     })
+// Public contact form / lead capture — 5 submissions per hour per IP
+export const publicLeadLimit   = createRateLimit({ windowMs: 3600_000, max: 5,  keyPrefix: 'lead'   })

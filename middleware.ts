@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { verifyJwt } from './lib/jwt'
-import { publicSearchLimit, portalLimit, loginLimit, authLimit, forgotPassLimit } from '@/lib/rate-limit'
+import { publicSearchLimit, portalLimit, loginLimit, authLimit, forgotPassLimit, aiLimit, publicLeadLimit } from '@/lib/rate-limit'
 
 // ── Blocked IP cache ────────────────────────────────────────────────────────
 let blockedIpCache: { ips: Set<string>; refreshedAt: number } = {
@@ -122,6 +122,35 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password') {
     const { allowed, retryAfterMs } = forgotPassLimit.check(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
+
+  // AI routes — rate-limit per API key (falls back to IP if no Bearer header)
+  if (pathname.startsWith('/api/ai/')) {
+    const bearer = request.headers.get('authorization')
+    const aiKey  = bearer?.startsWith('Bearer ') ? bearer.slice(7) : ip
+    const { allowed, retryAfterMs } = aiLimit.check(aiKey)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } }
+      )
+    }
+  }
+
+  // Public lead-capture endpoints — rate-limit by IP to prevent CRM spam
+  if (
+    (pathname === '/api/contacts' && request.method === 'POST') ||
+    pathname === '/api/gate/submit' ||
+    pathname.startsWith('/api/landing-pages/') ||
+    pathname.startsWith('/api/market-reports/')
+  ) {
+    const { allowed, retryAfterMs } = publicLeadLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many requests' },
