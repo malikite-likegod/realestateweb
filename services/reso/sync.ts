@@ -83,7 +83,6 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
   try {
     while (true) {
       page++
-      console.log(`[idx_property] Fetching page ${page} (added=${result.added} updated=${result.updated})`)
       const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
         $filter:  combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), activeFilter()),
         $orderby: 'ModificationTimestamp asc',
@@ -91,13 +90,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
         $select:  IDX_SELECT,
       })
 
-      const records = batch.value.filter(r => {
-        if (!r.ModificationTimestamp) {
-          console.warn(`[idx_property] Skipping ${r.ListingKey} — null ModificationTimestamp`)
-          return false
-        }
-        return true
-      })
+      const records = batch.value.filter(r => !!r.ModificationTimestamp)
 
       if (records.length > 0) {
         const now = new Date()
@@ -293,7 +286,6 @@ export async function syncDlaProperty(): Promise<ResoSyncResult> {
 
       const records = batch.value.filter(r => {
         if (!r.ModificationTimestamp) {
-          console.warn(`[dla_property] Skipping ${r.ListingKey} — null ModificationTimestamp`)
           return false
         }
         return true
