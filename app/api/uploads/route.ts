@@ -10,7 +10,9 @@ const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads')
 
 const MIME: Record<string, string> = {
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-  '.gif': 'image/gif',  '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.gif': 'image/gif',  '.webp': 'image/webp',
+  // .svg excluded — SVG files can embed <script> tags and execute as JavaScript
+  // when served from this origin, making them an XSS vector
   '.pdf': 'application/pdf',
   '.doc': 'application/msword',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -78,6 +80,11 @@ export async function POST(request: Request) {
 
   try {
     await mkdir(UPLOAD_DIR, { recursive: true })
+
+    const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json({ error: 'File too large (max 10 MB)' }, { status: 413 })
+    }
 
     const ext = file.name.includes('.') ? ('.' + file.name.split('.').pop()!.toLowerCase()) : ''
     if (!Object.prototype.hasOwnProperty.call(MIME, ext)) {
