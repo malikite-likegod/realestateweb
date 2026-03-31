@@ -42,6 +42,14 @@ function combineFilters(...filters: (string | null)[]): string {
   return filters.filter(Boolean).map(f => `(${f})`).join(' and ')
 }
 
+// PropTx returns many fields as either a string or a string array.
+// Flatten to a comma-joined string, or null for empty / missing values.
+function toStr(v: string | string[] | null | undefined): string | null {
+  if (v == null) return null
+  if (Array.isArray(v)) return v.length > 0 ? v.join(', ') : null
+  return v || null
+}
+
 // ─── IDX Property Sync ─────────────────────────────────────────────────────
 
 const IDX_SELECT = [
@@ -137,40 +145,40 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             bedroomsPlus:          r.BedroomsBelowGrade    ?? null,
             kitchensTotal:         r.KitchensTotal         ?? null,
             kitchensPlusTotal:     r.KitchensBelowGrade    ?? null,
-            basement:              r.Basement              ?? null,
-            heatSource:            r.HeatSource            ?? null,
-            heatType:              r.HeatType              ?? null,
-            airConditioning:       r.Cooling               ?? null,
+            basement:              toStr(r.Basement),
+            heatSource:            toStr(r.HeatSource),
+            heatType:              toStr(r.HeatType),
+            airConditioning:       toStr(r.Cooling),
             familyRoom:            r.DenFamilyroomYN != null ? (r.DenFamilyroomYN ? 'Yes' : 'No') : null,
-            fireplaceFeatures:     r.FireplaceFeatures     ?? null,
+            fireplaceFeatures:     toStr(r.FireplaceFeatures),
             // Exterior
-            exteriorFeatures:      r.ExteriorFeatures      ?? null,
-            roof:                  r.Roof                  ?? null,
-            foundationDetails:     r.FoundationDetails     ?? null,
-            parkingFeatures:       r.ParkingFeatures       ?? null,
-            poolFeatures:          r.PoolFeatures          ?? null,
-            frontingOn:            r.DirectionFaces        ?? null,
+            exteriorFeatures:      toStr(r.ExteriorFeatures),
+            roof:                  toStr(r.Roof),
+            foundationDetails:     toStr(r.FoundationDetails),
+            parkingFeatures:       toStr(r.ParkingFeatures),
+            poolFeatures:          toStr(r.PoolFeatures),
+            frontingOn:            toStr(r.DirectionFaces),
             lotDepth:              r.LotDepth              ?? null,
             lotFront:              r.LotWidth              ?? null,
-            waterFrontType:        r.WaterfrontFeatures    ?? null,
+            waterFrontType:        toStr(r.WaterfrontFeatures),
             // Building
-            style:                 r.ArchitecturalStyle    ?? null,
+            style:                 toStr(r.ArchitecturalStyle),
             storiesTotal:          r.LegalStories != null ? String(r.LegalStories) : null,
             approximateAge:        r.ApproximateAge        ?? null,
-            constructionMaterials: r.ConstructionMaterials ?? null,
-            sewer:                 r.Sewer                 ?? null,
-            water:                 r.WaterSource           ?? null,
+            constructionMaterials: toStr(r.ConstructionMaterials),
+            sewer:                 toStr(r.Sewer),
+            water:                 toStr(r.WaterSource),
             ownershipType:         null, // not available in PropTx IDX
             // Community
             community:             r.CityRegion            ?? null,
             municipality:          r.CountyOrParish        ?? null,
             crossStreet:           r.CrossStreet           ?? null,
-            amenities:             r.AssociationAmenities  ?? null,
+            amenities:             toStr(r.AssociationAmenities),
             // Taxes & fees
             taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
             taxYear:               r.TaxYear               ?? null,
             maintenanceFee:        r.AssociationFee        ?? null,
-            maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
+            maintenanceFeeIncludes: toStr(r.AssociationFeeIncludes),
             assessmentYear:        r.AssessmentYear        ?? null,
             inclusions:            null, // not available in PropTx IDX
             exclusions:            null, // not available in PropTx IDX
@@ -679,40 +687,40 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       bedroomsPlus:          r.BedroomsBelowGrade    ?? null,
       kitchensTotal:         r.KitchensTotal         ?? null,
       kitchensPlusTotal:     r.KitchensBelowGrade    ?? null,
-      basement:              r.Basement              ?? null,
-      heatSource:            r.HeatSource            ?? null,
-      heatType:              r.HeatType              ?? null,
-      airConditioning:       r.Cooling               ?? null,
+      basement:              toStr(r.Basement),
+      heatSource:            toStr(r.HeatSource),
+      heatType:              toStr(r.HeatType),
+      airConditioning:       toStr(r.Cooling),
       familyRoom:            r.DenFamilyroomYN != null ? (r.DenFamilyroomYN ? 'Yes' : 'No') : null,
-      fireplaceFeatures:     r.FireplaceFeatures     ?? null,
+      fireplaceFeatures:     toStr(r.FireplaceFeatures),
       // Exterior
-      exteriorFeatures:      r.ExteriorFeatures      ?? null,
-      roof:                  r.Roof                  ?? null,
-      foundationDetails:     r.FoundationDetails     ?? null,
-      parkingFeatures:       r.ParkingFeatures       ?? null,
-      poolFeatures:          r.PoolFeatures          ?? null,
-      frontingOn:            r.DirectionFaces        ?? null,
+      exteriorFeatures:      toStr(r.ExteriorFeatures),
+      roof:                  toStr(r.Roof),
+      foundationDetails:     toStr(r.FoundationDetails),
+      parkingFeatures:       toStr(r.ParkingFeatures),
+      poolFeatures:          toStr(r.PoolFeatures),
+      frontingOn:            toStr(r.DirectionFaces),
       lotDepth:              r.LotDepth              ?? null,
       lotFront:              r.LotWidth              ?? null,
-      waterFrontType:        r.WaterfrontFeatures    ?? null,
+      waterFrontType:        toStr(r.WaterfrontFeatures),
       // Building
-      style:                 r.ArchitecturalStyle    ?? null,
+      style:                 toStr(r.ArchitecturalStyle),
       storiesTotal:          r.LegalStories != null ? String(r.LegalStories) : null,
       approximateAge:        r.ApproximateAge        ?? null,
-      constructionMaterials: r.ConstructionMaterials ?? null,
-      sewer:                 r.Sewer                 ?? null,
-      water:                 r.WaterSource           ?? null,
+      constructionMaterials: toStr(r.ConstructionMaterials),
+      sewer:                 toStr(r.Sewer),
+      water:                 toStr(r.WaterSource),
       ownershipType:         null, // not available in PropTx IDX
       // Community
       community:             r.CityRegion            ?? null,
       municipality:          r.CountyOrParish        ?? null,
       crossStreet:           r.CrossStreet           ?? null,
-      amenities:             r.AssociationAmenities  ?? null,
+      amenities:             toStr(r.AssociationAmenities),
       // Taxes & fees
       taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
       taxYear:               r.TaxYear               ?? null,
       maintenanceFee:        r.AssociationFee        ?? null,
-      maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
+      maintenanceFeeIncludes: toStr(r.AssociationFeeIncludes),
       assessmentYear:        r.AssessmentYear        ?? null,
       inclusions:            null, // not available in PropTx IDX
       exclusions:            null, // not available in PropTx IDX
