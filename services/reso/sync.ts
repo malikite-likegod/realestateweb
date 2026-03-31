@@ -50,6 +50,21 @@ function toStr(v: string | string[] | null | undefined): string | null {
   return v || null
 }
 
+// PropTx sometimes returns numeric fields as strings (e.g. GarageParkingSpaces).
+// Parse to integer, returning null for missing / non-numeric values.
+function toInt(v: number | string | null | undefined): number | null {
+  if (v == null) return null
+  const n = typeof v === 'string' ? parseInt(v, 10) : Math.round(v)
+  return isNaN(n) ? null : n
+}
+
+// Same but for float fields.
+function toFloat(v: number | string | null | undefined): number | null {
+  if (v == null) return null
+  const n = typeof v === 'string' ? parseFloat(v) : v
+  return isNaN(n) ? null : n
+}
+
 // ─── IDX Property Sync ─────────────────────────────────────────────────────
 
 const IDX_SELECT = [
@@ -108,15 +123,15 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             standardStatus:        r.StandardStatus,
             propertyType:          r.PropertyType          ?? null,
             propertySubType:       r.PropertySubType       ?? null,
-            listPrice:             r.ListPrice             ?? null,
+            listPrice:             toFloat(r.ListPrice),
             originalListPrice:     null,
             closePrice:            null,
-            bedroomsTotal:         r.BedroomsTotal         ?? null,
-            bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
+            bedroomsTotal:         toInt(r.BedroomsTotal),
+            bathroomsTotalInteger: toInt(r.BathroomsTotalInteger),
             bathroomsPartial:      null,
-            livingArea:            r.BuildingAreaTotal     ?? null,
+            livingArea:            toFloat(r.BuildingAreaTotal),
             sqftRange:             r.LivingAreaRange       ?? null,
-            lotSizeSquareFeet:     r.LotSizeArea           ?? null,
+            lotSizeSquareFeet:     toFloat(r.LotSizeArea),
             yearBuilt:             null,
             streetNumber:          r.StreetNumber          ?? null,
             streetName:            r.StreetName            ?? null,
@@ -139,12 +154,12 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             lastSyncedAt:          now,
             // Interior
             flooring:              null, // not available in PropTx IDX
-            garageSpaces:          r.GarageParkingSpaces   ?? null,
-            parkingTotal:          r.ParkingTotal          ?? null,
+            garageSpaces:          toInt(r.GarageParkingSpaces),
+            parkingTotal:          toInt(r.ParkingTotal),
             poolPrivateYN:         false,
-            bedroomsPlus:          r.BedroomsBelowGrade    ?? null,
-            kitchensTotal:         r.KitchensTotal         ?? null,
-            kitchensPlusTotal:     r.KitchensBelowGrade    ?? null,
+            bedroomsPlus:          toInt(r.BedroomsBelowGrade),
+            kitchensTotal:         toInt(r.KitchensTotal),
+            kitchensPlusTotal:     toInt(r.KitchensBelowGrade),
             basement:              toStr(r.Basement),
             heatSource:            toStr(r.HeatSource),
             heatType:              toStr(r.HeatType),
@@ -158,12 +173,12 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             parkingFeatures:       toStr(r.ParkingFeatures),
             poolFeatures:          toStr(r.PoolFeatures),
             frontingOn:            toStr(r.DirectionFaces),
-            lotDepth:              r.LotDepth              ?? null,
-            lotFront:              r.LotWidth              ?? null,
+            lotDepth:              toFloat(r.LotDepth),
+            lotFront:              toFloat(r.LotWidth),
             waterFrontType:        toStr(r.WaterfrontFeatures),
             // Building
             style:                 toStr(r.ArchitecturalStyle),
-            storiesTotal:          r.LegalStories != null ? String(r.LegalStories) : null,
+            storiesTotal:          r.LegalStories != null ? String(r.LegalStories) : null,  // DB is String?
             approximateAge:        r.ApproximateAge        ?? null,
             constructionMaterials: toStr(r.ConstructionMaterials),
             sewer:                 toStr(r.Sewer),
@@ -175,11 +190,11 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             crossStreet:           r.CrossStreet           ?? null,
             amenities:             toStr(r.AssociationAmenities),
             // Taxes & fees
-            taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
-            taxYear:               r.TaxYear               ?? null,
-            maintenanceFee:        r.AssociationFee        ?? null,
+            taxAnnualAmount:       toFloat(r.TaxAnnualAmount),
+            taxYear:               toInt(r.TaxYear),
+            maintenanceFee:        toFloat(r.AssociationFee),
             maintenanceFeeIncludes: toStr(r.AssociationFeeIncludes),
-            assessmentYear:        r.AssessmentYear        ?? null,
+            assessmentYear:        toInt(r.AssessmentYear),
             inclusions:            null, // not available in PropTx IDX
             exclusions:            null, // not available in PropTx IDX
           }

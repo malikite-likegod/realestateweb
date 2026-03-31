@@ -3,17 +3,17 @@ export interface ResoPropertyRaw {
   StandardStatus:        string
   PropertyType?:         string
   PropertySubType?:      string
-  ListPrice?:            number
-  BedroomsTotal?:        number
-  BedroomsAboveGrade?:   number
-  BedroomsBelowGrade?:   number   // maps to bedroomsPlus
-  BathroomsTotalInteger?: number
-  BuildingAreaTotal?:    number
-  LivingAreaRange?:      string   // maps to sqftRange e.g. "1500-2000"
-  LotSizeArea?:          number
+  ListPrice?:            number | string
+  BedroomsTotal?:        number | string
+  BedroomsAboveGrade?:   number | string
+  BedroomsBelowGrade?:   number | string  // maps to bedroomsPlus
+  BathroomsTotalInteger?: number | string
+  BuildingAreaTotal?:    number | string
+  LivingAreaRange?:      string            // maps to sqftRange e.g. "1500-2000"
+  LotSizeArea?:          number | string
   LotSizeUnits?:         string
-  LotWidth?:             number   // maps to lotFront
-  LotDepth?:             number
+  LotWidth?:             number | string   // maps to lotFront
+  LotDepth?:             number | string
   StreetNumber?:         string
   StreetName?:           string
   StreetSuffix?:         string
@@ -30,13 +30,13 @@ export interface ResoPropertyRaw {
   ListOfficeName?:       string
   OriginalEntryTimestamp?: string  // maps to listingContractDate
   ModificationTimestamp?:  string
-  // Interior — PropTx returns many of these as string arrays; sync.ts uses toStr() to flatten
-  GarageParkingSpaces?:  number
-  ParkingTotal?:         number
+  // Interior — PropTx returns many of these as string arrays; sync.ts uses toStr()/toInt()/toFloat()
+  GarageParkingSpaces?:  number | string
+  ParkingTotal?:         number | string
   ParkingFeatures?:      string | string[]
-  KitchensTotal?:        number
-  KitchensAboveGrade?:   number
-  KitchensBelowGrade?:   number   // maps to kitchensPlusTotal
+  KitchensTotal?:        number | string
+  KitchensAboveGrade?:   number | string
+  KitchensBelowGrade?:   number | string  // maps to kitchensPlusTotal
   Basement?:             string | string[]
   HeatSource?:           string | string[]
   HeatType?:             string | string[]
@@ -53,7 +53,7 @@ export interface ResoPropertyRaw {
   WaterfrontYN?:         boolean
   // Building
   ArchitecturalStyle?:   string | string[]
-  LegalStories?:         number
+  LegalStories?:         number | string
   ApproximateAge?:       string
   ConstructionMaterials?: string | string[]
   Sewer?:                string | string[]
@@ -62,9 +62,9 @@ export interface ResoPropertyRaw {
   CrossStreet?:          string
   AssociationAmenities?: string | string[]  // maps to amenities
   // Taxes & fees
-  TaxAnnualAmount?:      number
-  TaxYear?:              number
-  AssociationFee?:       number
+  TaxAnnualAmount?:      number | string
+  TaxYear?:              number | string
+  AssociationFee?:       number | string
   AssociationFeeIncludes?: string | string[]
   AssessmentYear?:       number
   // DLA-enriched fields (not in IDX select, written by DLA sync)
