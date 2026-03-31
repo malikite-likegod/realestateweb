@@ -65,11 +65,11 @@ export async function signPendingContactJwt(contactId: string): Promise<string> 
     .sign(getSecret())
 }
 
-export async function verifyContactJwt(token: string): Promise<{ contactId: string; email: string } | null> {
+export async function verifyContactJwt(token: string): Promise<{ contactId: string; email: string; iat?: number } | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret())
     if (payload.type !== 'contact' || !payload.sub || !payload.email) return null
-    return { contactId: payload.sub as string, email: payload.email as string }
+    return { contactId: payload.sub as string, email: payload.email as string, iat: payload.iat }
   } catch {
     return null
   }

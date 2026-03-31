@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
   // nodemailer and Node.js built-ins used in server-only modules — exclude from webpack bundling.
   // Listed in both serverExternalPackages (for server components/routes) and webpack externals
   // (for instrumentation.ts which has its own bundle context).
-  serverExternalPackages: ['nodemailer', 'imapflow', 'twilio'],
+  serverExternalPackages: ['nodemailer', 'imapflow', 'twilio', 'ioredis'],
   webpack: (config, { isServer }) => {
     // Explicitly set @ alias so it resolves reliably on all deployment environments
     config.resolve.alias = {

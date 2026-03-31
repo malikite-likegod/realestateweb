@@ -20,6 +20,9 @@ export async function register() {
 
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
 
+  // Upgrade in-memory rate limiters to Redis-backed when REDIS_URL is set
+  await import('./lib/rate-limit-redis')
+
   const { processPendingJobs }       = await import('./lib/automation/job-queue')
   const { syncInbox }                = await import('./lib/communications/imap-service')
   const { geocodeMissingProperties } = await import('./services/reso/geocode')
