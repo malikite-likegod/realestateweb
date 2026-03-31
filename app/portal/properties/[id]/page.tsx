@@ -178,9 +178,20 @@ export default async function PropertyDetailPage({
                   ? `$${property.listPrice.toLocaleString()}${lease ? '/mo' : ''}`
                   : 'Price N/A'}
               </p>
-              {property.propertySubType && (
-                <p className="text-sm text-charcoal-500 capitalize mt-0.5">{property.propertySubType}</p>
-              )}
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                {property.ownershipType && (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold-100 text-gold-700">{property.ownershipType}</span>
+                )}
+                {property.propertySubType && (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-charcoal-100 text-charcoal-600">{property.propertySubType}</span>
+                )}
+                {property.style && (
+                  <span className="text-xs text-charcoal-500">{property.style}</span>
+                )}
+                {property.approximateAge && (
+                  <span className="text-xs text-charcoal-400">· {property.approximateAge}</span>
+                )}
+              </div>
             </div>
 
             {/* Key stats bar */}
@@ -269,20 +280,25 @@ export default async function PropertyDetailPage({
               </div>
               <dl className="divide-y divide-charcoal-50 px-4">
                 {[
-                  ['Type',         property.propertyType ?? property.propertySubType],
-                  ['Sale Type',    property.transactionType],
-                  ['Status',       statusLabel],
-                  ['Ownership',    property.ownershipType],
-                  ['Style',        property.style ?? property.propertySubType],
-                  ['Bedrooms',     property.bedroomsTotal != null ? String(property.bedroomsTotal) : null],
-                  ['Bathrooms',    property.bathroomsTotalInteger != null ? String(property.bathroomsTotalInteger) : null],
-                  ['Parking',      property.parkingTotal != null ? String(property.parkingTotal) : null],
-                  ['Sqft',         property.sqftRange ? `${property.sqftRange} sqft` : (property.livingArea != null ? `${Math.round(property.livingArea).toLocaleString()} sqft` : null)],
-                  ['Lot',          property.lotSizeSquareFeet != null ? `${Math.round(property.lotSizeSquareFeet).toLocaleString()} sqft` : null],
-                  ['Year Built',   property.yearBuilt != null ? String(property.yearBuilt) : null],
-                  ['MLS®',         property.listingId],
-                  ['Listed',       property.listingContractDate ? new Date(property.listingContractDate).toLocaleDateString('en-CA') : null],
-                  ['Postal Code',  property.postalCode],
+                  ['Type',          property.propertySubType],
+                  ['Sale Type',     property.transactionType],
+                  ['Status',        statusLabel],
+                  ['Ownership',     property.ownershipType],
+                  ['Style',         property.style],
+                  ['Approx. Age',   property.approximateAge],
+                  ['Bedrooms',      property.bedroomsTotal != null ? (property.bedroomsPlus ? `${property.bedroomsTotal}+${property.bedroomsPlus}` : String(property.bedroomsTotal)) : null],
+                  ['Bathrooms',     property.bathroomsTotalInteger != null ? (property.bathroomsPartial ? `${property.bathroomsTotalInteger} full, ${property.bathroomsPartial} partial` : String(property.bathroomsTotalInteger)) : null],
+                  ['Parking',       property.parkingTotal != null ? String(property.parkingTotal) : null],
+                  ['Square Footage', property.sqftRange ? `${property.sqftRange} sqft` : (property.livingArea != null ? `${Math.round(property.livingArea).toLocaleString()} sqft` : null)],
+                  ['Lot',           property.lotFront != null && property.lotDepth != null ? `${property.lotFront} × ${property.lotDepth} ft` : (property.lotSizeSquareFeet != null ? `${Math.round(property.lotSizeSquareFeet).toLocaleString()} sqft` : null)],
+                  ['Year Built',    property.yearBuilt != null ? String(property.yearBuilt) : null],
+                  ['Community',     property.community],
+                  ['Municipality',  property.municipality],
+                  ['Annual Taxes',  property.taxAnnualAmount != null ? `$${property.taxAnnualAmount.toLocaleString()}` : null],
+                  ['Maint. Fee',    property.maintenanceFee != null ? `$${property.maintenanceFee.toLocaleString()}/mo` : null],
+                  ['MLS®',          property.listingId],
+                  ['Listed',        property.listingContractDate ? new Date(property.listingContractDate).toLocaleDateString('en-CA') : null],
+                  ['Postal Code',   property.postalCode],
                 ].filter(([, v]) => v != null).map(([label, value]) => (
                   <div key={label} className="flex justify-between items-baseline py-2.5 gap-3">
                     <dt className="text-xs text-charcoal-500 shrink-0">{label}</dt>

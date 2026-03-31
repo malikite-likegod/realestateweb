@@ -65,28 +65,34 @@ export default async function AdminListingDetailPage({
 
   const hasMap = property.latitude != null && property.longitude != null
 
-  // Detail rows for the info table
+  // Detail rows for the info sidebar
   type DetailRow = { label: string; value: string | number }
   const details: DetailRow[] = ([
-    property.propertySubType       ? { label: 'Property Type',   value: property.propertySubType }                                        : null,
-    property.propertyType          ? { label: 'Style',            value: property.propertyType }                                          : null,
-    property.transactionType       ? { label: 'Transaction',      value: property.transactionType }                                       : null,
-    property.bedroomsTotal         != null ? { label: 'Bedrooms',      value: property.bedroomsTotal }                                   : null,
-    property.bathroomsTotalInteger != null ? { label: 'Bathrooms',     value: property.bathroomsTotalInteger }                           : null,
-    property.garageSpaces != null && property.garageSpaces > 0 ? { label: 'Garage Spaces', value: property.garageSpaces }               : null,
-    property.livingArea        != null ? { label: 'Living Area',  value: `${Math.round(property.livingArea).toLocaleString()} sqft` }    : null,
-    property.lotSizeSquareFeet != null ? { label: 'Lot Size',     value: `${Math.round(property.lotSizeSquareFeet).toLocaleString()} sqft` } : null,
-    property.yearBuilt         != null ? { label: 'Year Built',   value: property.yearBuilt }                                            : null,
-    property.poolPrivateYN         ? { label: 'Pool',             value: 'Yes' }                                                         : null,
-    property.postalCode            ? { label: 'Postal Code',      value: property.postalCode }                                           : null,
-    property.mlsStatus             ? { label: 'MLS Status',       value: property.mlsStatus }                                            : null,
-    fmtDate(property.listDate)            ? { label: 'List Date',       value: fmtDate(property.listDate) as string }                    : null,
-    fmtDate(property.listingContractDate) ? { label: 'Contract Date',   value: fmtDate(property.listingContractDate) as string }         : null,
-    fmtDate(property.closeDate)           ? { label: 'Close Date',      value: fmtDate(property.closeDate) as string }                   : null,
-    property.closePrice        != null ? { label: 'Close Price',  value: `$${property.closePrice.toLocaleString()}` }                   : null,
-    property.originalListPrice != null ? { label: 'Original Price', value: `$${property.originalListPrice.toLocaleString()}` }          : null,
-    property.listAgentFullName     ? { label: 'Listing Agent',    value: property.listAgentFullName }                                    : null,
-    property.listOfficeName        ? { label: 'Listing Office',   value: property.listOfficeName }                                      : null,
+    property.propertySubType       ? { label: 'Property Type',     value: property.propertySubType }                                              : null,
+    property.style                 ? { label: 'Style',              value: property.style }                                                       : null,
+    property.ownershipType         ? { label: 'Ownership',          value: property.ownershipType }                                               : null,
+    property.transactionType       ? { label: 'Transaction',        value: property.transactionType }                                             : null,
+    property.bedroomsTotal != null ? { label: 'Bedrooms',           value: property.bedroomsPlus ? `${property.bedroomsTotal}+${property.bedroomsPlus}` : property.bedroomsTotal } : null,
+    property.bathroomsTotalInteger != null ? { label: 'Bathrooms',  value: property.bathroomsPartial ? `${property.bathroomsTotalInteger} full, ${property.bathroomsPartial} partial` : property.bathroomsTotalInteger } : null,
+    property.garageSpaces != null && property.garageSpaces > 0 ? { label: 'Garage',          value: property.garageSpaces }                      : null,
+    property.parkingTotal != null  ? { label: 'Parking Total',      value: property.parkingTotal }                                                : null,
+    property.sqftRange             ? { label: 'Square Footage',     value: `${property.sqftRange} sqft` }                                        :
+    property.livingArea != null    ? { label: 'Square Footage',     value: `${Math.round(property.livingArea).toLocaleString()} sqft` }          : null,
+    property.lotFront != null && property.lotDepth != null ? { label: 'Lot Dimensions', value: `${property.lotFront} x ${property.lotDepth} ft` } :
+    property.lotSizeSquareFeet != null ? { label: 'Lot Size',       value: `${Math.round(property.lotSizeSquareFeet).toLocaleString()} sqft` }   : null,
+    property.yearBuilt != null     ? { label: 'Year Built',         value: property.yearBuilt }                                                   : null,
+    property.approximateAge        ? { label: 'Approx. Age',        value: property.approximateAge }                                              : null,
+    property.community             ? { label: 'Community',          value: property.community }                                                   : null,
+    property.municipality          ? { label: 'Municipality',       value: property.municipality }                                                : null,
+    property.taxAnnualAmount != null ? { label: 'Annual Taxes',     value: `$${property.taxAnnualAmount.toLocaleString()}` }                      : null,
+    property.maintenanceFee != null  ? { label: 'Maintenance Fee',  value: `$${property.maintenanceFee.toLocaleString()}/mo` }                    : null,
+    property.poolPrivateYN         ? { label: 'Pool',               value: 'Yes' }                                                               : null,
+    property.postalCode            ? { label: 'Postal Code',        value: property.postalCode }                                                  : null,
+    property.mlsStatus             ? { label: 'MLS Status',         value: property.mlsStatus }                                                   : null,
+    fmtDate(property.listDate)            ? { label: 'List Date',         value: fmtDate(property.listDate) as string }                           : null,
+    fmtDate(property.closeDate)           ? { label: 'Close Date',        value: fmtDate(property.closeDate) as string }                          : null,
+    property.closePrice != null    ? { label: 'Close Price',        value: `$${property.closePrice.toLocaleString()}` }                          : null,
+    property.originalListPrice != null ? { label: 'Original Price', value: `$${property.originalListPrice.toLocaleString()}` }                    : null,
   ] as (DetailRow | null)[]).filter((d): d is DetailRow => d !== null)
 
   // ── Full Property Details tab data ──────────────────────────────────────────
@@ -194,14 +200,30 @@ export default async function AdminListingDetailPage({
                 ? `$${property.listPrice.toLocaleString()}${lease ? '/mo' : ''}`
                 : 'Price N/A'}
             </p>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs text-charcoal-400 flex items-center gap-1">
-                <Hash size={11} /> MLS# {property.listingKey}
+                <Hash size={11} /> MLS# {property.listingId ?? property.listingKey}
               </span>
               {property.standardStatus && (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-charcoal-100 text-charcoal-600">
                   {property.standardStatus}
                 </span>
+              )}
+              {property.ownershipType && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold-100 text-gold-700">
+                  {property.ownershipType}
+                </span>
+              )}
+              {property.propertySubType && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-charcoal-100 text-charcoal-600">
+                  {property.propertySubType}
+                </span>
+              )}
+              {property.style && (
+                <span className="text-xs text-charcoal-500">{property.style}</span>
+              )}
+              {property.approximateAge && (
+                <span className="text-xs text-charcoal-500">· {property.approximateAge}</span>
               )}
             </div>
           </div>
@@ -213,7 +235,9 @@ export default async function AdminListingDetailPage({
                 <Bed size={18} className="text-gold-500 shrink-0" />
                 <div>
                   <p className="text-xs text-charcoal-500">Beds</p>
-                  <p className="text-base font-bold text-charcoal-900">{property.bedroomsTotal}</p>
+                  <p className="text-base font-bold text-charcoal-900">
+                    {property.bedroomsTotal}{property.bedroomsPlus ? `+${property.bedroomsPlus}` : ''}
+                  </p>
                 </div>
               </div>
             )}
@@ -222,7 +246,9 @@ export default async function AdminListingDetailPage({
                 <Bath size={18} className="text-gold-500 shrink-0" />
                 <div>
                   <p className="text-xs text-charcoal-500">Baths</p>
-                  <p className="text-base font-bold text-charcoal-900">{property.bathroomsTotalInteger}</p>
+                  <p className="text-base font-bold text-charcoal-900">
+                    {property.bathroomsTotalInteger}{property.bathroomsPartial ? `+${property.bathroomsPartial}` : ''}
+                  </p>
                 </div>
               </div>
             )}
@@ -235,12 +261,14 @@ export default async function AdminListingDetailPage({
                 </div>
               </div>
             )}
-            {property.livingArea != null && (
+            {(property.sqftRange || property.livingArea != null) && (
               <div className="flex items-center gap-2 rounded-xl bg-charcoal-50 px-4 py-3 min-w-[90px]">
                 <Ruler size={18} className="text-gold-500 shrink-0" />
                 <div>
                   <p className="text-xs text-charcoal-500">Sqft</p>
-                  <p className="text-base font-bold text-charcoal-900">{Math.round(property.livingArea).toLocaleString()}</p>
+                  <p className="text-base font-bold text-charcoal-900">
+                    {property.sqftRange ?? Math.round(property.livingArea!).toLocaleString()}
+                  </p>
                 </div>
               </div>
             )}
@@ -253,12 +281,16 @@ export default async function AdminListingDetailPage({
                 </div>
               </div>
             )}
-            {property.lotSizeSquareFeet != null && (
+            {(property.lotFront != null || property.lotSizeSquareFeet != null) && (
               <div className="flex items-center gap-2 rounded-xl bg-charcoal-50 px-4 py-3 min-w-[90px]">
                 <Ruler size={18} className="text-gold-500 shrink-0" />
                 <div>
                   <p className="text-xs text-charcoal-500">Lot</p>
-                  <p className="text-base font-bold text-charcoal-900">{Math.round(property.lotSizeSquareFeet).toLocaleString()}</p>
+                  <p className="text-base font-bold text-charcoal-900">
+                    {property.lotFront != null && property.lotDepth != null
+                      ? `${property.lotFront}×${property.lotDepth} ft`
+                      : `${Math.round(property.lotSizeSquareFeet!).toLocaleString()} sqft`}
+                  </p>
                 </div>
               </div>
             )}
