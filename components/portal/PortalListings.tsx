@@ -122,6 +122,11 @@ export function PortalListings({ firstName, agentEmail }: Props) {
     setPage(1)
     setApplied(filters)
     setSaveStatus('idle')
+    fetch('/api/behavior', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ eventType: 'search', metadata: { ...filters } }),
+    }).catch(() => null)
   }
 
   function clearFilters() {

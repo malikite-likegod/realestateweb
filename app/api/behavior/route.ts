@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { trackBehaviorEvent, trackBehaviorEventBatch } from '@/services/ai/lead-scoring'
+import { getContactSession } from '@/lib/auth'
 
 const singleEventSchema = z.object({
   eventType: z.string(),
@@ -19,8 +20,12 @@ const batchSchema = z.object({
 async function resolveContactId(): Promise<string | undefined> {
   try {
     const cookieStore = await cookies()
-    // Only trust the httpOnly cookie set by the verified gate flow
-    return cookieStore.get('re_verified')?.value
+    // Public gate flow
+    const verified = cookieStore.get('re_verified')?.value
+    if (verified) return verified
+    // Portal session (contact_token JWT)
+    const contact = await getContactSession()
+    return contact?.id ?? undefined
   } catch {
     return undefined
   }

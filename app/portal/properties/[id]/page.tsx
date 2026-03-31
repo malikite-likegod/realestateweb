@@ -4,6 +4,7 @@ import { redirect, notFound } from 'next/navigation'
 import { Bed, Bath, Car, Ruler, Calendar, MapPin, Tag, Building2, ExternalLink, ChevronLeft } from 'lucide-react'
 import { getContactSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { trackBehaviorEvent } from '@/services/ai/lead-scoring'
 import { PortalHeader } from '@/components/portal/PortalHeader'
 import { PortalSaveButton } from '@/components/portal/PortalSaveButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
@@ -66,6 +67,20 @@ export default async function PropertyDetailPage({
   ])
 
   if (!property) notFound()
+
+  // Track listing view (non-blocking)
+  trackBehaviorEvent('listing_view', property.id, contact.id, undefined, {
+    city:         property.city,
+    listPrice:    property.listPrice,
+    propertyType: property.propertySubType ?? property.propertyType,
+  }).catch(() => null)
+
+  // Record property interest
+  prisma.contactPropertyInterest.upsert({
+    where:  { contactId_resoPropertyId: { contactId: contact.id, resoPropertyId: property.id } },
+    update: { updatedAt: new Date() },
+    create: { contactId: contact.id, resoPropertyId: property.id, source: 'auto' },
+  }).catch(() => null)
 
   const images  = getImages(property.media)
   const address = getAddress(property)

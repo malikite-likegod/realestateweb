@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Bed, Bath, Car, Ruler, Calendar, MapPin, Tag, ExternalLink, ChevronLeft } from 'lucide-react'
 import { getContactSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { trackBehaviorEvent } from '@/services/ai/lead-scoring'
 import { PortalHeader } from '@/components/portal/PortalHeader'
 import { SaveButton } from '@/components/portal/SaveButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
@@ -46,6 +47,13 @@ export default async function ListingDetailPage({
 
   if (!listing) notFound()
   if (listing.property.status === 'draft') notFound()
+
+  // Track listing view (non-blocking)
+  trackBehaviorEvent('listing_view', listing.id, contact.id, undefined, {
+    city:         listing.property.city,
+    price:        listing.property.price,
+    propertyType: listing.property.propertyType,
+  }).catch(() => null)
 
   const p      = listing.property
   const isSaved = listing.savedByContacts.length > 0
