@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils'
 import { Mail, User, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { EmailDetailActions } from '@/components/communications/EmailDetailActions'
+import { sanitizeContent } from '@/lib/sanitize'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -92,7 +93,7 @@ export default async function EmailDetailPage({ params }: Props) {
         <Card>
           <div
             className="prose prose-sm max-w-none text-charcoal-800 [&_a]:text-gold-600 [&_pre]:whitespace-pre-wrap [&_pre]:text-xs"
-            dangerouslySetInnerHTML={{ __html: email.body }}
+            dangerouslySetInnerHTML={{ __html: sanitizeContent(email.body ?? '') }}
           />
         </Card>
 
