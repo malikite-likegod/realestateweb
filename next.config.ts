@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
     }
     if (isServer) {
       const existing = Array.isArray(config.externals) ? config.externals : config.externals ? [config.externals] : []
-      config.externals = [...existing, 'nodemailer', 'imapflow', 'twilio', 'fs', 'fs/promises', 'path', 'crypto']
+      config.externals = [...existing, 'nodemailer', 'imapflow', 'twilio', 'ioredis', 'fs', 'fs/promises', 'path', 'crypto']
     }
     return config
   },
