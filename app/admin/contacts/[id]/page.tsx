@@ -23,13 +23,17 @@ import {
   Building2, Star, MessageSquare, CheckCircle,
 } from 'lucide-react'
 
-interface Props { params: Promise<{ id: string }> }
+interface Props {
+  params:       Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string; sendListingId?: string; sendListingAddress?: string }>
+}
 
-export default async function ContactDetailPage({ params }: Props) {
+export default async function ContactDetailPage({ params, searchParams }: Props) {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
   const { id } = await params
+  const { tab: defaultTab, sendListingId, sendListingAddress } = await searchParams
 
   const [contact, timeline, allTags, campaignEnrollments, activeCampaigns] = await Promise.all([
     prisma.contact.findUnique({
@@ -365,7 +369,7 @@ export default async function ContactDetailPage({ params }: Props) {
 
         {/* ── Main content: tabbed communication hub ───────────────────── */}
         <div className="lg:col-span-2">
-          <Tabs tabs={[
+          <Tabs defaultTab={defaultTab} tabs={[
             {
               id:      'timeline',
               label:   'Timeline',
@@ -402,6 +406,9 @@ export default async function ContactDetailPage({ params }: Props) {
                   contactId={id}
                   contactEmail={contact.email}
                   emailOptOut={contact.emailOptOut}
+                  initialBody={sendListingId
+                    ? `Hi ${contact.firstName ?? ''},\n\nI thought you might be interested in this listing:\n${sendListingAddress ?? ''}\n\nYou can view the full details here:\n${process.env.NEXT_PUBLIC_APP_URL ?? ''}/portal/properties/${sendListingId}\n\nLet me know if you'd like to book a showing!`
+                    : undefined}
                 />
               ),
             },

@@ -9,17 +9,19 @@
 
 import { useState, Suspense, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, X } from 'lucide-react'
+import { Mail, X, Home } from 'lucide-react'
 import { ContactTable } from './ContactTable'
 import { ContactFilters } from './ContactFilters'
 import type { ContactWithTags, Tag } from '@/types'
 
 interface Props {
-  contacts: ContactWithTags[]
-  tags:     Tag[]
+  contacts:            ContactWithTags[]
+  tags:                Tag[]
+  sendListingId?:      string
+  sendListingAddress?: string
 }
 
-export function ContactsClientShell({ contacts, tags }: Props) {
+export function ContactsClientShell({ contacts, tags, sendListingId, sendListingAddress }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -49,11 +51,24 @@ export function ContactsClientShell({ contacts, tags }: Props) {
     router.push(`/admin/bulk-email?contactIds=${ids}`)
   }
 
+  const listingLinkSuffix = sendListingId
+    ? `?tab=email&sendListingId=${sendListingId}&sendListingAddress=${encodeURIComponent(sendListingAddress ?? '')}`
+    : undefined
+
   return (
     <>
       <Suspense>
         <ContactFilters tags={tags} />
       </Suspense>
+
+      {sendListingId && (
+        <div className="flex items-center gap-2 mb-3 px-4 py-2.5 bg-gold-50 border border-gold-200 rounded-lg text-sm">
+          <Home size={14} className="text-gold-600 shrink-0" />
+          <span className="text-gold-800">
+            Select a contact to send <span className="font-medium">{sendListingAddress ?? 'this listing'}</span>
+          </span>
+        </div>
+      )}
 
       {selected.size > 0 && (
         <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
@@ -79,6 +94,7 @@ export function ContactsClientShell({ contacts, tags }: Props) {
         selectedIds={selected}
         onToggle={toggle}
         onToggleAll={toggleAll}
+        linkSuffix={listingLinkSuffix}
       />
     </>
   )

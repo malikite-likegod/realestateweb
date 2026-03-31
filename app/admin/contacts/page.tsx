@@ -10,14 +10,14 @@ import Link                    from 'next/link'
 import { UserPlus, Upload, Mail } from 'lucide-react'
 
 interface Props {
-  searchParams: Promise<{ status?: string; tag?: string }>
+  searchParams: Promise<{ status?: string; tag?: string; sendListingId?: string; sendListingAddress?: string }>
 }
 
 export default async function ContactsPage({ searchParams }: Props) {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const { status, tag } = await searchParams
+  const { status, tag, sendListingId, sendListingAddress } = await searchParams
 
   const where = {
     ...(status ? { status }                                           : {}),
@@ -57,7 +57,12 @@ export default async function ContactsPage({ searchParams }: Props) {
           </div>
         }
       />
-      <ContactsClientShell contacts={contacts} tags={tags} />
+      <ContactsClientShell
+        contacts={contacts}
+        tags={tags}
+        sendListingId={sendListingId}
+        sendListingAddress={sendListingAddress}
+      />
     </DashboardLayout>
   )
 }

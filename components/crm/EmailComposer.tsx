@@ -39,16 +39,17 @@ export type EmailEntry = {
 }
 
 interface EmailComposerProps {
-  emails:       EmailEntry[]
-  contactId:    string
-  contactEmail: string | null
-  emailOptOut?: boolean
+  emails:        EmailEntry[]
+  contactId:     string
+  contactEmail:  string | null
+  emailOptOut?:  boolean
+  initialBody?:  string
 }
 
-export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = false }: EmailComposerProps) {
+export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = false, initialBody }: EmailComposerProps) {
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [subject, setSubject]     = useState('')
-  const [body, setBody]           = useState('')
+  const [body, setBody]           = useState(initialBody ?? '')
   const [templateId, setTemplateId] = useState('')
   const [attachments, setAttachments] = useState<PickedFile[]>([])
   const [showPicker,  setShowPicker]  = useState(false)

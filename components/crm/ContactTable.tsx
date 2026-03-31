@@ -15,6 +15,7 @@ interface ContactTableProps {
   selectedIds?:      Set<string>
   onToggle?:         (id: string) => void
   onToggleAll?:      (checked: boolean) => void
+  linkSuffix?:       string
 }
 
 export function ContactTable({
@@ -22,6 +23,7 @@ export function ContactTable({
   selectedIds,
   onToggle,
   onToggleAll,
+  linkSuffix,
 }: ContactTableProps) {
   const selectable   = !!onToggle
   const allChecked   = selectable && contacts.length > 0 && contacts.every(c => selectedIds?.has(c.id))
@@ -69,7 +71,7 @@ export function ContactTable({
                 </td>
               )}
               <td className="px-4 py-3">
-                <Link href={`/admin/contacts/${c.id}`} className="flex items-center gap-3">
+                <Link href={`/admin/contacts/${c.id}${linkSuffix ?? ''}`} className="flex items-center gap-3">
                   <Avatar name={`${c.firstName} ${c.lastName}`} size="sm" />
                   <div>
                     <p className="font-medium text-charcoal-900">{c.firstName} {c.lastName}</p>

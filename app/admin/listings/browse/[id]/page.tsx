@@ -366,7 +366,7 @@ export default async function AdminListingDetailPage({
 
           {/* Send to contact shortcut */}
           <Link
-            href={`/admin/listings/browse?contactId=&contactName=`}
+            href={`/admin/contacts?sendListingId=${property.id}&sendListingAddress=${encodeURIComponent(address)}`}
             className="block w-full text-center bg-charcoal-900 hover:bg-charcoal-700 text-white text-sm font-medium py-3 rounded-xl transition-colors"
           >
             Send to a Contact
