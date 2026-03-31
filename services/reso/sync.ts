@@ -47,7 +47,7 @@ function combineFilters(...filters: (string | null)[]): string {
 const IDX_SELECT = [
   'ListingKey', 'ListingId', 'StandardStatus', 'PropertyType', 'PropertySubType',
   'ListPrice', 'OriginalListPrice', 'ClosePrice', 'BedroomsTotal', 'BathroomsTotalInteger',
-  'BathroomsPartial', 'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
+  'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
   'StreetNumber', 'StreetName', 'StreetSuffix', 'UnitNumber', 'TransactionType',
   'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
   'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
