@@ -17,6 +17,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { notifyInboundEmail } from '@/lib/notifications/admin-notify'
 
 interface SyncResult {
   fetched:    number
@@ -118,6 +119,7 @@ export async function syncInbox(): Promise<SyncResult> {
         })
 
         imported++
+        await notifyInboundEmail(contact, fromEmail ?? fromName, subject)
 
         // Mark as seen on the server
         await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })

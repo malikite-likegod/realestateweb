@@ -5,6 +5,7 @@ import { getSession } from '@/lib/auth'
 import { sendWebhook } from '@/services/ai/webhooks'
 import { enqueueJob } from '@/lib/automation/job-queue'
 import { createNotification } from '@/lib/notifications'
+import { notifyNewContact } from '@/lib/notifications/admin-notify'
 
 const createContactSchema = z.object({
   firstName:  z.string().optional(),
@@ -106,6 +107,8 @@ export async function POST(request: Request) {
         : `Already in the database — submitted the contact form again${parsed.source ? ` (${parsed.source})` : ''}`,
       contactId: contact.id,
     })
+
+    if (isNew) await notifyNewContact(contact)
 
     return NextResponse.json({ data: contact }, { status: 201 })
   } catch (error) {

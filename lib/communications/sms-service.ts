@@ -15,6 +15,7 @@ import twilio from 'twilio'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { renderTemplate } from '@/lib/communications/email-service'
+import { notifyInboundSms } from '@/lib/notifications/admin-notify'
 
 // ─── Twilio client ───────────────────────────────────────────────────────────
 
@@ -178,6 +179,7 @@ export async function parseTwilioWebhook(form: URLSearchParams) {
     body:      body.length > 100 ? body.slice(0, 97) + '…' : body,
     contactId: contact?.id ?? null,
   })
+  await notifyInboundSms(contact, from, body)
 
   return message
 }

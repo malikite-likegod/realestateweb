@@ -20,6 +20,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { enqueueJob } from './job-queue'
+import { notifyHotLead } from '@/lib/notifications/admin-notify'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,8 @@ async function executeActions(
         if (ctx.contactId) {
           const contact = await prisma.contact.findUnique({ where: { id: ctx.contactId } })
           if (contact) {
-            const newScore = Math.min(100, Math.max(0, contact.leadScore + action.delta))
+            const prevScore = contact.leadScore
+            const newScore  = Math.min(100, Math.max(0, prevScore + action.delta))
             await prisma.contact.update({ where: { id: ctx.contactId }, data: { leadScore: newScore } })
             await prisma.leadScore.create({
               data: {
@@ -254,6 +256,11 @@ async function executeActions(
                 reason:    action.reason ?? 'Automation rule',
               },
             })
+            // Notify admin when contact crosses the hot-lead threshold (≥70)
+            if (prevScore < 70 && newScore >= 70) {
+              const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.email || 'Unknown'
+              await notifyHotLead(ctx.contactId, name, newScore)
+            }
           }
         }
         break
