@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/gate-email'
+import { isSecureContext } from '@/lib/auth'
 
 const schema = z.object({
   firstName: z.string().min(1),
@@ -59,6 +60,8 @@ export async function POST(request: Request) {
   // Set re_pending cookie so listing pages show "waiting" overlay
   const response = NextResponse.json({ success: true })
   response.cookies.set('re_pending', data.email, {
+    httpOnly: true,
+    secure:   isSecureContext,
     sameSite: 'lax',
     path:     '/',
     // session cookie (no maxAge)

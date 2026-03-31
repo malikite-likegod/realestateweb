@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { verifyPassword, createSession } from '@/lib/auth'
+import { verifyPassword, createSession, isSecureContext } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { signPendingJwt } from '@/lib/jwt'
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       const res = NextResponse.json({ requires2fa: true })
       res.cookies.set('pending_token', pendingToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isSecureContext,
         sameSite: 'lax',
         maxAge: 60 * 10,
         path: '/',
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     })
     response.cookies.set('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecureContext,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',

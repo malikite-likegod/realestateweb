@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { signPendingContactJwt } from '@/lib/jwt'
 import { sendPhoneOtp } from '@/lib/communications/verification-service'
+import { isSecureContext } from '@/lib/auth'
 
 const schema = z.object({
   email: z.string().email(),
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ sent: true })
     response.cookies.set('contact_pending_token', pendingToken, {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
+      secure:   isSecureContext,
       sameSite: 'lax',
       maxAge:   60 * 15,
       path:     '/',

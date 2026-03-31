@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { getSession } from '@/lib/auth'
+import { getSession, isSecureContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   const response = NextResponse.json({ ok: true })
   response.cookies.set('auth_token', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecureContext,
     sameSite: 'lax',
     maxAge: 0,
     path: '/',

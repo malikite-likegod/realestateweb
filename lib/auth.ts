@@ -4,6 +4,16 @@ import type { NextRequest } from 'next/server'
 import { signJwt, verifyJwt, verifyContactJwt, verifyPendingContactJwt } from './jwt'
 import { prisma } from './prisma'
 
+/**
+ * True when cookies should be sent over HTTPS only.
+ * Centralised here so every cookie setter uses the same logic and a
+ * mis-named NODE_ENV value (e.g. "prod", "docker") can be handled by
+ * also setting FORCE_SECURE_COOKIES=true in that environment's .env.
+ */
+export const isSecureContext =
+  process.env.NODE_ENV === 'production' ||
+  process.env.FORCE_SECURE_COOKIES === 'true'
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
 }

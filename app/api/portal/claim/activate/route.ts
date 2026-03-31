@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { getPendingContactId } from '@/lib/auth'
+import { getPendingContactId, isSecureContext } from '@/lib/auth'
 import { signContactJwt } from '@/lib/jwt'
 
 const schema = z.object({
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     response.cookies.set('contact_pending_token', '', { maxAge: 0, path: '/' })
     response.cookies.set('contact_token', token, {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
+      secure:   isSecureContext,
       sameSite: 'lax',
       maxAge:   60 * 60 * 24 * 7,
       path:     '/',

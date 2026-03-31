@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isSecureContext } from '@/lib/auth'
 
 async function hashToken(token: string): Promise<string> {
   const data   = new TextEncoder().encode(token)
@@ -43,14 +44,13 @@ export async function GET(request: NextRequest) {
   })
 
   const returnUrl = record.returnUrl ?? '/listings'
-  const isSecure  = process.env.NODE_ENV === 'production'
   const response  = NextResponse.redirect(new URL(returnUrl, request.url))
 
   // Set verified cookie (Route Handler — cookie writes are permitted here)
   response.cookies.set('re_verified', contact.id, {
     maxAge:   365 * 24 * 60 * 60,
     httpOnly: true,
-    secure:   isSecure,
+    secure:   isSecureContext,
     sameSite: 'lax',
     path:     '/',
   })

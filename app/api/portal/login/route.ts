@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { signContactJwt } from '@/lib/jwt'
 import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
+import { isSecureContext } from '@/lib/auth'
 
 const schema = z.object({
   email:    z.string().email(),
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ firstName: contact.firstName })
     response.cookies.set('contact_token', token, {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
+      secure:   isSecureContext,
       sameSite: 'lax',
       maxAge:   60 * 60 * 24 * 7,
       path:     '/',

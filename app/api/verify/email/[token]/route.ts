@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { sendPhoneOtp } from '@/lib/communications/verification-service'
+import { isSecureContext } from '@/lib/auth'
 
 export async function GET(
   _req: NextRequest,
@@ -47,7 +48,7 @@ export async function GET(
     // 1-hour HttpOnly cookie — the /api/verify/phone route reads it from here
     response.cookies.set('phone_session', sessionToken, {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
+      secure:   isSecureContext,
       sameSite: 'lax',
       maxAge:   60 * 60, // 1 hour, matches OTP expiry
       path:     '/',

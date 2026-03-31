@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { verifyPendingJwt, signJwt } from '@/lib/jwt'
+import { isSecureContext } from '@/lib/auth'
 import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
 
 export async function POST(request: Request) {
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
   const response = NextResponse.json({ ok: true })
   response.cookies.set('auth_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecureContext,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
