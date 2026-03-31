@@ -45,26 +45,26 @@ function combineFilters(...filters: (string | null)[]): string {
 // ─── IDX Property Sync ─────────────────────────────────────────────────────
 
 const IDX_SELECT = [
-  'ListingKey', 'ListingId', 'StandardStatus', 'PropertyType', 'PropertySubType',
-  'ListPrice', 'OriginalListPrice', 'ClosePrice', 'BedroomsTotal', 'BathroomsTotalInteger',
-  'BuildingAreaTotal', 'LotSizeArea', 'LotSizeUnits', 'YearBuilt',
-  'StreetNumber', 'StreetName', 'StreetSuffix', 'UnitNumber', 'TransactionType',
-  'City', 'StateOrProvince', 'PostalCode', 'Latitude', 'Longitude', 'PublicRemarks',
-  'ListAgentKey', 'ListAgentFullName', 'ListOfficeKey', 'ListOfficeName',
-  'ListingContractDate', 'ModificationTimestamp',
-  // Interior details
-  'GarageSpaces', 'ParkingTotal', 'PoolPrivateYN',
-  'BedroomsPlus', 'KitchensTotal', 'KitchensPlusTotal',
-  'Basement', 'HeatSource', 'HeatType', 'AirConditioning', 'FamilyRoom', 'FireplaceFeatures',
-  // Exterior details
-  'ExteriorFeatures', 'Roof', 'FoundationDetails', 'ParkingFeatures', 'PoolFeatures',
-  'FrontingOn', 'LotDepth', 'LotFront', 'WaterFrontType',
-  // Building description
-  'ArchitecturalStyle', 'StoriesTotal', 'ApproximateAge', 'ConstructionMaterials', 'Sewer', 'Water', 'OwnershipType',
+  'ListingKey', 'StandardStatus', 'PropertyType', 'PropertySubType',
+  'ListPrice', 'BedroomsTotal', 'BedroomsAboveGrade', 'BedroomsBelowGrade', 'BathroomsTotalInteger',
+  'BuildingAreaTotal', 'LivingAreaRange', 'LotSizeArea', 'LotSizeUnits', 'LotWidth', 'LotDepth',
+  'StreetNumber', 'StreetName', 'StreetSuffix', 'UnitNumber', 'UnparsedAddress',
+  'TransactionType', 'City', 'CityRegion', 'CountyOrParish', 'StateOrProvince', 'PostalCode',
+  'PublicRemarks', 'ListOfficeKey', 'ListOfficeName',
+  'OriginalEntryTimestamp', 'ModificationTimestamp',
+  // Interior
+  'GarageParkingSpaces', 'ParkingTotal', 'ParkingFeatures',
+  'KitchensTotal', 'KitchensAboveGrade', 'KitchensBelowGrade',
+  'Basement', 'HeatSource', 'HeatType', 'Cooling', 'DenFamilyroomYN', 'FireplaceFeatures',
+  // Exterior
+  'ExteriorFeatures', 'Roof', 'FoundationDetails', 'PoolFeatures',
+  'DirectionFaces', 'WaterfrontFeatures', 'WaterfrontYN',
+  // Building
+  'ArchitecturalStyle', 'LegalStories', 'ApproximateAge', 'ConstructionMaterials', 'Sewer', 'WaterSource',
   // Community
-  'Community', 'Municipality', 'CrossStreet',
+  'CrossStreet', 'AssociationAmenities',
   // Taxes & fees
-  'TaxAnnualAmount', 'TaxYear', 'AssociationFee', 'AssociationFeeIncludes', 'AssessmentYear', 'Inclusions', 'Exclusions',
+  'TaxAnnualAmount', 'TaxYear', 'AssociationFee', 'AssociationFeeIncludes', 'AssessmentYear',
 ].join(',')
 
 export async function syncIdxProperty(): Promise<ResoSyncResult> {
@@ -103,20 +103,20 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
         const now = new Date()
         const ops = records.map(r => {
           const data = {
-            listingId:             r.ListingId             ?? null,
+            listingId:             r.ListingKey, // PropTx has no separate ListingId; ListingKey IS the MLS number
             standardStatus:        r.StandardStatus,
             propertyType:          r.PropertyType          ?? null,
             propertySubType:       r.PropertySubType       ?? null,
             listPrice:             r.ListPrice             ?? null,
-            originalListPrice:     r.OriginalListPrice     ?? null,
-            closePrice:            r.ClosePrice            ?? null,
+            originalListPrice:     null,
+            closePrice:            null,
             bedroomsTotal:         r.BedroomsTotal         ?? null,
             bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
-            bathroomsPartial:      r.BathroomsPartial      ?? null,
+            bathroomsPartial:      null,
             livingArea:            r.BuildingAreaTotal     ?? null,
-            sqftRange:             r.ApproximateSquareFootage ?? null,
+            sqftRange:             r.LivingAreaRange       ?? null,
             lotSizeSquareFeet:     r.LotSizeArea           ?? null,
-            yearBuilt:             r.YearBuilt             ?? null,
+            yearBuilt:             null,
             streetNumber:          r.StreetNumber          ?? null,
             streetName:            r.StreetName            ?? null,
             streetSuffix:          r.StreetSuffix          ?? null,
@@ -125,62 +125,62 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             city:                  r.City                  ?? '',
             stateOrProvince:       r.StateOrProvince       ?? '',
             postalCode:            r.PostalCode            ?? null,
-            latitude:              r.Latitude              ?? null,
-            longitude:             r.Longitude             ?? null,
+            latitude:              null,
+            longitude:             null,
             publicRemarks:         r.PublicRemarks         ?? null,
             media:                 null, // fetched separately from the Media resource
-            listAgentKey:          r.ListAgentKey          ?? null,
-            listAgentName:         r.ListAgentFullName     ?? null,
+            listAgentKey:          null,
+            listAgentName:         null, // populated by DLA sync
             listOfficeKey:         r.ListOfficeKey         ?? null,
             listOfficeName:        r.ListOfficeName        ?? null,
-            listingContractDate:   r.ListingContractDate ? new Date(r.ListingContractDate) : null,
+            listingContractDate:   r.OriginalEntryTimestamp ? new Date(r.OriginalEntryTimestamp) : null,
             modificationTimestamp: new Date(r.ModificationTimestamp!),
             lastSyncedAt:          now,
-            // Interior details
-            flooring:              r.Flooring              ?? null,
-            garageSpaces:          r.GarageSpaces          ?? null,
+            // Interior
+            flooring:              null, // not available in PropTx IDX
+            garageSpaces:          r.GarageParkingSpaces   ?? null,
             parkingTotal:          r.ParkingTotal          ?? null,
-            poolPrivateYN:         r.PoolPrivateYN         ?? false,
-            bedroomsPlus:          r.BedroomsPlus          ?? null,
+            poolPrivateYN:         false,
+            bedroomsPlus:          r.BedroomsBelowGrade    ?? null,
             kitchensTotal:         r.KitchensTotal         ?? null,
-            kitchensPlusTotal:     r.KitchensPlusTotal     ?? null,
+            kitchensPlusTotal:     r.KitchensBelowGrade    ?? null,
             basement:              r.Basement              ?? null,
             heatSource:            r.HeatSource            ?? null,
             heatType:              r.HeatType              ?? null,
-            airConditioning:       r.AirConditioning       ?? null,
-            familyRoom:            r.FamilyRoom            ?? null,
+            airConditioning:       r.Cooling               ?? null,
+            familyRoom:            r.DenFamilyroomYN != null ? (r.DenFamilyroomYN ? 'Yes' : 'No') : null,
             fireplaceFeatures:     r.FireplaceFeatures     ?? null,
-            // Exterior details
+            // Exterior
             exteriorFeatures:      r.ExteriorFeatures      ?? null,
             roof:                  r.Roof                  ?? null,
             foundationDetails:     r.FoundationDetails     ?? null,
             parkingFeatures:       r.ParkingFeatures       ?? null,
             poolFeatures:          r.PoolFeatures          ?? null,
-            frontingOn:            r.FrontingOn            ?? null,
+            frontingOn:            r.DirectionFaces        ?? null,
             lotDepth:              r.LotDepth              ?? null,
-            lotFront:              r.LotFront              ?? null,
-            waterFrontType:        r.WaterFrontType        ?? null,
-            // Building description
+            lotFront:              r.LotWidth              ?? null,
+            waterFrontType:        r.WaterfrontFeatures    ?? null,
+            // Building
             style:                 r.ArchitecturalStyle    ?? null,
-            storiesTotal:          r.StoriesTotal != null ? String(r.StoriesTotal) : null,
+            storiesTotal:          r.LegalStories != null ? String(r.LegalStories) : null,
             approximateAge:        r.ApproximateAge        ?? null,
             constructionMaterials: r.ConstructionMaterials ?? null,
             sewer:                 r.Sewer                 ?? null,
-            water:                 r.Water                 ?? null,
-            ownershipType:         r.OwnershipType         ?? null,
+            water:                 r.WaterSource           ?? null,
+            ownershipType:         null, // not available in PropTx IDX
             // Community
-            community:             r.Community             ?? null,
-            municipality:          r.Municipality          ?? null,
+            community:             r.CityRegion            ?? null,
+            municipality:          r.CountyOrParish        ?? null,
             crossStreet:           r.CrossStreet           ?? null,
-            amenities:             r.NearbyAmenities       ?? null,
+            amenities:             r.AssociationAmenities  ?? null,
             // Taxes & fees
             taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
             taxYear:               r.TaxYear               ?? null,
             maintenanceFee:        r.AssociationFee        ?? null,
             maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
             assessmentYear:        r.AssessmentYear        ?? null,
-            inclusions:            r.Inclusions            ?? null,
-            exclusions:            r.Exclusions            ?? null,
+            inclusions:            null, // not available in PropTx IDX
+            exclusions:            null, // not available in PropTx IDX
           }
           // Don't overwrite media on update — it's fetched separately by syncIdxMedia
           const { media: _media, ...updateData } = data
@@ -645,20 +645,20 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
     if (!r) return false
 
     const data = {
-      listingId:             r.ListingId             ?? null,
+      listingId:             r.ListingKey, // PropTx has no separate ListingId; ListingKey IS the MLS number
       standardStatus:        r.StandardStatus,
       propertyType:          r.PropertyType          ?? null,
       propertySubType:       r.PropertySubType       ?? null,
       listPrice:             r.ListPrice             ?? null,
-      originalListPrice:     r.OriginalListPrice     ?? null,
-      closePrice:            r.ClosePrice            ?? null,
+      originalListPrice:     null,
+      closePrice:            null,
       bedroomsTotal:         r.BedroomsTotal         ?? null,
       bathroomsTotalInteger: r.BathroomsTotalInteger ?? null,
-      bathroomsPartial:      r.BathroomsPartial      ?? null,
+      bathroomsPartial:      null,
       livingArea:            r.BuildingAreaTotal     ?? null,
-      sqftRange:             r.ApproximateSquareFootage ?? null,
+      sqftRange:             r.LivingAreaRange       ?? null,
       lotSizeSquareFeet:     r.LotSizeArea           ?? null,
-      yearBuilt:             r.YearBuilt             ?? null,
+      yearBuilt:             null,
       streetNumber:          r.StreetNumber          ?? null,
       streetName:            r.StreetName            ?? null,
       streetSuffix:          r.StreetSuffix          ?? null,
@@ -667,63 +667,63 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       city:                  r.City                  ?? '',
       stateOrProvince:       r.StateOrProvince       ?? '',
       postalCode:            r.PostalCode            ?? null,
-      latitude:              r.Latitude              ?? null,
-      longitude:             r.Longitude             ?? null,
+      latitude:              null,
+      longitude:             null,
       publicRemarks:         r.PublicRemarks         ?? null,
       media:                 null,
-      listAgentKey:          r.ListAgentKey          ?? null,
-      listAgentName:         r.ListAgentFullName     ?? null,
+      listAgentKey:          null,
+      listAgentName:         null, // populated by DLA sync
       listOfficeKey:         r.ListOfficeKey         ?? null,
       listOfficeName:        r.ListOfficeName        ?? null,
-      listingContractDate:   r.ListingContractDate ? new Date(r.ListingContractDate) : null,
+      listingContractDate:   r.OriginalEntryTimestamp ? new Date(r.OriginalEntryTimestamp) : null,
       modificationTimestamp: r.ModificationTimestamp ? new Date(r.ModificationTimestamp) : null,
       lastSyncedAt:          new Date(),
       onDemand:              true,
-      // Interior details
-      flooring:              r.Flooring              ?? null,
-      garageSpaces:          r.GarageSpaces          ?? null,
+      // Interior
+      flooring:              null, // not available in PropTx IDX
+      garageSpaces:          r.GarageParkingSpaces   ?? null,
       parkingTotal:          r.ParkingTotal          ?? null,
-      poolPrivateYN:         r.PoolPrivateYN         ?? false,
-      bedroomsPlus:          r.BedroomsPlus          ?? null,
+      poolPrivateYN:         false,
+      bedroomsPlus:          r.BedroomsBelowGrade    ?? null,
       kitchensTotal:         r.KitchensTotal         ?? null,
-      kitchensPlusTotal:     r.KitchensPlusTotal     ?? null,
+      kitchensPlusTotal:     r.KitchensBelowGrade    ?? null,
       basement:              r.Basement              ?? null,
       heatSource:            r.HeatSource            ?? null,
       heatType:              r.HeatType              ?? null,
-      airConditioning:       r.AirConditioning       ?? null,
-      familyRoom:            r.FamilyRoom            ?? null,
+      airConditioning:       r.Cooling               ?? null,
+      familyRoom:            r.DenFamilyroomYN != null ? (r.DenFamilyroomYN ? 'Yes' : 'No') : null,
       fireplaceFeatures:     r.FireplaceFeatures     ?? null,
-      // Exterior details
+      // Exterior
       exteriorFeatures:      r.ExteriorFeatures      ?? null,
       roof:                  r.Roof                  ?? null,
       foundationDetails:     r.FoundationDetails     ?? null,
       parkingFeatures:       r.ParkingFeatures       ?? null,
       poolFeatures:          r.PoolFeatures          ?? null,
-      frontingOn:            r.FrontingOn            ?? null,
+      frontingOn:            r.DirectionFaces        ?? null,
       lotDepth:              r.LotDepth              ?? null,
-      lotFront:              r.LotFront              ?? null,
-      waterFrontType:        r.WaterFrontType        ?? null,
-      // Building description
+      lotFront:              r.LotWidth              ?? null,
+      waterFrontType:        r.WaterfrontFeatures    ?? null,
+      // Building
       style:                 r.ArchitecturalStyle    ?? null,
-      storiesTotal:          r.StoriesTotal != null ? String(r.StoriesTotal) : null,
+      storiesTotal:          r.LegalStories != null ? String(r.LegalStories) : null,
       approximateAge:        r.ApproximateAge        ?? null,
       constructionMaterials: r.ConstructionMaterials ?? null,
       sewer:                 r.Sewer                 ?? null,
-      water:                 r.Water                 ?? null,
-      ownershipType:         r.OwnershipType         ?? null,
+      water:                 r.WaterSource           ?? null,
+      ownershipType:         null, // not available in PropTx IDX
       // Community
-      community:             r.Community             ?? null,
-      municipality:          r.Municipality          ?? null,
+      community:             r.CityRegion            ?? null,
+      municipality:          r.CountyOrParish        ?? null,
       crossStreet:           r.CrossStreet           ?? null,
-      amenities:             r.NearbyAmenities       ?? null,
+      amenities:             r.AssociationAmenities  ?? null,
       // Taxes & fees
       taxAnnualAmount:       r.TaxAnnualAmount       ?? null,
       taxYear:               r.TaxYear               ?? null,
       maintenanceFee:        r.AssociationFee        ?? null,
       maintenanceFeeIncludes: r.AssociationFeeIncludes ?? null,
       assessmentYear:        r.AssessmentYear        ?? null,
-      inclusions:            r.Inclusions            ?? null,
-      exclusions:            r.Exclusions            ?? null,
+      inclusions:            null, // not available in PropTx IDX
+      exclusions:            null, // not available in PropTx IDX
     }
 
     await prisma.resoProperty.upsert({

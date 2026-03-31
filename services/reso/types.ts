@@ -1,91 +1,79 @@
 export interface ResoPropertyRaw {
   ListingKey:            string
-  ListingId?:            string
   StandardStatus:        string
   PropertyType?:         string
   PropertySubType?:      string
   ListPrice?:            number
-  OriginalListPrice?:    number
-  ClosePrice?:           number
   BedroomsTotal?:        number
+  BedroomsAboveGrade?:   number
+  BedroomsBelowGrade?:   number   // maps to bedroomsPlus
   BathroomsTotalInteger?: number
-  BathroomsPartial?:     number
-  LivingArea?:           number
-  ApproximateSquareFootage?: string
   BuildingAreaTotal?:    number
+  LivingAreaRange?:      string   // maps to sqftRange e.g. "1500-2000"
   LotSizeArea?:          number
   LotSizeUnits?:         string
-  LotSizeAcres?:         number
-  YearBuilt?:            number
+  LotWidth?:             number   // maps to lotFront
+  LotDepth?:             number
   StreetNumber?:         string
   StreetName?:           string
   StreetSuffix?:         string
   UnitNumber?:           string
+  UnparsedAddress?:      string
   TransactionType?:      string
   City?:                 string
+  CityRegion?:           string   // maps to community
+  CountyOrParish?:       string   // maps to municipality
   StateOrProvince?:      string
   PostalCode?:           string
-  Latitude?:             number
-  Longitude?:            number
   PublicRemarks?:        string
-  Media?:                { url: string; order: number }[]
-  ListAgentKey?:         string
-  ListAgentFullName?:    string
   ListOfficeKey?:        string
   ListOfficeName?:       string
-  ListingContractDate?:  string
-  ModificationTimestamp?: string
-  // Interior details
-  Flooring?:                 string
-  GarageSpaces?:             number
-  ParkingTotal?:             number
-  PoolPrivateYN?:            boolean
-  BedroomsPlus?:             number
-  KitchensTotal?:            number
-  KitchensPlusTotal?:        number
-  Basement?:                 string
-  HeatSource?:               string
-  HeatType?:                 string
-  AirConditioning?:          string
-  FamilyRoom?:               string
-  FireplaceFeatures?:        string
-  // Exterior details
-  ExteriorFeatures?:         string
-  Roof?:                     string
-  FoundationDetails?:        string
-  ParkingFeatures?:          string
-  PoolFeatures?:             string
-  FrontingOn?:               string
-  LotDepth?:                 number
-  LotFront?:                 number
-  WaterFrontType?:           string
-  // Building description
-  ArchitecturalStyle?:       string
-  StoriesTotal?:             number
-  ApproximateAge?:           string
-  ConstructionMaterials?:    string
-  Sewer?:                    string
-  Water?:                    string
-  OwnershipType?:            string
+  OriginalEntryTimestamp?: string  // maps to listingContractDate
+  ModificationTimestamp?:  string
+  // Interior
+  GarageParkingSpaces?:  number   // maps to garageSpaces
+  ParkingTotal?:         number
+  ParkingFeatures?:      string
+  KitchensTotal?:        number
+  KitchensAboveGrade?:   number
+  KitchensBelowGrade?:   number   // maps to kitchensPlusTotal
+  Basement?:             string
+  HeatSource?:           string
+  HeatType?:             string
+  Cooling?:              string   // maps to airConditioning
+  DenFamilyroomYN?:      boolean  // maps to familyRoom as "Yes"/"No"
+  FireplaceFeatures?:    string
+  // Exterior
+  ExteriorFeatures?:     string
+  Roof?:                 string
+  FoundationDetails?:    string
+  PoolFeatures?:         string
+  DirectionFaces?:       string   // maps to frontingOn
+  WaterfrontFeatures?:   string   // maps to waterFrontType
+  WaterfrontYN?:         boolean
+  // Building
+  ArchitecturalStyle?:   string
+  LegalStories?:         number   // maps to storiesTotal
+  ApproximateAge?:       string
+  ConstructionMaterials?: string
+  Sewer?:                string
+  WaterSource?:          string   // maps to water
   // Community
-  Community?:                string
-  Municipality?:             string
-  CrossStreet?:              string
-  NearbyAmenities?:          string
+  CrossStreet?:          string
+  AssociationAmenities?: string   // maps to amenities
   // Taxes & fees
-  TaxAnnualAmount?:          number
-  TaxYear?:                  number
-  AssociationFee?:           number
-  AssociationFeeIncludes?:   string
-  AssessmentYear?:           number
-  Inclusions?:               string
-  Exclusions?:               string
-  // DLA-enriched fields
+  TaxAnnualAmount?:      number
+  TaxYear?:              number
+  AssociationFee?:       number
+  AssociationFeeIncludes?: string
+  AssessmentYear?:       number
+  // DLA-enriched fields (not in IDX select, written by DLA sync)
   MlsStatus?:                string
   ContractStatus?:           string
   PhotosChangeTimestamp?:    string
   DocumentsChangeTimestamp?: string
   MediaChangeTimestamp?:     string
+  ListAgentFullName?:        string
   MajorChangeTimestamp?:     string
 }
 
