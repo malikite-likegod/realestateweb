@@ -21,9 +21,8 @@ export default async function ListingDetailPage({
   params: Promise<{ id: string }>
 }) {
   const contact = await getContactSession()
-  if (!contact) redirect(`/portal/login?redirect=${encodeURIComponent(`/portal/listings/${id}`)}`)
-
   const { id } = await params
+  if (!contact) redirect(`/portal/login?redirect=${encodeURIComponent(`/portal/listings/${id}`)}`)
   const listing = await prisma.listing.findUnique({
     where:   { id },
     include: {
