@@ -61,6 +61,7 @@ export async function PATCH(request: Request, { params }: Props) {
     // Replace steps in a transaction when provided
     const campaign = await prisma.$transaction(async tx => {
       if (steps) {
+        await tx.campaignStepExecution.deleteMany({ where: { step: { sequenceId: id } } })
         await tx.automationStep.deleteMany({ where: { sequenceId: id } })
         await tx.automationStep.createMany({
           data: steps.map(step => ({
