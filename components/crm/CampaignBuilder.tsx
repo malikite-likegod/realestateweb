@@ -81,6 +81,18 @@ const STEP_LABELS: Record<StepType, string> = {
   send_portal_invite:  'Send Portal Invite',
 }
 
+/** Encode a task-type-specific step as a synthetic selector value */
+function taskStepValue(taskTypeId: string) { return `create_task::${taskTypeId}` }
+
+/** Get the value the step-type <select> should show for a given step */
+function stepSelectValue(step: StepForm): string {
+  if (step.type === 'create_task' && step.config.taskTypeId) {
+    return taskStepValue(step.config.taskTypeId as string)
+  }
+  return step.type
+}
+
+
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   new_lead:           'New Lead Created',
   deal_stage_change:  'Deal Stage Changed',
@@ -164,6 +176,20 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
       if (patch.type && patch.type !== s.type) updated.config = defaultConfig(patch.type)
       return updated
     }))
+  }
+
+  /** Handle the step-type selector — decomposes synthetic create_task::<id> values */
+  function handleStepTypeChange(index: number, value: string) {
+    if (value.startsWith('create_task::')) {
+      const taskTypeId = value.slice('create_task::'.length)
+      setSteps(prev => prev.map((s, i) =>
+        i !== index
+          ? s
+          : { ...s, type: 'create_task', config: { ...defaultConfig('create_task'), taskTypeId } }
+      ))
+    } else {
+      updateStep(index, { type: value as StepType })
+    }
   }
 
   function updateConfig(index: number, key: string, value: string | number) {
@@ -291,12 +317,22 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-charcoal-200 text-xs font-bold text-charcoal-700">
                   {i + 1}
                 </span>
-                <select value={step.type}
-                  onChange={e => updateStep(i, { type: e.target.value as StepType })}
+                <select
+                  value={stepSelectValue(step)}
+                  onChange={e => handleStepTypeChange(i, e.target.value)}
                   className="flex-1 rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900">
-                  {Object.entries(STEP_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
+                  <option value="send_email">Send Email</option>
+                  <option value="send_sms">Send SMS</option>
+                  <optgroup label="Create Task">
+                    <option value="create_task">Generic / Miscellaneous</option>
+                    {taskTypes.map(tt => (
+                      <option key={tt.id} value={taskStepValue(tt.id)}>{tt.name}</option>
+                    ))}
+                  </optgroup>
+                  <option value="wait">Wait / Delay</option>
+                  <option value="update_lead_score">Update Lead Score</option>
+                  <option value="transfer_campaign">Transfer to Campaign</option>
+                  <option value="send_portal_invite">Send Portal Invite</option>
                 </select>
                 <div className="flex items-center gap-1 shrink-0">
                   <button type="button" onClick={() => moveStep(i, -1)} disabled={i === 0}
@@ -340,7 +376,6 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
                 onChange={(k, v) => updateConfig(i, k, v)}
                 allCampaigns={allCampaigns}
                 currentCampaignId={campaignId ?? currentCampaignId}
-                taskTypes={taskTypes}
               />
             </div>
           ))}
@@ -357,13 +392,12 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
   )
 }
 
-function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, taskTypes }: {
+function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }: {
   type:               StepType
   config:             Record<string, string | number>
   onChange:           (key: string, value: string | number) => void
   allCampaigns?:      CampaignSummary[]
   currentCampaignId?: string
-  taskTypes?:         TaskTypeOption[]
 }) {
   const [showPicker, setShowPicker] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -440,16 +474,6 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
               {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
-          <select
-            value={(config.taskTypeId ?? '') as string}
-            onChange={e => onChange('taskTypeId', e.target.value)}
-            className={inputCls}
-          >
-            <option value="">Generic / Miscellaneous</option>
-            {(taskTypes ?? []).map(tt => (
-              <option key={tt.id} value={tt.id}>{tt.name}</option>
-            ))}
-          </select>
           <textarea placeholder="Description (optional)" rows={2} value={(config.description ?? '') as string}
             onChange={e => onChange('description', e.target.value)}
             className={`${inputCls} resize-none`} />
@@ -511,7 +535,7 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
                   >
                     {selected.steps.map((s, idx) => (
                       <option key={idx} value={idx}>
-                        Step {idx + 1} — {STEP_LABELS[s.type as StepType] ?? s.type}
+                        Step {idx + 1} — {STEP_LABELS[s.type as StepType] ?? s.type.replace('create_task::', 'Create Task: ')}
                       </option>
                     ))}
                   </select>
