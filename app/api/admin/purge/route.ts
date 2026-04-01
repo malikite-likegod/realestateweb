@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getSession, verifySecret } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
+import { verifySecret } from '@/lib/cron-auth'
 import { prisma } from '@/lib/prisma'
 import {
   purgeOldBehaviorEvents,

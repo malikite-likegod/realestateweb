@@ -12,7 +12,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getSession, verifySecret } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
+import { verifySecret } from '@/lib/cron-auth'
 import { syncInbox }    from '@/lib/communications/imap-service'
 
 export async function POST(request: Request) {

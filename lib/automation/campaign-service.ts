@@ -243,7 +243,7 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
             title:       resolvedTitle,
             description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (config.priority as string) ?? 'normal',
-            taskTypeId:  (taskConfig.taskTypeId as string) || null,
+            taskTypeId:  (config.taskTypeId as string) || null,
             contactId:   enrollment.contactId,
             dueAt:       enrollment.nextRunAt ?? new Date(),
           },

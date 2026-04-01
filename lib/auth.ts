@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs'
-import { timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import type { NextRequest } from 'next/server'
 import { signJwt, verifyJwt, verifyContactJwt, verifyPendingContactJwt } from './jwt'
@@ -14,22 +13,6 @@ import { prisma } from './prisma'
 export const isSecureContext =
   process.env.NODE_ENV === 'production' ||
   process.env.FORCE_SECURE_COOKIES === 'true'
-
-/**
- * Constant-time secret comparison — prevents timing attacks against cron secrets.
- * Returns false if either argument is falsy or the buffers differ in length.
- */
-export function verifySecret(provided: string | null, expected: string | undefined): boolean {
-  if (!provided || !expected) return false
-  try {
-    const a = Buffer.from(provided)
-    const b = Buffer.from(expected)
-    if (a.length !== b.length) return false
-    return timingSafeEqual(a, b)
-  } catch {
-    return false
-  }
-}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)

@@ -12,7 +12,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getSession, verifySecret } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
+import { verifySecret } from '@/lib/cron-auth'
 import { processPendingJobs } from '@/lib/automation/job-queue'
 
 export async function POST(request: Request) {
