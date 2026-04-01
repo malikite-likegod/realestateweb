@@ -37,7 +37,7 @@ function ListingsContent() {
   const [areaOptions, setAreaOptions] = useState<string[]>([])
 
   const [filters, setFilters] = useState({
-    keyword:       searchParams.get('keyword') ?? '',
+    keyword:       '',
     city:          searchParams.get('city') ?? '',
     postalCode:    searchParams.get('postalCode') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
@@ -134,12 +134,6 @@ function ListingsContent() {
       <div className="bg-charcoal-950 py-8">
         <Container>
           <div className="flex flex-wrap gap-3 items-end">
-            <Input
-              placeholder="Location, keyword, MLS#…"
-              value={filters.keyword}
-              onChange={e => setFilters(f => ({ ...f, keyword: e.target.value }))}
-              className="min-w-[240px]"
-            />
             <AutocompleteInput
               options={areaOptions}
               value={filters.city}
