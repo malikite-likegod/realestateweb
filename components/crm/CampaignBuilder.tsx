@@ -37,6 +37,12 @@ interface TagOption {
   color: string
 }
 
+interface TaskTypeOption {
+  id:    string
+  name:  string
+  color: string
+}
+
 interface InitialCampaignData {
   name:          string
   description:   string
@@ -86,7 +92,7 @@ function defaultConfig(type: StepType): Record<string, string | number> {
   switch (type) {
     case 'send_email':        return { subject: '', body: '' }
     case 'send_sms':          return { body: '' }
-    case 'create_task':       return { title: '', description: '', priority: 'normal' }
+    case 'create_task':       return { title: '', description: '', priority: 'normal', taskTypeId: '' }
     case 'wait':              return {}
     case 'update_lead_score': return { delta: 5 }
     case 'transfer_campaign':  return { targetSequenceId: '', targetSequenceName: '', startAtStep: 0 }
@@ -117,6 +123,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
   const [trigger,       setTrigger]       = useState<TriggerType>(initialData?.trigger ?? 'new_lead')
   const [triggerTagId,  setTriggerTagId]  = useState<string>(initialData?.triggerTagId ?? '')
   const [tags,          setTags]          = useState<TagOption[]>([])
+  const [taskTypes,     setTaskTypes]     = useState<TaskTypeOption[]>([])
   const [steps,         setSteps]         = useState<StepForm[]>(
     initialData?.steps?.length
       ? initialData.steps.map(initialStepForm)
@@ -127,6 +134,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
 
   useEffect(() => {
     fetch('/api/tags').then(r => r.json()).then(d => setTags(d.data ?? [])).catch(() => {})
+    fetch('/api/task-types').then(r => r.json()).then(d => setTaskTypes(d.data ?? [])).catch(() => {})
   }, [])
 
   function addStep() {
@@ -332,6 +340,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
                 onChange={(k, v) => updateConfig(i, k, v)}
                 allCampaigns={allCampaigns}
                 currentCampaignId={campaignId ?? currentCampaignId}
+                taskTypes={taskTypes}
               />
             </div>
           ))}
@@ -348,12 +357,13 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
   )
 }
 
-function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }: {
+function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, taskTypes }: {
   type:               StepType
   config:             Record<string, string | number>
   onChange:           (key: string, value: string | number) => void
   allCampaigns?:      CampaignSummary[]
   currentCampaignId?: string
+  taskTypes?:         TaskTypeOption[]
 }) {
   const [showPicker, setShowPicker] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -430,6 +440,16 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
               {['low', 'normal', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+          <select
+            value={(config.taskTypeId ?? '') as string}
+            onChange={e => onChange('taskTypeId', e.target.value)}
+            className={inputCls}
+          >
+            <option value="">Generic / Miscellaneous</option>
+            {(taskTypes ?? []).map(tt => (
+              <option key={tt.id} value={tt.id}>{tt.name}</option>
+            ))}
+          </select>
           <textarea placeholder="Description (optional)" rows={2} value={(config.description ?? '') as string}
             onChange={e => onChange('description', e.target.value)}
             className={`${inputCls} resize-none`} />
