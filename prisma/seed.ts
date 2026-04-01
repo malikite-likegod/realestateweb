@@ -12,6 +12,18 @@ const DEAL_STAGES = [
   { name: 'Closed',         order: 6, color: '#059669' },
 ]
 
+const DEFAULT_TASK_TYPES = [
+  { name: 'Call',             color: '#3b82f6', textColor: '#ffffff', isDefault: true },
+  { name: 'Meeting',          color: '#8b5cf6', textColor: '#ffffff', isDefault: true },
+  { name: 'Email',            color: '#10b981', textColor: '#ffffff', isDefault: true },
+  { name: 'Follow-Up',        color: '#f59e0b', textColor: '#ffffff', isDefault: true },
+  { name: 'Property Showing', color: '#ef4444', textColor: '#ffffff', isDefault: true },
+  { name: 'Document Review',  color: '#6366f1', textColor: '#ffffff', isDefault: true },
+  { name: 'Offer Prep',       color: '#ec4899', textColor: '#ffffff', isDefault: true },
+  { name: 'Contract Review',  color: '#14b8a6', textColor: '#ffffff', isDefault: true },
+  { name: 'To-Do',            color: '#64748b', textColor: '#ffffff', isDefault: true },
+]
+
 async function main() {
   // Create default admin if none exists
   const existing = await prisma.user.findUnique({ where: { email: 'miketaylor.realty@gmail.com' } })
@@ -36,6 +48,16 @@ async function main() {
     await prisma.stage.createMany({ data: DEAL_STAGES })
     console.log('✓ Deal stages seeded')
   }
+
+  // Upsert default task types (safe to re-run)
+  for (const tt of DEFAULT_TASK_TYPES) {
+    await prisma.taskType.upsert({
+      where:  { name: tt.name },
+      update: { isDefault: true },
+      create: tt,
+    })
+  }
+  console.log('✓ Default task types seeded')
 }
 
 main()
