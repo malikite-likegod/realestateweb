@@ -207,8 +207,8 @@ function ListingsContent() {
           <ListingMap markers={properties.filter(p => p.latitude).map(p => ({ lat: p.latitude!, lng: p.longitude!, title: p.title, price: p.price }))} height="600px" />
         )}
 
-        {/* More listings notice — shown on the last page of a non-brokerage search */}
-        {hasActiveSearch(activeFilters) && page === totalPages && totalPages > 0 && !loading && (
+        {/* More listings notice — shown on the last page */}
+        {page === totalPages && totalPages > 0 && !loading && (
           <div className="mt-10 rounded-2xl border border-gold-200 bg-gold-50 px-6 py-5 text-center">
             <p className="font-semibold text-charcoal-900">Looking for more options?</p>
             <p className="mt-1 text-sm text-charcoal-600">
