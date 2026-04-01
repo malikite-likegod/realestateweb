@@ -31,23 +31,37 @@ async function sendViaSmtp(opts: {
     return
   }
   const { default: nodemailer } = await import('nodemailer')
-  const transporter = nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT ?? 587) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-  await transporter.sendMail({
-    from:        opts.from,
-    to:          opts.to,
-    cc:          opts.cc?.join(', '),
-    subject:     opts.subject,
-    html:        opts.html,
-    attachments: opts.attachments,
-  })
+  const port   = Number(process.env.SMTP_PORT ?? 587)
+  const secure = port === 465
+
+  let lastError: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 2000))
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      })
+      await transporter.sendMail({
+        from:        opts.from,
+        to:          opts.to,
+        cc:          opts.cc?.join(', '),
+        subject:     opts.subject,
+        html:        opts.html,
+        attachments: opts.attachments,
+      })
+      return
+    } catch (err) {
+      lastError = err
+      const code = (err as { code?: string }).code
+      // ETLS = transient STARTTLS refusal ("454 Try again later") — retry
+      if (code !== 'ETLS') throw err
+      console.warn(`[email-service] STARTTLS refused (attempt ${attempt + 1}/3), retrying…`)
+    }
+  }
+  throw lastError
 }
 
 // ─── Template rendering ──────────────────────────────────────────────────────
