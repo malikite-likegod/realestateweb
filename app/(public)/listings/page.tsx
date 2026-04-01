@@ -87,15 +87,10 @@ function ListingsContent() {
       setFilters(f => ({ ...f, keyword: '', [resolvedField]: value }))
       setActiveFilters(f => ({ ...f, keyword: '', [resolvedField]: value }))
     }
-    if (searching) {
-      // Cap total and pages to MAX_SEARCH_PAGES so we never show more than 100 results
-      const cappedTotal = Math.min(data.total ?? 0, MAX_SEARCH_PAGES * PAGE_SIZE)
-      setTotal(cappedTotal)
-      setTotalPages(Math.min(data.totalPages ?? 1, MAX_SEARCH_PAGES))
-    } else {
-      setTotal(data.total ?? 0)
-      setTotalPages(data.totalPages ?? 1)
-    }
+    // Cap total and pages to MAX_SEARCH_PAGES (100) for both brokerage and search results
+    const cappedTotal = Math.min(data.total ?? 0, MAX_SEARCH_PAGES * PAGE_SIZE)
+    setTotal(cappedTotal)
+    setTotalPages(Math.min(data.totalPages ?? 1, MAX_SEARCH_PAGES))
     setLoading(false)
   }, [])
 
