@@ -87,7 +87,7 @@ export async function enrollContact(sequenceId: string, contactId: string, start
         title:       resolvedTitle,
         description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
         priority:    (taskConfig.priority as string) ?? 'normal',
-        taskTypeId:  (taskConfig.taskTypeId as string) || null,
+        taskTypeId:  await resolveTaskTypeId(taskConfig.taskTypeId as string | undefined),
         contactId,
         dueAt:       nextRunAt,
       },
@@ -243,7 +243,7 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
             title:       resolvedTitle,
             description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (config.priority as string) ?? 'normal',
-            taskTypeId:  (config.taskTypeId as string) || null,
+            taskTypeId:  await resolveTaskTypeId(config.taskTypeId as string | undefined),
             contactId:   enrollment.contactId,
             dueAt:       enrollment.nextRunAt ?? new Date(),
           },
@@ -342,7 +342,7 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
             title:       resolvedTitle,
             description: taskDesc ? `${taskDesc} · ${campaignTag}` : campaignTag,
             priority:    (taskConfig.priority as string) ?? 'normal',
-            taskTypeId:  (taskConfig.taskTypeId as string) || null,
+            taskTypeId:  await resolveTaskTypeId(taskConfig.taskTypeId as string | undefined),
             contactId:   enrollment.contactId,
             dueAt:       nextRunAt,
           },
@@ -441,6 +441,33 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Maps builtin task type IDs (used in the campaign builder UI) to their display names */
+const BUILTIN_NAME_MAP: Record<string, string> = {
+  builtin_call:            'Call',
+  builtin_meeting:         'Meeting',
+  builtin_email:           'Email',
+  builtin_followup:        'Follow-Up',
+  builtin_showing:         'Property Showing',
+  builtin_document_review: 'Document Review',
+  builtin_offer_prep:      'Offer Prep',
+  builtin_contract_review: 'Contract Review',
+  builtin_todo:            'To-Do',
+}
+
+/**
+ * Resolve a taskTypeId from campaign config to a real DB task type ID.
+ * Builtin IDs (prefixed "builtin_") are matched by name against the task_types table.
+ * Returns null if the type doesn't exist in the DB yet.
+ */
+async function resolveTaskTypeId(raw: string | undefined | null): Promise<string | null> {
+  if (!raw) return null
+  if (!raw.startsWith('builtin_')) return raw   // already a real DB ID
+  const name = BUILTIN_NAME_MAP[raw]
+  if (!name) return null
+  const found = await prisma.taskType.findUnique({ where: { name } })
+  return found?.id ?? null
+}
 
 function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60_000)

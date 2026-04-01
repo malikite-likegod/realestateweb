@@ -81,6 +81,19 @@ const STEP_LABELS: Record<StepType, string> = {
   send_portal_invite:  'Send Portal Invite',
 }
 
+/** Built-in task types that always appear even if the DB is empty */
+const BUILTIN_TASK_TYPES: TaskTypeOption[] = [
+  { id: 'builtin_call',             name: 'Call',             color: '#3b82f6' },
+  { id: 'builtin_meeting',          name: 'Meeting',          color: '#8b5cf6' },
+  { id: 'builtin_email',            name: 'Email',            color: '#10b981' },
+  { id: 'builtin_followup',         name: 'Follow-Up',        color: '#f59e0b' },
+  { id: 'builtin_showing',          name: 'Property Showing', color: '#ef4444' },
+  { id: 'builtin_document_review',  name: 'Document Review',  color: '#6366f1' },
+  { id: 'builtin_offer_prep',       name: 'Offer Prep',       color: '#ec4899' },
+  { id: 'builtin_contract_review',  name: 'Contract Review',  color: '#14b8a6' },
+  { id: 'builtin_todo',             name: 'To-Do',            color: '#64748b' },
+]
+
 /** Encode a task-type-specific step as a synthetic selector value */
 function taskStepValue(taskTypeId: string) { return `create_task::${taskTypeId}` }
 
@@ -325,9 +338,14 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
                   <option value="send_sms">Send SMS</option>
                   <optgroup label="Create Task">
                     <option value="create_task">Generic / Miscellaneous</option>
-                    {taskTypes.map(tt => (
+                    {BUILTIN_TASK_TYPES.map(tt => (
                       <option key={tt.id} value={taskStepValue(tt.id)}>{tt.name}</option>
                     ))}
+                    {taskTypes
+                      .filter(tt => !BUILTIN_TASK_TYPES.some(b => b.name.toLowerCase() === tt.name.toLowerCase()))
+                      .map(tt => (
+                        <option key={tt.id} value={taskStepValue(tt.id)}>{tt.name}</option>
+                      ))}
                   </optgroup>
                   <option value="wait">Wait / Delay</option>
                   <option value="update_lead_score">Update Lead Score</option>
