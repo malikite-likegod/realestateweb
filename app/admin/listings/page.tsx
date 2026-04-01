@@ -15,6 +15,7 @@ export default async function ListingsManagerPage() {
 
   const properties = await prisma.property.findMany({
     orderBy: { createdAt: 'desc' },
+    take:    100,
     include: { listings: true },
   })
 
@@ -22,7 +23,7 @@ export default async function ListingsManagerPage() {
     <DashboardLayout user={session}>
       <PageHeader
         title="Listings Manager"
-        subtitle={`${properties.length} properties`}
+        subtitle={properties.length === 100 ? 'Showing most recent 100 properties' : `${properties.length} properties`}
         breadcrumbs={[{ label: 'Dashboard', href: '/admin/dashboard' }, { label: 'Listings' }]}
         actions={
           <div className="flex gap-2">
