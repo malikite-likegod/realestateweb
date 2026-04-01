@@ -13,8 +13,7 @@ import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { useBehaviorTracker } from '@/hooks/useBehaviorTracker'
 
-const PAGE_SIZE            = 20
-const MAX_SEARCH_PAGES     = 5   // caps search results at 100 (5 × 20)
+const PAGE_SIZE            = 12
 
 function hasActiveSearch(f: Record<string, string>) {
   return Object.values(f).some(v => v !== '')
@@ -87,10 +86,8 @@ function ListingsContent() {
       setFilters(f => ({ ...f, keyword: '', [resolvedField]: value }))
       setActiveFilters(f => ({ ...f, keyword: '', [resolvedField]: value }))
     }
-    // Cap total and pages to MAX_SEARCH_PAGES (100) for both brokerage and search results
-    const cappedTotal = Math.min(data.total ?? 0, MAX_SEARCH_PAGES * PAGE_SIZE)
-    setTotal(cappedTotal)
-    setTotalPages(Math.min(data.totalPages ?? 1, MAX_SEARCH_PAGES))
+    setTotal(data.total ?? 0)
+    setTotalPages(data.totalPages ?? 1)
     setLoading(false)
   }, [])
 

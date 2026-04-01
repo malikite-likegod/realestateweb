@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const minSqft      = searchParams.get('minSqft')
   const maxSqft      = searchParams.get('maxSqft')
   const page         = Math.max(1, Number(searchParams.get('page') ?? '1'))
-  const pageSize     = 20
+  const pageSize     = 12
   const skip         = (page - 1) * pageSize
 
   const isRelational = !process.env.DATABASE_URL?.startsWith('file:')
@@ -72,8 +72,6 @@ export async function GET(request: Request) {
     }
   }
 
-  const MAX_RESULTS = 100
-
   const [rawTotal, properties] = await Promise.all([
     prisma.resoProperty.count({ where }),
     prisma.resoProperty.findMany({
@@ -105,8 +103,8 @@ export async function GET(request: Request) {
     : []
   const savedSet = new Set(saved.map(s => s.resoPropertyId))
 
-  const total      = Math.min(rawTotal, MAX_RESULTS)
-  const capped     = rawTotal > MAX_RESULTS
+  const total      = rawTotal
+  const capped     = false
   const totalPages = Math.ceil(total / pageSize)
 
   const data = properties.map(p => ({ ...p, isSaved: savedSet.has(p.id) }))
