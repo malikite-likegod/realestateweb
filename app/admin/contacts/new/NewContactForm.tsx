@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, Trash2 } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button, useToast } from '@/components/ui'
 
 type PhoneEntry   = { label: string; number: string; isPrimary: boolean }
 type AddressEntry = { label: string; street: string; city: string; province: string; postalCode: string; country: string; isPrimary: boolean }
+type Campaign     = { id: string; name: string; trigger: string; isActive: boolean }
 
 const INPUT_CLASS  = 'w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
 const SELECT_CLASS = 'w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
@@ -31,6 +32,27 @@ export function NewContactForm() {
 
   const [phones,    setPhones]    = useState<PhoneEntry[]>([])
   const [addresses, setAddresses] = useState<AddressEntry[]>([])
+
+  // Campaign enrollment state
+  const [campaigns,         setCampaigns]         = useState<Campaign[]>([])
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
+  const [skipAutoTriggers,  setSkipAutoTriggers]  = useState(false)
+
+  useEffect(() => {
+    fetch('/api/campaigns')
+      .then(r => r.json())
+      .then(body => {
+        const list: Campaign[] = (body.data ?? []).filter((c: Campaign) => c.isActive)
+        setCampaigns(list)
+      })
+      .catch(() => {/* non-critical */})
+  }, [])
+
+  function toggleCampaign(id: string) {
+    setSelectedCampaigns(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    )
+  }
 
   // ── Phone helpers ───────────────────────────────────────────────────────────
   function addPhone() {
@@ -98,6 +120,8 @@ export function NewContactForm() {
           notes:     form.notes    || null,
           phones,
           addresses,
+          skipAutoTriggers,
+          campaignIds: selectedCampaigns,
         }),
       })
       if (!res.ok) {
@@ -266,6 +290,57 @@ export function NewContactForm() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Campaign Enrollment ─────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-charcoal-100 bg-white p-6 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide">Campaign Enrollment</p>
+        </div>
+
+        {/* Skip auto-triggers toggle */}
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={skipAutoTriggers}
+            onChange={e => setSkipAutoTriggers(e.target.checked)}
+            className="mt-0.5 accent-gold-500 w-4 h-4 shrink-0"
+          />
+          <div>
+            <span className="text-sm font-medium text-charcoal-700">Skip auto-enrollment triggers</span>
+            <p className="text-xs text-charcoal-400 mt-0.5">
+              Bypass the automated campaign rules that normally fire when a new contact is added.
+              Use this when manually adding a contact who should not enter any drip sequences automatically.
+            </p>
+          </div>
+        </label>
+
+        {/* Manual campaign selection */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium text-charcoal-600">Manually enroll in campaigns (optional)</p>
+          {campaigns.length === 0 ? (
+            <p className="text-xs text-charcoal-400 italic">No active campaigns found.</p>
+          ) : (
+            <div className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
+              {campaigns.map(campaign => (
+                <label key={campaign.id} className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-charcoal-100 px-3 py-2.5 hover:bg-charcoal-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedCampaigns.includes(campaign.id)}
+                    onChange={() => toggleCampaign(campaign.id)}
+                    className="accent-gold-500 w-4 h-4 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-charcoal-800 font-medium">{campaign.name}</span>
+                  </div>
+                  <span className="text-xs text-charcoal-400 capitalize shrink-0">
+                    {campaign.trigger.replace(/_/g, ' ')}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

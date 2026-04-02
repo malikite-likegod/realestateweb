@@ -16,6 +16,7 @@ import { ContactListingsTab } from '@/components/admin/ContactListingsTab'
 import { ContactActivityFeed } from '@/components/admin/contacts/ContactActivityFeed'
 import { SavedSearchesTab } from '@/components/admin/contacts/SavedSearchesTab'
 import { PortalInviteButton } from '@/components/admin/contacts/PortalInviteButton'
+import { DeleteContactButton } from './DeleteContactButton'
 import { Avatar, Badge, Tabs, BlurredField } from '@/components/ui'
 import { formatDate } from '@/lib/utils'
 import {
@@ -136,6 +137,10 @@ export default async function ContactDetailPage({ params, searchParams }: Props)
         ]}
         actions={
           <div className="flex items-center gap-3">
+            <DeleteContactButton
+              contactId={contact.id}
+              contactName={`${contact.firstName} ${contact.lastName}`}
+            />
             {contact.email && (
               <PortalInviteButton
                 contactId={contact.id}

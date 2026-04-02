@@ -6,6 +6,23 @@ import { sendWebhook } from '@/services/ai/webhooks'
 import { enqueueJob } from '@/lib/automation/job-queue'
 import { createNotification } from '@/lib/notifications'
 import { notifyNewContact } from '@/lib/notifications/admin-notify'
+import { enrollContact } from '@/lib/automation/campaign-service'
+
+const phoneSchema = z.object({
+  label:     z.string().default('mobile'),
+  number:    z.string(),
+  isPrimary: z.boolean().default(false),
+})
+
+const addressSchema = z.object({
+  label:      z.string().default('home'),
+  street:     z.string().optional().nullable(),
+  city:       z.string().optional().nullable(),
+  province:   z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  country:    z.string().default('CA'),
+  isPrimary:  z.boolean().default(false),
+})
 
 const createContactSchema = z.object({
   firstName:  z.string().optional(),
@@ -14,10 +31,19 @@ const createContactSchema = z.object({
   email:      z.string().email().optional(),
   phone:      z.string().optional(),
   company:    z.string().optional(),
+  jobTitle:   z.string().optional().nullable(),
   source:     z.string().optional(),
+  status:     z.enum(['lead', 'prospect', 'client', 'past_client']).optional(),
+  birthday:   z.string().optional().nullable(),
+  notes:      z.string().optional().nullable(),
   interest:   z.string().optional(),
   message:    z.string().optional(),
   metadata:   z.record(z.unknown()).optional(),
+  phones:     z.array(phoneSchema).optional(),
+  addresses:  z.array(addressSchema).optional(),
+  // Campaign controls
+  skipAutoTriggers: z.boolean().optional(),
+  campaignIds:      z.array(z.string()).optional(),
 })
 
 export async function GET(request: Request) {
@@ -77,13 +103,63 @@ export async function POST(request: Request) {
       const existing = await prisma.contact.findUnique({ where: { email: parsed.email } })
       isNew = !existing
       contact = await prisma.contact.upsert({
-        where: { email: parsed.email },
+        where:  { email: parsed.email },
         update: { phone: parsed.phone ?? undefined, source: parsed.source ?? undefined },
-        create: { firstName, lastName, email: parsed.email, phone: parsed.phone ?? null, company: parsed.company ?? null, source: parsed.source ?? 'website' },
+        create: {
+          firstName,
+          lastName,
+          email:    parsed.email,
+          phone:    parsed.phone    ?? null,
+          company:  parsed.company  ?? null,
+          jobTitle: parsed.jobTitle ?? null,
+          source:   parsed.source   ?? 'website',
+          status:   parsed.status   ?? 'lead',
+          notes:    parsed.notes    ?? null,
+          ...(parsed.birthday ? { birthday: new Date(parsed.birthday) } : {}),
+        },
       })
     } else {
       contact = await prisma.contact.create({
-        data: { firstName, lastName, email: null, phone: parsed.phone ?? null, source: parsed.source ?? 'website' },
+        data: {
+          firstName,
+          lastName,
+          email:    null,
+          phone:    parsed.phone    ?? null,
+          company:  parsed.company  ?? null,
+          jobTitle: parsed.jobTitle ?? null,
+          source:   parsed.source   ?? 'website',
+          status:   parsed.status   ?? 'lead',
+          notes:    parsed.notes    ?? null,
+          ...(parsed.birthday ? { birthday: new Date(parsed.birthday) } : {}),
+        },
+      })
+    }
+
+    // Create phone records
+    if (parsed.phones && parsed.phones.length > 0) {
+      await prisma.contactPhone.createMany({
+        data: parsed.phones.map(p => ({
+          contactId: contact.id,
+          label:     p.label,
+          number:    p.number,
+          isPrimary: p.isPrimary,
+        })),
+      })
+    }
+
+    // Create address records
+    if (parsed.addresses && parsed.addresses.length > 0) {
+      await prisma.contactAddress.createMany({
+        data: parsed.addresses.map(a => ({
+          contactId:  contact.id,
+          label:      a.label,
+          street:     a.street     ?? null,
+          city:       a.city       ?? null,
+          province:   a.province   ?? null,
+          postalCode: a.postalCode ?? null,
+          country:    a.country,
+          isPrimary:  a.isPrimary,
+        })),
       })
     }
 
@@ -94,9 +170,18 @@ export async function POST(request: Request) {
       })
     }
 
-    // Webhook + automation rules
-    await sendWebhook('new_lead', { contactId: contact.id, source: parsed.source })
-    await enqueueJob('evaluate_rules', { trigger: 'new_lead', contactId: contact.id })
+    // Webhook + automation rules (skip if caller requested bypass)
+    if (!parsed.skipAutoTriggers) {
+      await sendWebhook('new_lead', { contactId: contact.id, source: parsed.source })
+      await enqueueJob('evaluate_rules', { trigger: 'new_lead', contactId: contact.id })
+    }
+
+    // Manually enroll in any specified campaigns
+    if (parsed.campaignIds && parsed.campaignIds.length > 0) {
+      await Promise.allSettled(
+        parsed.campaignIds.map(campaignId => enrollContact(campaignId, contact.id))
+      )
+    }
 
     const name = [firstName, lastName].filter(Boolean).join(' ') || parsed.email || 'Unknown'
     await createNotification({
