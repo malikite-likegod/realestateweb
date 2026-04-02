@@ -51,6 +51,7 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [subject, setSubject]     = useState(initialSubject ?? '')
   const [body, setBody]           = useState(initialBody ?? '')
+  const [signature, setSignature] = useState('')
   const [templateId, setTemplateId] = useState('')
   const [attachments, setAttachments] = useState<PickedFile[]>([])
   const [showPicker,  setShowPicker]  = useState(false)
@@ -60,11 +61,15 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
   const { toast }                     = useToast()
   const bodyRef                       = useRef<HTMLTextAreaElement>(null)
 
-  // Load templates on mount
+  // Load templates and signature on mount
   useEffect(() => {
     fetch('/api/email-templates')
       .then(r => r.json())
       .then(json => setTemplates(json.data ?? []))
+      .catch(() => {})
+    fetch('/api/settings/signature')
+      .then(r => r.json())
+      .then(json => { if (json.data?.emailSignature) setSignature(json.data.emailSignature) })
       .catch(() => {})
   }, [])
 
@@ -86,10 +91,14 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
     if (!subject.trim() || !body.trim() || !contactEmail) return
     setSending(true)
     try {
+      const finalBody = signature.trim()
+        ? `${body.trim()}\n\n<hr style="border:none;border-top:1px solid #e5e5e5;margin:16px 0"/>\n${signature.trim()}`
+        : body.trim()
+
       const formData = new FormData()
       formData.append('contactId', contactId)
       formData.append('subject',   subject.trim())
-      formData.append('body',      body.trim())
+      formData.append('body',      finalBody)
       formData.append('toEmail',   contactEmail)
       if (templateId) formData.append('templateId', templateId)
       // Send existing-file references by URL — API reads them from disk
@@ -165,6 +174,22 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
               className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900 resize-none font-mono"
             />
           </div>
+
+          {/* Signature */}
+          {signature.trim() && (
+            <div className="border-t border-charcoal-100 pt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-charcoal-400">Signature (appended on send)</span>
+                <button type="button" onClick={() => setSignature('')} className="text-xs text-charcoal-400 hover:text-red-500 transition-colors">Remove</button>
+              </div>
+              <textarea
+                value={signature}
+                onChange={e => setSignature(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-charcoal-100 bg-charcoal-50 px-3 py-2 text-xs text-charcoal-500 focus:outline-none focus:ring-1 focus:ring-charcoal-300 resize-none"
+              />
+            </div>
+          )}
 
           {/* Attachments */}
           <div>

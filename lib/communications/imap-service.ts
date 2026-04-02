@@ -119,6 +119,29 @@ export async function syncInbox(): Promise<SyncResult> {
         })
 
         imported++
+
+        // ── Anti-spam compliance: auto opt-out when contact sends "unsubscribe" ──
+        if (contact && !contact.emailOptOut) {
+          const lowerSubject = subject.toLowerCase()
+          const lowerBody    = body.toLowerCase()
+          if (lowerSubject.includes('unsubscribe') || lowerBody.includes('unsubscribe')) {
+            await prisma.$transaction([
+              prisma.contact.update({
+                where: { id: contact.id },
+                data:  { emailOptOut: true },
+              }),
+              prisma.communicationOptLog.create({
+                data: {
+                  contactId: contact.id,
+                  channel:   'email',
+                  action:    'opt_out',
+                  reason:    'Auto opt-out: inbound email contained "unsubscribe"',
+                },
+              }),
+            ])
+          }
+        }
+
         await notifyInboundEmail(contact, fromEmail ?? fromName, subject)
 
         // Mark as seen on the server

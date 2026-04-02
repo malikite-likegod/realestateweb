@@ -140,6 +140,9 @@ export async function getSmsThread(contactId: string, opts?: { page?: number; pa
   return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) }
 }
 
+// CTIA opt-out keywords — receiving any of these must result in an immediate opt-out
+const SMS_STOP_KEYWORDS = new Set(['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'])
+
 /**
  * Handle an inbound Twilio SMS webhook.
  * Twilio sends a URL-encoded POST with From, To, Body, MessageSid, etc.
@@ -169,6 +172,24 @@ export async function parseTwilioWebhook(form: URLSearchParams) {
       groupId:    null,
     },
   })
+
+  // ── Anti-spam compliance: auto opt-out on CTIA stop keywords ─────────────
+  if (contact && SMS_STOP_KEYWORDS.has(body.trim().toUpperCase())) {
+    await prisma.$transaction([
+      prisma.contact.update({
+        where: { id: contact.id },
+        data:  { smsOptOut: true },
+      }),
+      prisma.communicationOptLog.create({
+        data: {
+          contactId: contact.id,
+          channel:   'sms',
+          action:    'opt_out',
+          reason:    `Auto opt-out: inbound SMS keyword "${body.trim().toUpperCase()}"`,
+        },
+      }),
+    ])
+  }
 
   const contactName = contact
     ? `${contact.firstName} ${contact.lastName}`.trim()

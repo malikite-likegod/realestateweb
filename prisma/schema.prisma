@@ -27,6 +27,8 @@ model User {
   pendingOtpHash     String?
   pendingOtpExpiry   DateTime?
   pendingOtpAttempts Int       @default(0)
+  emailSignature     String?   // HTML/plain-text appended to outbound emails
+  smsSignature       String?   // Plain-text appended to outbound SMS
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

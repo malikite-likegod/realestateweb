@@ -12,12 +12,13 @@ import { LeadCaptureSettingsCard } from '@/components/admin/LeadCaptureSettingsC
 import { BlurModeSettingsCard } from '@/components/admin/BlurModeSettingsCard'
 import { MlsSyncSettingsCard } from '@/components/admin/MlsSyncSettingsCard'
 import { HotBrowserAlertCard } from '@/components/admin/HotBrowserAlertCard'
+import { SignatureSettingsCard } from '@/components/admin/SignatureSettingsCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -32,6 +33,7 @@ export default async function SettingsPage() {
     prisma.resoProperty.count({ where: { standardStatus: 'Active' } }),
     prisma.siteSettings.findUnique({ where: { key: 'mls_sync_interval_minutes' } }),
     prisma.siteSettings.findMany({ where: { key: { in: ['hot_browser_alert_enabled', 'hot_browser_alert_views', 'hot_browser_alert_hours'] } } }),
+    prisma.user.findUnique({ where: { id: session.id }, select: { emailSignature: true, smsSignature: true } }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
   const totpEnabled = tfaUser?.totpEnabled ?? false
@@ -90,6 +92,11 @@ export default async function SettingsPage() {
         <ChangePasswordCard />
 
         <TwoFactorCard initialEnabled={totpEnabled} userEmail={session.email} />
+
+        <SignatureSettingsCard
+          initialEmailSignature={sigUser?.emailSignature ?? null}
+          initialSmsSignature={sigUser?.smsSignature ?? null}
+        />
 
         <LeadCaptureSettingsCard initialLimit={gateLimit} initialEnabled={gateEnabled} />
 

@@ -32,11 +32,20 @@ interface SmsThreadProps {
 }
 
 export function SmsThread({ initialMessages, contactId, contactPhone, smsOptOut = false }: SmsThreadProps) {
-  const [messages, setMessages] = useState<SmsEntry[]>(initialMessages)
-  const [text, setText]         = useState('')
-  const [sending, setSending]   = useState(false)
-  const bottomRef               = useRef<HTMLDivElement>(null)
-  const { toast }               = useToast()
+  const [messages,  setMessages]  = useState<SmsEntry[]>(initialMessages)
+  const [text, setText]           = useState('')
+  const [signature, setSignature] = useState('')
+  const [sending, setSending]     = useState(false)
+  const bottomRef                 = useRef<HTMLDivElement>(null)
+  const { toast }                 = useToast()
+
+  // Load SMS signature on mount
+  useEffect(() => {
+    fetch('/api/settings/signature')
+      .then(r => r.json())
+      .then(json => { if (json.data?.smsSignature) setSignature(json.data.smsSignature) })
+      .catch(() => {})
+  }, [])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -60,10 +69,11 @@ export function SmsThread({ initialMessages, contactId, contactPhone, smsOptOut 
     if (!text.trim() || !contactPhone) return
     setSending(true)
     try {
+      const finalBody = signature.trim() ? `${text.trim()} ${signature.trim()}` : text.trim()
       const res = await fetch('/api/sms', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ contactId, body: text.trim(), toNumber: contactPhone }),
+        body:    JSON.stringify({ contactId, body: finalBody, toNumber: contactPhone }),
       })
       if (!res.ok) throw new Error('Failed to send')
       const { data } = await res.json()
@@ -115,18 +125,25 @@ export function SmsThread({ initialMessages, contactId, contactPhone, smsOptOut 
           This contact has opted out of SMS communications. Edit the contact to re-enable.
         </div>
       ) : contactPhone ? (
-        <form onSubmit={handleSend} className="flex gap-2">
-          <input
-            type="text"
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder={`Message ${contactPhone}…`}
-            className="flex-1 rounded-xl border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
-          />
-          <Button type="submit" variant="primary" size="sm" loading={sending} leftIcon={<Send size={14} />}>
-            Send
-          </Button>
-        </form>
+        <div className="flex flex-col gap-1.5">
+          <form onSubmit={handleSend} className="flex gap-2">
+            <input
+              type="text"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={`Message ${contactPhone}…`}
+              className="flex-1 rounded-xl border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
+            />
+            <Button type="submit" variant="primary" size="sm" loading={sending} leftIcon={<Send size={14} />}>
+              Send
+            </Button>
+          </form>
+          {signature.trim() && (
+            <p className="text-xs text-charcoal-400 px-1">
+              Signature will be appended: <span className="text-charcoal-500 italic">{signature.trim()}</span>
+            </p>
+          )}
+        </div>
       ) : (
         <p className="text-xs text-charcoal-400 text-center">Add a phone number to this contact to enable SMS.</p>
       )}
