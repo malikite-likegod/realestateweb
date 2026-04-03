@@ -126,7 +126,10 @@ export function NewContactForm() {
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Failed to create contact')
+        const errMsg = Array.isArray(body.error)
+          ? body.error.map((e: { message: string }) => e.message).join(', ')
+          : (body.error ?? 'Failed to create contact')
+        throw new Error(errMsg)
       }
       const { data } = await res.json()
       toast('success', 'Contact created')

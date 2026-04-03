@@ -28,7 +28,7 @@ const createContactSchema = z.object({
   firstName:  z.string().optional(),
   lastName:   z.string().optional(),
   name:       z.string().optional(),
-  email:      z.string().email().optional(),
+  email:      z.string().email().optional().nullable(),
   phone:      z.string().optional(),
   company:    z.string().optional(),
   jobTitle:   z.string().optional().nullable(),
