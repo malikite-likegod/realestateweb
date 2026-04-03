@@ -36,7 +36,7 @@ function formatDateTime(iso: string) {
 }
 
 function getAddress(p: PropertySnippet): string {
-  return [p.streetNumber, p.streetDirPrefix, p.streetName, p.streetSuffix, p.streetDirSuffix].filter(Boolean).join(' ') || p.listingKey
+  return [p.streetNumber, p.streetName, p.streetSuffix, p.streetDirPrefix, p.streetDirSuffix].filter(Boolean).join(' ') || p.listingKey
 }
 
 function getFirstImage(media: string | null): string {

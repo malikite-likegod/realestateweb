@@ -40,9 +40,9 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
 
       const addressParts = [
         p.streetNumber,
-        p.streetDirPrefix,
         p.streetName,
         p.streetSuffix,
+        p.streetDirPrefix,
         p.streetDirSuffix,
         p.unitNumber ? `#${p.unitNumber}` : null,
       ].filter(Boolean)

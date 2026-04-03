@@ -15,7 +15,7 @@ function formatPrice(price: number | null): string {
 
 function formatAddress(p: { streetNumber: string | null; streetDirPrefix: string | null; streetName: string | null; streetSuffix: string | null; streetDirSuffix: string | null; unitNumber: string | null } | null): string {
   if (!p) return 'Address TBD'
-  return [p.unitNumber, p.streetNumber, p.streetDirPrefix, p.streetName, p.streetSuffix, p.streetDirSuffix].filter(Boolean).join(' ') || 'Address TBD'
+  return [p.streetNumber, p.streetName, p.streetSuffix, p.streetDirPrefix, p.streetDirSuffix, p.unitNumber].filter(Boolean).join(' ') || 'Address TBD'
 }
 
 export default async function PackagePage({ params }: Props) {

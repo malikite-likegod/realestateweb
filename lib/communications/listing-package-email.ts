@@ -51,7 +51,7 @@ function buildListingCard(
 ): string {
   const p       = item.property
   const photo   = p ? getFirstPhoto(p.media) : ''
-  const addressParts = [p?.streetNumber, p?.streetDirPrefix, p?.streetName, p?.streetSuffix, p?.streetDirSuffix, p?.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
+  const addressParts = [p?.streetNumber, p?.streetName, p?.streetSuffix, p?.streetDirPrefix, p?.streetDirSuffix, p?.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
   const address = addressParts.length > 0 ? addressParts.join(' ') : 'Address unavailable'
   const city    = p?.city ?? ''
   const price   = formatPrice(p?.listPrice ?? null)

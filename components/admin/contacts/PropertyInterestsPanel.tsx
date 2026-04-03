@@ -44,7 +44,7 @@ interface Summary {
 interface Props { contactId: string }
 
 function getAddress(p: ResoPropertyInfo): string {
-  return [p.streetNumber, p.streetDirPrefix, p.streetName, p.streetDirSuffix].filter(Boolean).join(' ') || p.listingKey
+  return [p.streetNumber, p.streetName, p.streetDirPrefix, p.streetDirSuffix].filter(Boolean).join(' ') || p.listingKey
 }
 
 export function PropertyInterestsPanel({ contactId }: Props) {
