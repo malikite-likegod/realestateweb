@@ -71,7 +71,7 @@ const IDX_SELECT = [
   'ListingKey', 'StandardStatus', 'PropertyType', 'PropertySubType',
   'ListPrice', 'BedroomsTotal', 'BedroomsAboveGrade', 'BedroomsBelowGrade', 'BathroomsTotalInteger',
   'BuildingAreaTotal', 'LivingAreaRange', 'LotSizeArea', 'LotSizeUnits', 'LotWidth', 'LotDepth',
-  'StreetNumber', 'StreetName', 'StreetSuffix', 'UnitNumber', 'UnparsedAddress',
+  'StreetNumber', 'StreetDirPrefix', 'StreetName', 'StreetSuffix', 'StreetDirSuffix', 'UnitNumber', 'UnparsedAddress',
   'TransactionType', 'City', 'CityRegion', 'CountyOrParish', 'StateOrProvince', 'PostalCode',
   'PublicRemarks', 'ListOfficeKey', 'ListOfficeName',
   'OriginalEntryTimestamp', 'ModificationTimestamp',

@@ -15,8 +15,10 @@ export interface ResoPropertyRaw {
   LotWidth?:             number | string   // maps to lotFront
   LotDepth?:             number | string
   StreetNumber?:         string
+  StreetDirPrefix?:      string
   StreetName?:           string
   StreetSuffix?:         string
+  StreetDirSuffix?:      string
   UnitNumber?:           string
   UnparsedAddress?:      string
   TransactionType?:      string
