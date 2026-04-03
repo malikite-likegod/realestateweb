@@ -7,12 +7,14 @@
  * and renders: tag/status filters, selection toolbar, contacts table.
  */
 
-import { useState, Suspense, useEffect } from 'react'
+import { useState, Suspense, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, X, Home } from 'lucide-react'
+import { Mail, X, Home, ArrowDownAZ, ArrowUpAZ, Clock } from 'lucide-react'
 import { ContactTable } from './ContactTable'
 import { ContactFilters } from './ContactFilters'
 import type { ContactWithTags, Tag } from '@/types'
+
+type SortOrder = 'date' | 'name_asc' | 'name_desc'
 
 interface Props {
   contacts:            ContactWithTags[]
@@ -24,6 +26,7 @@ interface Props {
 export function ContactsClientShell({ contacts, tags, sendListingId, sendListingAddress }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [sortOrder, setSortOrder] = useState<SortOrder>('date')
 
   useEffect(() => {
     setSelected(new Set())
@@ -49,6 +52,19 @@ export function ContactsClientShell({ contacts, tags, sendListingId, sendListing
   function emailSelected() {
     const ids = Array.from(selected).join(',')
     router.push(`/admin/bulk-email?contactIds=${ids}`)
+  }
+
+  const sortedContacts = useMemo(() => {
+    if (sortOrder === 'date') return contacts
+    return [...contacts].sort((a, b) => {
+      const nameA = `${a.lastName} ${a.firstName}`.trim().toLowerCase()
+      const nameB = `${b.lastName} ${b.firstName}`.trim().toLowerCase()
+      return sortOrder === 'name_asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA)
+    })
+  }, [contacts, sortOrder])
+
+  function cycleSort() {
+    setSortOrder(prev => prev === 'date' ? 'name_asc' : prev === 'name_asc' ? 'name_desc' : 'date')
   }
 
   const listingLinkSuffix = sendListingId
@@ -89,8 +105,19 @@ export function ContactsClientShell({ contacts, tags, sendListingId, sendListing
         </div>
       )}
 
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={cycleSort}
+          className="flex items-center gap-1.5 text-xs font-medium text-charcoal-500 hover:text-charcoal-800 transition-colors"
+        >
+          {sortOrder === 'date'      && <><Clock size={13} /> Date added</>}
+          {sortOrder === 'name_asc'  && <><ArrowDownAZ size={13} /> Name A–Z</>}
+          {sortOrder === 'name_desc' && <><ArrowUpAZ size={13} /> Name Z–A</>}
+        </button>
+      </div>
+
       <ContactTable
-        contacts={contacts}
+        contacts={sortedContacts}
         selectedIds={selected}
         onToggle={toggle}
         onToggleAll={toggleAll}
