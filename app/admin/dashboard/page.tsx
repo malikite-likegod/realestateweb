@@ -21,10 +21,15 @@ export default async function DashboardPage() {
 
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
 
+  // Resolve agent MLS name before the main query so we can filter RESO listings
+  const agentMlsNameRow = await prisma.siteSettings.findUnique({ where: { key: 'listing_agent_mls_name' } })
+  const agentMlsName = agentMlsNameRow?.value?.trim() || null
+
   const [
     contactCount,
     dealCount,
-    listingCount,
+    manualListingCount,
+    resoListingCount,
     taskCount,
     recentContacts,
     recentTasks,
@@ -37,6 +42,17 @@ export default async function DashboardPage() {
     prisma.contact.count(),
     prisma.deal.count(),
     prisma.property.count({ where: { status: 'active' } }),
+    agentMlsName
+      ? prisma.resoProperty.count({
+          where: {
+            standardStatus: 'Active',
+            OR: [
+              { listAgentFullName: { contains: agentMlsName, mode: 'insensitive' } },
+              { listAgentName:     { contains: agentMlsName, mode: 'insensitive' } },
+            ],
+          },
+        })
+      : Promise.resolve(0),
     prisma.task.count({ where: { status: { not: 'done' } } }),
     prisma.contact.findMany({
       orderBy: { createdAt: 'desc' },
@@ -88,6 +104,8 @@ export default async function DashboardPage() {
       },
     }),
   ])
+
+  const listingCount = manualListingCount + resoListingCount
 
   const leads = recentContacts as ContactWithTags[]
 
