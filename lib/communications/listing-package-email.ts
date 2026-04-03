@@ -49,7 +49,7 @@ function buildListingCard(
 ): string {
   const p       = item.property
   const photo   = p ? getFirstPhoto(p.media) : ''
-  const addressParts = [p?.streetNumber, p?.streetName, p?.streetSuffix, p?.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
+  const addressParts = [p?.streetNumber, p?.streetDirPrefix, p?.streetName, p?.streetSuffix, p?.streetDirSuffix, p?.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
   const address = addressParts.length > 0 ? addressParts.join(' ') : 'Address unavailable'
   const city    = p?.city ?? ''
   const price   = formatPrice(p?.listPrice ?? null)
@@ -85,13 +85,13 @@ export async function sendListingPackageEmail({ pkg, contact }: SendPackageEmail
     where: { listingKey: { in: listingKeys } },
     select: {
       listingKey: true,
-      streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+      streetNumber: true, streetDirPrefix: true, streetName: true, streetSuffix: true, streetDirSuffix: true, unitNumber: true,
       city: true, listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
       livingArea: true, media: true,
     },
   })
   const propMap        = Object.fromEntries(properties.map(p => [p.listingKey, {
-    streetNumber: p.streetNumber, streetName: p.streetName, streetSuffix: p.streetSuffix, unitNumber: p.unitNumber,
+    streetNumber: p.streetNumber, streetDirPrefix: p.streetDirPrefix, streetName: p.streetName, streetSuffix: p.streetSuffix, streetDirSuffix: p.streetDirSuffix, unitNumber: p.unitNumber,
     city: p.city, listPrice: p.listPrice, bedroomsTotal: p.bedroomsTotal,
     bathroomsTotalInteger: p.bathroomsTotalInteger, livingArea: p.livingArea, media: p.media,
   }]))

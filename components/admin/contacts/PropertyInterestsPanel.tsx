@@ -7,9 +7,11 @@ import { Home, X, Plus, Eye, Link as LinkIcon } from 'lucide-react'
 interface ResoPropertyInfo {
   id:           string
   listingKey:   string
-  streetNumber: string | null
-  streetName:   string | null
-  unitNumber:   string | null
+  streetNumber:    string | null
+  streetDirPrefix: string | null
+  streetName:      string | null
+  streetDirSuffix: string | null
+  unitNumber:      string | null
   city:         string
   listPrice:    number | null
   propertySubType: string | null
@@ -42,7 +44,7 @@ interface Summary {
 interface Props { contactId: string }
 
 function getAddress(p: ResoPropertyInfo): string {
-  return [p.streetNumber, p.streetName].filter(Boolean).join(' ') || p.listingKey
+  return [p.streetNumber, p.streetDirPrefix, p.streetName, p.streetDirSuffix].filter(Boolean).join(' ') || p.listingKey
 }
 
 export function PropertyInterestsPanel({ contactId }: Props) {

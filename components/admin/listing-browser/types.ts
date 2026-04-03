@@ -2,8 +2,10 @@ export interface ResoListing {
   id:                    string
   listingKey:            string
   streetNumber:          string | null
+  streetDirPrefix:       string | null
   streetName:            string | null
   streetSuffix:          string | null
+  streetDirSuffix:       string | null
   unitNumber:            string | null
   city:                  string | null
   listPrice:             number | null

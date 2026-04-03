@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const property = await PropertyService.getProperty(id)
   if (!property) return {}
-  const address = [property.streetNumber, property.streetName, property.streetSuffix, property.city].filter(Boolean).join(' ')
+  const address = [property.streetNumber, property.streetDirPrefix, property.streetName, property.streetSuffix, property.streetDirSuffix, property.city].filter(Boolean).join(' ')
   return {
     title: address || property.listingKey,
     description: property.publicRemarks ?? undefined,
@@ -74,7 +74,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
   const mediaItems = parseJsonSafe<{ url: string; order: number }[]>(property.media, [])
   const images     = mediaItems.length > 0 ? mediaItems.map(m => m.url) : ['/images/minimal-light-placeholder.svg']
-  const address    = [property.streetNumber, property.streetName, property.streetSuffix, property.unitNumber ? `#${property.unitNumber}` : null].filter(Boolean).join(' ')
+  const address    = [property.streetNumber, property.streetDirPrefix, property.streetName, property.streetSuffix, property.streetDirSuffix, property.unitNumber ? `#${property.unitNumber}` : null].filter(Boolean).join(' ')
   const returnUrl  = `/listings/${id}`
 
   return (

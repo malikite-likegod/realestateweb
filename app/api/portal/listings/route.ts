@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         propertyType: true, propertySubType: true, transactionType: true,
         listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
         garageSpaces: true, livingArea: true, yearBuilt: true,
-        streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+        streetNumber: true, streetDirPrefix: true, streetName: true, streetSuffix: true, streetDirSuffix: true, unitNumber: true,
         city: true, stateOrProvince: true, postalCode: true,
         latitude: true, longitude: true,
         publicRemarks: true, media: true,

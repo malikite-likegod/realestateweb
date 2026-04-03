@@ -14,7 +14,7 @@ export async function GET() {
       propertyType: true, propertySubType: true, transactionType: true,
       listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
       garageSpaces: true, livingArea: true,
-      streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+      streetNumber: true, streetDirPrefix: true, streetName: true, streetSuffix: true, streetDirSuffix: true, unitNumber: true,
       city: true, stateOrProvince: true, postalCode: true,
       media: true, listAgentFullName: true, listOfficeName: true,
     } } },

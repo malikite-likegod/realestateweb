@@ -19,7 +19,7 @@ function formatPrice(price: number | null): string {
 }
 
 function formatAddress(l: ResoListing): string {
-  return [l.unitNumber, l.streetNumber, l.streetName, l.streetSuffix].filter(Boolean).join(' ') || 'Address TBD'
+  return [l.unitNumber, l.streetNumber, l.streetDirPrefix, l.streetName, l.streetSuffix, l.streetDirSuffix].filter(Boolean).join(' ') || 'Address TBD'
 }
 
 export function BrowseGrid({ listings, selected, onToggle }: Props) {

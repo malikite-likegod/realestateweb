@@ -416,8 +416,10 @@ model ResoProperty {
   exclusions            String?   // items excluded from the sale
 
   streetNumber          String?
+  streetDirPrefix       String?
   streetName            String?
   streetSuffix          String?
+  streetDirSuffix       String?
   unitNumber            String?
   transactionType       String?
   city                  String

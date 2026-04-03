@@ -8,8 +8,10 @@ interface PropertySnippet {
   id:              string
   listingKey:      string
   streetNumber:    string | null
+  streetDirPrefix: string | null
   streetName:      string | null
   streetSuffix:    string | null
+  streetDirSuffix: string | null
   unitNumber:      string | null
   city:            string
   listPrice:       number | null
@@ -34,7 +36,7 @@ function formatDateTime(iso: string) {
 }
 
 function getAddress(p: PropertySnippet): string {
-  return [p.streetNumber, p.streetName, p.streetSuffix].filter(Boolean).join(' ') || p.listingKey
+  return [p.streetNumber, p.streetDirPrefix, p.streetName, p.streetSuffix, p.streetDirSuffix].filter(Boolean).join(' ') || p.listingKey
 }
 
 function getFirstImage(media: string | null): string {

@@ -27,7 +27,7 @@ export async function GET(
     where: { listingKey: { in: listingKeys } },
     select: {
       listingKey: true,
-      streetNumber: true, streetName: true, streetSuffix: true, unitNumber: true,
+      streetNumber: true, streetDirPrefix: true, streetName: true, streetSuffix: true, streetDirSuffix: true, unitNumber: true,
       city: true, listPrice: true, bedroomsTotal: true, bathroomsTotalInteger: true,
       livingArea: true, media: true, standardStatus: true,
     },

@@ -14,10 +14,10 @@ import { ListingMap } from '@/components/real-estate/ListingMap'
 import { PropertyDetailTabs, type DetailRow } from '@/components/real-estate/PropertyDetailTabs'
 
 function getAddress(p: {
-  streetNumber: string | null; streetName: string | null;
-  streetSuffix: string | null; unitNumber: string | null; listingKey: string
+  streetNumber: string | null; streetDirPrefix: string | null; streetName: string | null;
+  streetSuffix: string | null; streetDirSuffix: string | null; unitNumber: string | null; listingKey: string
 }): string {
-  return [p.streetNumber, p.streetName, p.streetSuffix, p.unitNumber ? `#${p.unitNumber}` : null]
+  return [p.streetNumber, p.streetDirPrefix, p.streetName, p.streetSuffix, p.streetDirSuffix, p.unitNumber ? `#${p.unitNumber}` : null]
     .filter(Boolean).join(' ') || p.listingKey
 }
 

@@ -14,8 +14,10 @@ export interface ResoProperty {
   garageSpaces:         number | null
   livingArea:           number | null
   streetNumber:         string | null
+  streetDirPrefix:      string | null
   streetName:           string | null
   streetSuffix:         string | null
+  streetDirSuffix:      string | null
   unitNumber:           string | null
   city:                 string
   stateOrProvince:      string
@@ -27,7 +29,7 @@ export interface ResoProperty {
 }
 
 function getAddress(p: ResoProperty): string {
-  return [p.streetNumber, p.streetName, p.streetSuffix, p.unitNumber ? `#${p.unitNumber}` : null]
+  return [p.streetNumber, p.streetDirPrefix, p.streetName, p.streetSuffix, p.streetDirSuffix, p.unitNumber ? `#${p.unitNumber}` : null]
     .filter(Boolean).join(' ') || p.listingKey
 }
 
