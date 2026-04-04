@@ -71,6 +71,104 @@ export function renderTemplate(template: string, vars: Record<string, string>): 
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`)
 }
 
+/**
+ * Resolve {{listing:MLSNUMBER:field}} tags in a template string.
+ *
+ * Supported fields: address | image | price | link
+ *
+ * Looks up each unique MLS# against both the internal Property table
+ * (mlsNumber) and the RESO ResoProperty table (listingKey / listingId).
+ * Internal listings take precedence when both share the same MLS#.
+ */
+export async function resolveListingTags(text: string): Promise<string> {
+  const TAG_RE = /\{\{listing:([^:}]+):(\w+)\}\}/g
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+
+  // Collect unique MLS numbers referenced in the template
+  const mlsNumbers = new Set<string>()
+  for (const [, mls] of text.matchAll(TAG_RE)) mlsNumbers.add(mls)
+  if (mlsNumbers.size === 0) return text
+
+  const mlsList = Array.from(mlsNumbers)
+
+  // Load internal properties matching any of the MLS numbers
+  const [internalProps, resoProps] = await Promise.all([
+    prisma.property.findMany({
+      where: { mlsNumber: { in: mlsList } },
+      select: {
+        id: true, mlsNumber: true,
+        address: true, city: true, province: true, postalCode: true,
+        price: true, images: true,
+      },
+    }),
+    prisma.resoProperty.findMany({
+      where: { OR: [{ listingKey: { in: mlsList } }, { listingId: { in: mlsList } }] },
+      select: {
+        id: true, listingKey: true, listingId: true,
+        streetNumber: true, streetName: true, streetSuffix: true,
+        unitNumber: true, city: true, stateOrProvince: true, postalCode: true,
+        listPrice: true, media: true,
+      },
+    }),
+  ])
+
+  // Build a lookup map keyed by MLS# → resolved field values
+  type ListingData = { address: string; image: string; price: string; link: string }
+  const lookup = new Map<string, ListingData>()
+
+  for (const p of resoProps) {
+    const mls = mlsList.find(m => m === p.listingKey || m === p.listingId)
+    if (!mls) continue
+
+    const parts = [p.unitNumber, p.streetNumber, p.streetName, p.streetSuffix].filter(Boolean)
+    const street = parts.join(' ')
+    const address = [street, p.city, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
+
+    let image = ''
+    try {
+      const media = JSON.parse(p.media ?? '[]') as Array<{ url?: string; Order?: number }>
+      const sorted = media.sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
+      image = sorted[0]?.url ?? ''
+    } catch { /* leave empty */ }
+
+    const price = p.listPrice != null
+      ? `$${p.listPrice.toLocaleString('en-CA')}`
+      : ''
+
+    lookup.set(mls, {
+      address,
+      image,
+      price,
+      link: `${appUrl}/listings/${p.listingKey}`,
+    })
+  }
+
+  // Internal properties overwrite RESO entries for the same MLS#
+  for (const p of internalProps) {
+    if (!p.mlsNumber) continue
+    const address = [p.address, p.city, p.province, p.postalCode].filter(Boolean).join(', ')
+
+    let image = ''
+    try {
+      const imgs = JSON.parse(p.images ?? '[]') as string[]
+      image = imgs[0] ?? ''
+    } catch { /* leave empty */ }
+
+    lookup.set(p.mlsNumber, {
+      address,
+      image,
+      price: `$${p.price.toLocaleString('en-CA')}`,
+      link:  `${appUrl}/listings/${p.id}`,
+    })
+  }
+
+  return text.replace(TAG_RE, (original, mls: string, field: string) => {
+    const data = lookup.get(mls)
+    if (!data) return original
+    return (data as Record<string, string>)[field] ?? original
+  })
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export type SendEmailInput = {
@@ -141,8 +239,8 @@ export async function sendEmail(input: SendEmailInput) {
     MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
     YEAR:             String(new Date().getFullYear()),
   }
-  const resolvedSubject = renderTemplate(input.subject, mergeVars)
-  const resolvedBody    = renderTemplate(input.body,    mergeVars)
+  const resolvedSubject = await resolveListingTags(renderTemplate(input.subject, mergeVars))
+  const resolvedBody    = await resolveListingTags(renderTemplate(input.body,    mergeVars))
 
   // Inject a 1×1 tracking pixel into the HTML body before the closing </body>
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''

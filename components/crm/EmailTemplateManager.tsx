@@ -85,7 +85,14 @@ const PREVIEW_VARS: Record<string, string> = {
 }
 
 function applyPreview(text: string) {
-  return text.replace(/\{\{(\w+)\}\}/g, (_, k) => PREVIEW_VARS[k] ?? `{{${k}}}`)
+  // Resolve standard {{variable}} tags
+  let out = text.replace(/\{\{(\w+)\}\}/g, (_, k) => PREVIEW_VARS[k] ?? `{{${k}}}`)
+  // Render listing tags as inline placeholders so the preview is readable
+  out = out.replace(
+    /\{\{listing:([^:}]+):(\w+)\}\}/g,
+    (_, mls: string, field: string) => `[Listing ${mls} — ${field}]`,
+  )
+  return out
 }
 
 function emptyForm() {
