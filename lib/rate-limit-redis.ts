@@ -29,7 +29,11 @@ function getClient(): Redis | null {
       lazyConnect:          true,
       enableOfflineQueue:   false,
     })
-    client.on('error', () => { unavailable = true; client = null })
+    client.on('error', (err: Error) => {
+      console.warn('[rate-limit] Redis unavailable — falling back to in-memory rate limiting:', err.message)
+      unavailable = true
+      client = null
+    })
     return client
   } catch {
     unavailable = true

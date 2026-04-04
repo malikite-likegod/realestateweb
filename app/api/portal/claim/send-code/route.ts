@@ -19,13 +19,10 @@ export async function POST(request: Request) {
       select: { id: true, phone: true, passwordHash: true },
     })
 
-    if (!contact) {
-      return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-    }
-
-    // Security: only allow this flow for contacts that haven't set a password yet
-    if (contact.passwordHash) {
-      return NextResponse.json({ error: 'Account already set up — please log in' }, { status: 400 })
+    // Return the same response regardless of whether the contact exists or has a
+    // password — distinct error codes would allow enumeration of the contact DB.
+    if (!contact || contact.passwordHash) {
+      return NextResponse.json({ sent: true })
     }
 
     // If no phone on file, save the provided phone number

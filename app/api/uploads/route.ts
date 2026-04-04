@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { writeFile, mkdir, readdir, stat } from 'fs/promises'
 import { join, extname } from 'path'
+import { fileTypeFromBuffer } from 'file-type'
 
 const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads')
 
@@ -91,8 +92,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
     }
 
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    // Validate actual file content against declared extension (magic bytes check).
+    // This catches renamed files (e.g. a PHP file saved as .jpg).
+    // PDFs and Office docs are excluded from this check because their magic bytes
+    // vary across versions and the file-type library may not detect all variants.
+    const imageMimes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+    const declaredMime = MIME[ext]
+    if (imageMimes.has(declaredMime)) {
+      const detected = await fileTypeFromBuffer(buffer)
+      if (!detected || detected.mime !== declaredMime) {
+        return NextResponse.json({ error: 'File content does not match declared type' }, { status: 400 })
+      }
+    }
+
     const filename = `${globalThis.crypto.randomUUID()}${ext}`
-    const buffer   = Buffer.from(await file.arrayBuffer())
 
     await writeFile(join(UPLOAD_DIR, filename), buffer)
 

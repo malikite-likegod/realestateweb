@@ -11,17 +11,20 @@
  */
 
 export async function register() {
-  // Only run in the Node.js runtime (not Edge), and only when the job runner is enabled
+  // Only run in the Node.js runtime (not Edge)
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
+
+  // Upgrade in-memory rate limiters to Redis-backed when REDIS_URL is set.
+  // This runs unconditionally so Redis rate limiting works even when the
+  // automation runner is disabled (the common production configuration).
+  await import('./lib/rate-limit-redis')
+
   // On shared hosting, the automation runner consumes threads continuously.
   // It is disabled in production unless explicitly enabled.
   if (process.env.NODE_ENV === 'production' && process.env.ENABLE_AUTOMATION_RUNNER !== 'true') return
   if (process.env.DISABLE_AUTOMATION_RUNNER === 'true') return
 
   const intervalMs = Math.max(10_000, parseInt(process.env.AUTOMATION_INTERVAL_MS ?? '') || 60_000) // default: 1 minute, minimum: 10s
-
-  // Upgrade in-memory rate limiters to Redis-backed when REDIS_URL is set
-  await import('./lib/rate-limit-redis')
 
   const { processPendingJobs }       = await import('./lib/automation/job-queue')
   const { syncInbox }                = await import('./lib/communications/imap-service')
