@@ -11,7 +11,8 @@
  */
 
 import crypto from 'crypto'
-import { prisma } from '@/lib/prisma'
+import { prisma }              from '@/lib/prisma'
+import { getBrokerageFilter } from '@/lib/site-settings'
 
 // ─── Nodemailer transport ────────────────────────────────────────────────────
 
@@ -185,9 +186,16 @@ export async function resolveListingTags(text: string): Promise<string> {
     const slotsNeeded = slotNumbers.size
     const poolSize    = Math.max(slotsNeeded * 5, 20)
 
-    // Fetch a pool of active listings and shuffle in JS for random selection
+    // Fetch a pool of active listings from your office and shuffle for random selection
+    const brokerage = await getBrokerageFilter()
+    const officeWhere = brokerage.officeKey
+      ? { listOfficeKey: brokerage.officeKey }
+      : brokerage.officeName
+        ? { listOfficeName: { equals: brokerage.officeName, mode: 'insensitive' as const } }
+        : {}
+
     const pool = await prisma.resoProperty.findMany({
-      where:   { standardStatus: 'Active' },
+      where:   { standardStatus: 'Active', ...officeWhere },
       select: {
         listingKey: true, listingId: true,
         streetNumber: true, streetDirPrefix: true, streetName: true,
