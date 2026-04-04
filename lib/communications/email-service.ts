@@ -89,13 +89,22 @@ export async function resolveListingTags(text: string): Promise<string> {
 
   // ── Helper: parse a RESO property row into ListingData ───────────────────
   function resoToData(p: {
-    listingKey: string | null; unitNumber: string | null; streetNumber: string | null
-    streetName: string | null; streetSuffix: string | null; city: string | null
+    listingKey: string | null; streetNumber: string | null; streetDirPrefix: string | null
+    streetName: string | null; streetSuffix: string | null; streetDirSuffix: string | null
+    unitNumber: string | null; city: string | null
     stateOrProvince: string | null; postalCode: string | null
     listPrice: number | null; media: string | null
   }): ListingData {
-    const parts  = [p.unitNumber, p.streetNumber, p.streetName, p.streetSuffix].filter(Boolean)
-    const address = [[...parts].join(' '), p.city, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
+    // Format: {streetNumber} {streetDirPrefix} {streetName} {streetSuffix} {streetDirSuffix}, Unit {unitNumber}, {city}, {province}, {postal}
+    const streetLine = [
+      p.streetNumber,
+      p.streetDirPrefix,
+      p.streetName,
+      p.streetSuffix,
+      p.streetDirSuffix,
+    ].filter(Boolean).join(' ')
+    const unitPart  = p.unitNumber ? `Unit ${p.unitNumber}` : null
+    const address   = [streetLine, unitPart, p.city, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
     let image = ''
     try {
       const media = JSON.parse(p.media ?? '[]') as Array<{ url?: string; Order?: number }>
@@ -131,7 +140,8 @@ export async function resolveListingTags(text: string): Promise<string> {
         where: { OR: [{ listingKey: { in: mlsList } }, { listingId: { in: mlsList } }] },
         select: {
           id: true, listingKey: true, listingId: true,
-          streetNumber: true, streetName: true, streetSuffix: true,
+          streetNumber: true, streetDirPrefix: true, streetName: true,
+          streetSuffix: true, streetDirSuffix: true,
           unitNumber: true, city: true, stateOrProvince: true, postalCode: true,
           listPrice: true, media: true,
         },
@@ -180,7 +190,8 @@ export async function resolveListingTags(text: string): Promise<string> {
       where:   { standardStatus: 'Active' },
       select: {
         listingKey: true, listingId: true,
-        streetNumber: true, streetName: true, streetSuffix: true,
+        streetNumber: true, streetDirPrefix: true, streetName: true,
+        streetSuffix: true, streetDirSuffix: true,
         unitNumber: true, city: true, stateOrProvince: true, postalCode: true,
         listPrice: true, media: true,
       },
