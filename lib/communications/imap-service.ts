@@ -82,6 +82,18 @@ export async function syncInbox(): Promise<SyncResult> {
         const toAddr     = envelope?.to?.[0]
         const toEmail    = toAddr?.address     ?? user
 
+        // Skip emails sent by the system itself to prevent notification loops
+        const systemEmails = [
+          user,
+          process.env.SMTP_FROM,
+          process.env.SMTP_USER,
+        ].filter(Boolean).map(e => e!.toLowerCase())
+        if (fromEmail && systemEmails.includes(fromEmail.toLowerCase())) {
+          await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })
+          skipped++
+          continue
+        }
+
         // Deduplicate by IMAP Message-ID
         if (messageId) {
           const existing = await prisma.emailMessage.findUnique({
