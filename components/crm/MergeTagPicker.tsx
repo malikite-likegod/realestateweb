@@ -31,6 +31,7 @@ export const MERGE_TAGS = [
   { label: '{{officeAddress}}',    description: "Office address"                  },
   { label: '{{agentBio}}',         description: "Agent bio paragraph"             },
   { label: '{{agentImage}}',       description: "Agent photo URL"                 },
+  { label: '{{brandLogo}}',        description: "Brand/brokerage logo URL"         },
   // Date
   { label: '{{MONTH}}',            description: "Current month name (e.g. April)" },
   { label: '{{YEAR}}',             description: "Current four-digit year"          },

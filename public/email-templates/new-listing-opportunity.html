@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>New Listing Opportunity</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    /* Reset */
+    * { box-sizing: border-box; }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; }
+    body { margin: 0; padding: 0; background-color: #f4f3f0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+
+    /* Typography */
+    .serif { font-family: Georgia, 'Times New Roman', serif; }
+
+    /* Links */
+    a { color: inherit; }
+
+    /* Responsive */
+    @media only screen and (max-width: 620px) {
+      .wrapper { width: 100% !important; padding: 0 !important; }
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .listing-grid td { display: block !important; width: 100% !important; padding: 0 0 16px 0 !important; }
+      .listing-card { width: 100% !important; }
+      .hero-padding { padding: 36px 24px !important; }
+      .section-padding { padding: 32px 24px !important; }
+      .footer-padding { padding: 28px 24px !important; }
+      .detail-chip { display: inline-block !important; margin: 4px 4px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3f0;">
+
+  <!-- Preheader (hidden preview text) -->
+  <div style="display:none;font-size:1px;color:#f4f3f0;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    A new exclusive listing has just hit the market — {{firstName}}, here's what you need to know.
+  </div>
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background-color:#f4f3f0;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- Email container -->
+        <table class="container" width="600" cellpadding="0" cellspacing="0" border="0" role="presentation"
+          style="width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- ══════════════════════════════════════════
+               HEADER — dark charcoal with gold accent
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#1a1a1a;padding:28px 40px;" class="hero-padding">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td>
+                    <!-- Brand logo: set {{brandLogo}} in Settings → Brand Logo -->
+                    <img src="{{brandLogo}}" alt="{{agentBrokerage}}" height="44"
+                      style="height:44px;max-width:220px;object-fit:contain;display:block;" />
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <span style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+                      color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      New Listing
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               HERO — featured listing banner
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#1a1a1a;padding:0 40px 40px;" class="hero-padding">
+
+              <!-- Gold divider line -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="padding-bottom:28px;">
+                    <div style="width:48px;height:3px;background-color:#c9a84c;border-radius:2px;"></div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+                color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                Exclusive Opportunity
+              </p>
+              <h1 class="serif" style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:34px;
+                font-weight:700;line-height:1.2;color:#ffffff;letter-spacing:-0.5px;">
+                A Property You Don't Want to Miss
+              </h1>
+              <p style="margin:0 0 28px;font-size:16px;line-height:1.65;color:#a0a0a0;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                Hi {{firstName}}, I've just listed a property that I think will catch your eye.
+                It checks all the boxes — and in this market, listings like this don't stay available for long.
+              </p>
+
+              <!-- Feature listing image placeholder -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="border-radius:12px;overflow:hidden;background-color:#2a2a2a;">
+                    <img src="{{listing:MLSNUMBER:image}}" alt="Featured Listing"
+                      width="520" style="width:100%;max-width:520px;height:280px;object-fit:cover;
+                      display:block;border-radius:12px;" />
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               LISTING DETAILS — white section
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#ffffff;padding:40px 40px 32px;" class="section-padding">
+
+              <!-- Address + price header -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="vertical-align:top;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:2px;
+                      text-transform:uppercase;color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      Featured Listing
+                    </p>
+                    <h2 class="serif" style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;
+                      font-size:24px;font-weight:700;color:#1a1a1a;line-height:1.25;">
+                      {{listing:MLSNUMBER:address}}
+                    </h2>
+                  </td>
+                  <td align="right" style="vertical-align:top;">
+                    <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:26px;
+                      font-weight:700;color:#1a1a1a;">
+                      {{listing:MLSNUMBER:price}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Gold rule -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="padding:20px 0 24px;">
+                    <div style="height:1px;background-color:#e8e4dc;"></div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What makes this special -->
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#4a4a4a;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                This is a rare opportunity to own a truly exceptional home in one of the city's most sought-after
+                neighbourhoods. Whether you're upgrading your lifestyle or making a strategic investment, this property
+                delivers on every front.
+              </p>
+
+              <!-- Key highlights chips -->
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:28px;">
+                <tr>
+                  <td style="padding-right:8px;padding-bottom:8px;">
+                    <span class="detail-chip" style="display:inline-block;background-color:#1a1a1a;color:#ffffff;
+                      font-size:12px;font-weight:600;letter-spacing:0.5px;padding:8px 16px;border-radius:40px;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      4 Bedrooms
+                    </span>
+                  </td>
+                  <td style="padding-right:8px;padding-bottom:8px;">
+                    <span class="detail-chip" style="display:inline-block;background-color:#1a1a1a;color:#ffffff;
+                      font-size:12px;font-weight:600;letter-spacing:0.5px;padding:8px 16px;border-radius:40px;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      3 Bathrooms
+                    </span>
+                  </td>
+                  <td style="padding-right:8px;padding-bottom:8px;">
+                    <span class="detail-chip" style="display:inline-block;background-color:#1a1a1a;color:#ffffff;
+                      font-size:12px;font-weight:600;letter-spacing:0.5px;padding:8px 16px;border-radius:40px;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      2,400 sq ft
+                    </span>
+                  </td>
+                  <td style="padding-bottom:8px;">
+                    <span class="detail-chip" style="display:inline-block;background-color:#f5f0e8;color:#8b6914;
+                      font-size:12px;font-weight:600;letter-spacing:0.5px;padding:8px 16px;border-radius:40px;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      Detached
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA button -->
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="border-radius:8px;background-color:#c9a84c;">
+                    <a href="{{listing:MLSNUMBER:link}}"
+                      style="display:inline-block;padding:15px 36px;font-size:14px;font-weight:700;
+                      letter-spacing:0.5px;color:#1a1a1a;text-decoration:none;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      View Full Listing Details →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               MORE LISTINGS — subtle grey section
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#f9f8f6;padding:36px 40px;" class="section-padding">
+
+              <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+                color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                Also Available
+              </p>
+              <h3 class="serif" style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;
+                font-size:20px;font-weight:700;color:#1a1a1a;">
+                More Properties Worth Considering
+              </h3>
+
+              <!-- Two-column listing cards -->
+              <table class="listing-grid" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <!-- Card 1 -->
+                  <td class="listing-card" width="50%" style="padding-right:10px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+                      style="border:1px solid #e8e4dc;border-radius:10px;overflow:hidden;background-color:#ffffff;">
+                      <tr>
+                        <td>
+                          <img src="{{listing:MLSNUMBER2:image}}" alt="Listing 2"
+                            width="260" style="width:100%;height:160px;object-fit:cover;display:block;" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:16px;">
+                          <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1a1a1a;
+                            font-family:Georgia,'Times New Roman',serif;">
+                            {{listing:MLSNUMBER2:price}}
+                          </p>
+                          <p style="margin:0;font-size:12px;line-height:1.5;color:#777777;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            {{listing:MLSNUMBER2:address}}
+                          </p>
+                          <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-top:12px;">
+                            <tr>
+                              <td>
+                                <a href="{{listing:MLSNUMBER2:link}}"
+                                  style="display:inline-block;padding:8px 18px;font-size:12px;font-weight:600;
+                                  color:#1a1a1a;text-decoration:none;border:1.5px solid #1a1a1a;border-radius:6px;
+                                  font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                                  View Details
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+
+                  <!-- Card 2 -->
+                  <td class="listing-card" width="50%" style="padding-left:10px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+                      style="border:1px solid #e8e4dc;border-radius:10px;overflow:hidden;background-color:#ffffff;">
+                      <tr>
+                        <td>
+                          <img src="{{listing:MLSNUMBER3:image}}" alt="Listing 3"
+                            width="260" style="width:100%;height:160px;object-fit:cover;display:block;" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:16px;">
+                          <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1a1a1a;
+                            font-family:Georgia,'Times New Roman',serif;">
+                            {{listing:MLSNUMBER3:price}}
+                          </p>
+                          <p style="margin:0;font-size:12px;line-height:1.5;color:#777777;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            {{listing:MLSNUMBER3:address}}
+                          </p>
+                          <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-top:12px;">
+                            <tr>
+                              <td>
+                                <a href="{{listing:MLSNUMBER3:link}}"
+                                  style="display:inline-block;padding:8px 18px;font-size:12px;font-weight:600;
+                                  color:#1a1a1a;text-decoration:none;border:1.5px solid #1a1a1a;border-radius:6px;
+                                  font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                                  View Details
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               AGENT SIGNATURE — dark footer
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#1a1a1a;padding:36px 40px;" class="footer-padding">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <!-- Agent photo -->
+                  <td width="64" style="vertical-align:top;padding-right:20px;">
+                    <img src="{{agentImage}}" alt="{{agentName}}" width="64" height="64"
+                      style="width:64px;height:64px;border-radius:50%;object-fit:cover;display:block;
+                      border:2px solid #c9a84c;" />
+                  </td>
+                  <!-- Agent info -->
+                  <td style="vertical-align:top;">
+                    <p style="margin:0 0 2px;font-family:Georgia,'Times New Roman',serif;font-size:17px;
+                      font-weight:700;color:#ffffff;">
+                      {{agentName}}
+                    </p>
+                    <p style="margin:0 0 8px;font-size:12px;color:#c9a84c;letter-spacing:0.5px;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      {{agentDesignation}} · {{agentBrokerage}}
+                    </p>
+                    <p style="margin:0;font-size:12px;line-height:1.6;color:#888888;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      <a href="tel:{{agentPhone}}" style="color:#888888;text-decoration:none;">{{agentPhone}}</a>
+                      &nbsp;·&nbsp;
+                      <a href="mailto:{{agentEmail}}" style="color:#888888;text-decoration:none;">{{agentEmail}}</a><br />
+                      {{officeAddress}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               FOOTER — legal / unsubscribe
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#111111;padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:11px;line-height:1.6;color:#555555;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                You're receiving this because you've connected with {{agentName}}.
+                &nbsp;·&nbsp;
+                {{officeAddress}}<br />
+                <a href="#" style="color:#c9a84c;text-decoration:none;">Unsubscribe</a>
+                &nbsp;·&nbsp;
+                <a href="#" style="color:#555555;text-decoration:none;">View in browser</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- / Email container -->
+
+      </td>
+    </tr>
+  </table>
+  <!-- / Outer wrapper -->
+
+</body>
+</html>

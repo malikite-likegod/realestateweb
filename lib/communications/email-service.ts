@@ -217,7 +217,7 @@ export async function sendEmail(input: SendEmailInput) {
   }
 
   // Load agent profile from siteSettings (falls back to env vars)
-  const agentSettingKeys = ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image']
+  const agentSettingKeys = ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image','brand_logo']
   const agentRows = await prisma.siteSettings.findMany({ where: { key: { in: agentSettingKeys } } })
   const agentMap: Record<string, string> = {}
   for (const r of agentRows) agentMap[r.key] = r.value
@@ -236,6 +236,7 @@ export async function sendEmail(input: SendEmailInput) {
     agentBrokerage:   agentMap['agent_brokerage']   ?? '',
     officeAddress:    agentMap['office_address']    ?? '',
     agentImage:       agentMap['agent_image']       ?? '',
+    brandLogo:        agentMap['brand_logo']        ?? '',
     MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
     YEAR:             String(new Date().getFullYear()),
   }

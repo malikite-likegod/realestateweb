@@ -80,6 +80,7 @@ const PREVIEW_VARS: Record<string, string> = {
   officeAddress:    '123 King St W, Toronto, ON M5H 1A1',
   agentBio:         'Michael Taylor is a top-producing REALTOR® with over 15 years of experience in the GTA luxury market.',
   agentImage:       '',
+  brandLogo:        '',
   MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
   YEAR:             String(new Date().getFullYear()),
 }

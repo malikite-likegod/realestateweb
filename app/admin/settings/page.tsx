@@ -16,12 +16,13 @@ import { SignatureSettingsCard } from '@/components/admin/SignatureSettingsCard'
 import { AgentMlsNameCard }   from '@/components/admin/AgentMlsNameCard'
 import { AgentProfileCard }   from '@/components/admin/AgentProfileCard'
 import type { AgentProfileSettings } from '@/components/admin/AgentProfileCard'
+import { BrandLogoCard }      from '@/components/admin/BrandLogoCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -41,6 +42,7 @@ export default async function SettingsPage() {
     prisma.siteSettings.findMany({
       where: { key: { in: ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image'] } },
     }),
+    prisma.siteSettings.findUnique({ where: { key: 'brand_logo' } }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
 
@@ -119,6 +121,8 @@ export default async function SettingsPage() {
         />
 
         <AgentProfileCard initial={agentProfileSettings} />
+
+        <BrandLogoCard initialLogoUrl={brandLogoRow?.value ?? ''} />
 
         <LeadCaptureSettingsCard initialLimit={gateLimit} initialEnabled={gateEnabled} />
 
