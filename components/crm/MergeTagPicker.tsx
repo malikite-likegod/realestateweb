@@ -13,14 +13,24 @@
 import { RefObject } from 'react'
 
 export const MERGE_TAGS = [
-  { label: '{{firstName}}',  description: "Contact's first name" },
-  { label: '{{lastName}}',   description: "Contact's last name"  },
-  { label: '{{fullName}}',   description: "Contact's full name"  },
-  { label: '{{email}}',      description: "Contact's email"      },
-  { label: '{{phone}}',      description: "Contact's phone"      },
-  { label: '{{agentName}}',  description: "Agent's name"         },
-  { label: '{{agentEmail}}', description: "Agent's email"        },
-  { label: '{{agentPhone}}', description: "Agent's phone"        },
+  // Contact
+  { label: '{{firstName}}',        description: "Contact's first name"  },
+  { label: '{{lastName}}',         description: "Contact's last name"   },
+  { label: '{{fullName}}',         description: "Contact's full name"   },
+  { label: '{{email}}',            description: "Contact's email"       },
+  { label: '{{phone}}',            description: "Contact's phone"       },
+  // Agent profile
+  { label: '{{agentName}}',        description: "Agent's name"                    },
+  { label: '{{agentEmail}}',       description: "Agent's email"                   },
+  { label: '{{agentPhone}}',       description: "Agent's phone"                   },
+  { label: '{{agentDesignation}}', description: "Agent's designation / title"     },
+  { label: '{{agentBrokerage}}',   description: "Agent's brokerage name"          },
+  { label: '{{officeAddress}}',    description: "Office address"                  },
+  { label: '{{agentBio}}',         description: "Agent bio paragraph"             },
+  { label: '{{agentImage}}',       description: "Agent photo URL"                 },
+  // Date
+  { label: '{{MONTH}}',            description: "Current month name (e.g. April)" },
+  { label: '{{YEAR}}',             description: "Current four-digit year"          },
 ]
 
 interface Props {

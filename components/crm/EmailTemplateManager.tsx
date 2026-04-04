@@ -67,16 +67,21 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 /** Sample values substituted during preview rendering */
 const PREVIEW_VARS: Record<string, string> = {
-  firstName:  'Jane',
-  lastName:   'Smith',
-  fullName:   'Jane Smith',
-  email:      'jane@example.com',
-  phone:      '(416) 555-0100',
-  agentName:  'Michael Taylor',
-  agentEmail: 'michael@michaeltaylor.ca',
-  agentPhone: '(416) 555-0199',
-  MONTH:      new Date().toLocaleString('en-CA', { month: 'long' }),
-  YEAR:       String(new Date().getFullYear()),
+  firstName:        'Jane',
+  lastName:         'Smith',
+  fullName:         'Jane Smith',
+  email:            'jane@example.com',
+  phone:            '(416) 555-0100',
+  agentName:        'Michael Taylor',
+  agentEmail:       'michael@michaeltaylor.ca',
+  agentPhone:       '(416) 555-0199',
+  agentDesignation: 'REALTOR®',
+  agentBrokerage:   'LuxeRealty Inc., Brokerage',
+  officeAddress:    '123 King St W, Toronto, ON M5H 1A1',
+  agentBio:         'Michael Taylor is a top-producing REALTOR® with over 15 years of experience in the GTA luxury market.',
+  agentImage:       '',
+  MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
+  YEAR:             String(new Date().getFullYear()),
 }
 
 function applyPreview(text: string) {

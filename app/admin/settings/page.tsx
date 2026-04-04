@@ -13,13 +13,15 @@ import { BlurModeSettingsCard } from '@/components/admin/BlurModeSettingsCard'
 import { MlsSyncSettingsCard } from '@/components/admin/MlsSyncSettingsCard'
 import { HotBrowserAlertCard } from '@/components/admin/HotBrowserAlertCard'
 import { SignatureSettingsCard } from '@/components/admin/SignatureSettingsCard'
-import { AgentMlsNameCard } from '@/components/admin/AgentMlsNameCard'
+import { AgentMlsNameCard }   from '@/components/admin/AgentMlsNameCard'
+import { AgentProfileCard }   from '@/components/admin/AgentProfileCard'
+import type { AgentProfileSettings } from '@/components/admin/AgentProfileCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -36,8 +38,24 @@ export default async function SettingsPage() {
     prisma.siteSettings.findMany({ where: { key: { in: ['hot_browser_alert_enabled', 'hot_browser_alert_views', 'hot_browser_alert_hours'] } } }),
     prisma.user.findUnique({ where: { id: session.id }, select: { emailSignature: true, smsSignature: true } }),
     prisma.siteSettings.findUnique({ where: { key: 'listing_agent_mls_name' } }),
+    prisma.siteSettings.findMany({
+      where: { key: { in: ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image'] } },
+    }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
+
+  const agentProfileMap: Record<string, string> = {}
+  for (const r of agentProfileRows) agentProfileMap[r.key] = r.value
+  const agentProfileSettings: AgentProfileSettings = {
+    agent_name:        agentProfileMap['agent_name']        ?? process.env.AGENT_NAME  ?? '',
+    agent_designation: agentProfileMap['agent_designation'] ?? '',
+    agent_bio:         agentProfileMap['agent_bio']         ?? '',
+    agent_phone:       agentProfileMap['agent_phone']       ?? process.env.AGENT_PHONE ?? '',
+    agent_brokerage:   agentProfileMap['agent_brokerage']   ?? '',
+    office_address:    agentProfileMap['office_address']    ?? '',
+    agent_email:       agentProfileMap['agent_email']       ?? process.env.AGENT_EMAIL ?? '',
+    agent_image:       agentProfileMap['agent_image']       ?? '',
+  }
   const totpEnabled = tfaUser?.totpEnabled ?? false
 
   const twilioConfigured  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
@@ -99,6 +117,8 @@ export default async function SettingsPage() {
           initialEmailSignature={sigUser?.emailSignature ?? null}
           initialSmsSignature={sigUser?.smsSignature ?? null}
         />
+
+        <AgentProfileCard initial={agentProfileSettings} />
 
         <LeadCaptureSettingsCard initialLimit={gateLimit} initialEnabled={gateEnabled} />
 

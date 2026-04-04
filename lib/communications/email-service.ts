@@ -118,15 +118,28 @@ export async function sendEmail(input: SendEmailInput) {
     })
   }
 
+  // Load agent profile from siteSettings (falls back to env vars)
+  const agentSettingKeys = ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image']
+  const agentRows = await prisma.siteSettings.findMany({ where: { key: { in: agentSettingKeys } } })
+  const agentMap: Record<string, string> = {}
+  for (const r of agentRows) agentMap[r.key] = r.value
+
   const mergeVars: Record<string, string> = {
-    firstName:  contact?.firstName ?? '',
-    lastName:   contact?.lastName  ?? '',
-    fullName:   [contact?.firstName, contact?.lastName].filter(Boolean).join(' '),
-    email:      contact?.email     ?? '',
-    phone:      contact?.phone     ?? '',
-    agentName:  process.env.AGENT_NAME  ?? '',
-    agentEmail: process.env.AGENT_EMAIL ?? process.env.SMTP_USER ?? '',
-    agentPhone: process.env.AGENT_PHONE ?? '',
+    firstName:        contact?.firstName ?? '',
+    lastName:         contact?.lastName  ?? '',
+    fullName:         [contact?.firstName, contact?.lastName].filter(Boolean).join(' '),
+    email:            contact?.email     ?? '',
+    phone:            contact?.phone     ?? '',
+    agentName:        agentMap['agent_name']        ?? process.env.AGENT_NAME  ?? '',
+    agentEmail:       agentMap['agent_email']       ?? process.env.AGENT_EMAIL ?? process.env.SMTP_USER ?? '',
+    agentPhone:       agentMap['agent_phone']       ?? process.env.AGENT_PHONE ?? '',
+    agentDesignation: agentMap['agent_designation'] ?? '',
+    agentBio:         agentMap['agent_bio']         ?? '',
+    agentBrokerage:   agentMap['agent_brokerage']   ?? '',
+    officeAddress:    agentMap['office_address']    ?? '',
+    agentImage:       agentMap['agent_image']       ?? '',
+    MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
+    YEAR:             String(new Date().getFullYear()),
   }
   const resolvedSubject = renderTemplate(input.subject, mergeVars)
   const resolvedBody    = renderTemplate(input.body,    mergeVars)
