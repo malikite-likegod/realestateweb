@@ -148,7 +148,7 @@ export async function middleware(request: NextRequest) {
   if (
     (pathname === '/api/contacts' && request.method === 'POST') ||
     pathname === '/api/gate/submit' ||
-    pathname.startsWith('/api/landing-pages/') ||
+    (pathname.startsWith('/api/landing-pages/') && pathname.endsWith('/lead')) ||
     pathname.startsWith('/api/market-reports/')
   ) {
     const { allowed, retryAfterMs } = await publicLeadLimit.check(ip)
