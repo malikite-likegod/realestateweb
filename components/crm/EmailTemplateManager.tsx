@@ -370,7 +370,7 @@ export function EmailTemplateManager({ initialTemplates }: Props) {
                 value={form.body}
                 onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                 placeholder="Paste or type your HTML email body here…"
-                rows={16}
+                rows={12}
                 className="font-mono text-xs leading-relaxed"
               />
               <div className="mt-1.5">

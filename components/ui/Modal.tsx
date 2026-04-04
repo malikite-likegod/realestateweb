@@ -45,20 +45,20 @@ export function Modal({ open, onClose, title, children, size = 'md', className }
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              'relative w-full rounded-2xl bg-white shadow-2xl',
+              'relative flex max-h-[90vh] w-full flex-col rounded-2xl bg-white shadow-2xl',
               modalSizes[size],
               className,
             )}
           >
             {title && (
-              <div className="flex items-center justify-between border-b border-charcoal-100 px-6 py-4">
+              <div className="flex shrink-0 items-center justify-between border-b border-charcoal-100 px-6 py-4">
                 <h2 className="text-lg font-semibold text-charcoal-900 font-serif">{title}</h2>
                 <button type="button" onClick={onClose} className="rounded-lg p-1.5 hover:bg-charcoal-100 transition-colors">
                   <X size={18} className="text-charcoal-500" />
                 </button>
               </div>
             )}
-            <div className="p-6">{children}</div>
+            <div className="overflow-y-auto p-6">{children}</div>
           </motion.div>
         </div>
       )}
