@@ -218,9 +218,9 @@ Returns a 1×1 transparent pixel and records an open event. No auth required (us
 ### `GET|POST /api/email-templates`
 **POST body** `{ "name": "string", "subject": "string", "body": "HTML", "category": "follow_up|listing|newsletter|custom" }`
 
-Both `subject` and `body` support `{{placeholder}}` merge tags that are substituted at send time.
+Both `subject` and `body` support two classes of merge tags substituted at send time.
 
-**Available merge tags**
+**Contact & agent tags — `{{tagName}}`**
 
 | Tag | Value |
 |-----|-------|
@@ -229,13 +229,43 @@ Both `subject` and `body` support `{{placeholder}}` merge tags that are substitu
 | `{{fullName}}` | Contact full name |
 | `{{email}}` | Contact email address |
 | `{{phone}}` | Contact phone number |
-| `{{agentName}}` | Agent name (`AGENT_NAME` env) |
-| `{{agentEmail}}` | Agent email (`AGENT_EMAIL` env) |
-| `{{agentPhone}}` | Agent phone (`AGENT_PHONE` env) |
+| `{{agentName}}` | Agent name (DB setting → `AGENT_NAME` env fallback) |
+| `{{agentEmail}}` | Agent email (DB setting → `AGENT_EMAIL` env fallback) |
+| `{{agentPhone}}` | Agent phone (DB setting → `AGENT_PHONE` env fallback) |
+| `{{agentDesignation}}` | Agent designation / title (DB setting) |
+| `{{agentBrokerage}}` | Brokerage name (DB setting) |
+| `{{officeAddress}}` | Office address (DB setting) |
+| `{{agentBio}}` | Agent bio paragraph (DB setting) |
+| `{{agentImage}}` | Agent photo URL (DB setting) |
 | `{{MONTH}}` | Current month name (e.g. `April`) |
 | `{{YEAR}}` | Current four-digit year |
 
-Unknown tags are left as-is in the output.
+Agent profile values are stored in `siteSettings` and editable at `/admin/settings` → Agent Profile card.
+
+**Listing tags — `{{listing:MLSNUMBER:field}}`**
+
+Embed live listing data by MLS number. The MLS# is matched against `Property.mlsNumber` (internal listings) and `ResoProperty.listingKey` / `ResoProperty.listingId` (RESO/MLS listings). Internal listings take precedence when both share the same number.
+
+| Field | Value |
+|-------|-------|
+| `address` | Full formatted address |
+| `price` | Price formatted as `$1,250,000` |
+| `image` | First photo URL |
+| `link` | Absolute URL to the public listing page |
+
+Example usage in an HTML body:
+```html
+<img src="{{listing:C1234567:image}}" width="600" />
+<p>
+  <a href="{{listing:C1234567:link}}">
+    {{listing:C1234567:address}} — {{listing:C1234567:price}}
+  </a>
+</p>
+```
+
+Tags for an unrecognised MLS# are left unchanged in the output. Multiple different listings can appear in the same template.
+
+Unknown standard tags are also left as-is.
 
 **Response 200** `{ "data": { "id": "...", "name": "...", "subject": "...", "body": "...", "category": "...", "isActive": true, "createdAt": "...", "updatedAt": "..." } }`
 

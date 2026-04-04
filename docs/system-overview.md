@@ -117,10 +117,36 @@ Accessible at `/admin/email-templates`. Provides full CRUD for reusable HTML ema
 - **Category filters** — `newsletter`, `listing`, `follow_up`, `custom`
 - **Create / Edit modal** — Edit tab (name, category, subject, HTML body) and Preview tab (renders the HTML in a sandboxed iframe with sample merge-tag values)
 - **HTML import** — upload a local `.html` file directly into the body field; sample templates live in `public/email-templates/`
-- **Merge tag picker** — inserts `{{placeholder}}` tokens at the cursor in the subject or body fields (see API reference for full tag list)
+- **Merge tag picker** — two sections:
+  - *Standard tags* — contact and agent `{{placeholder}}` chips
+  - *Listing tags* — MLS# input field + four field buttons (`address`, `price`, `image`, `link`) that insert `{{listing:MLSNUMBER:field}}` at the cursor
 - **Delete** — inline per-card confirmation before deletion
 
 Templates are stored in the `EmailTemplate` model (fields: `id`, `name`, `subject`, `body`, `category`, `isActive`, `createdAt`, `updatedAt`). Soft-delete is not used; deletion is permanent.
+
+### Merge tag resolution (send time)
+
+All merge tag substitution happens inside `lib/communications/email-service.ts → sendEmail()`, applied to both `subject` and `body`.
+
+1. **`renderTemplate()`** — replaces `{{variable}}` tokens using a `mergeVars` map built from the contact record and agent profile `siteSettings` (with env var fallbacks for `agentName`, `agentEmail`, `agentPhone`).
+2. **`resolveListingTags()`** — replaces `{{listing:MLSNUMBER:field}}` tokens. Scans for all unique MLS numbers, batches two DB queries (internal `Property` + `ResoProperty`), then substitutes `address`, `price`, `image`, or `link`. Internal listings take precedence over RESO when both share a MLS#. Unrecognised MLS numbers are left unchanged.
+
+### Agent Profile settings
+
+The `/admin/settings` → **Agent Profile** card stores the following keys in `siteSettings`:
+
+| Key | Merge tag |
+|-----|-----------|
+| `agent_name` | `{{agentName}}` |
+| `agent_email` | `{{agentEmail}}` |
+| `agent_phone` | `{{agentPhone}}` |
+| `agent_designation` | `{{agentDesignation}}` |
+| `agent_brokerage` | `{{agentBrokerage}}` |
+| `office_address` | `{{officeAddress}}` |
+| `agent_bio` | `{{agentBio}}` |
+| `agent_image` | `{{agentImage}}` |
+
+Values pre-populate from `AGENT_NAME` / `AGENT_EMAIL` / `AGENT_PHONE` env vars when no DB entry exists. Agent photo can be uploaded via `/api/uploads` or entered as a URL directly.
 
 ---
 
