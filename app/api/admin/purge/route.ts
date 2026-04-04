@@ -10,7 +10,7 @@ import {
 } from '@/services/data-lifecycle'
 
 function isCronRequest(request: Request): boolean {
-  return verifySecret(request.headers.get('x-cron-secret'), process.env.RESO_SYNC_SECRET)
+  return verifySecret(request.headers.get('x-cron-secret'), process.env.PURGE_CRON_SECRET)
 }
 
 export async function POST(request: Request) {
