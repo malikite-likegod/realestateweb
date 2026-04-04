@@ -81,92 +81,135 @@ export function renderTemplate(template: string, vars: Record<string, string>): 
  * Internal listings take precedence when both share the same MLS#.
  */
 export async function resolveListingTags(text: string): Promise<string> {
-  const TAG_RE = /\{\{listing:([^:}]+):(\w+)\}\}/g
+  const TAG_RE        = /\{\{listing:([^:}]+):(\w+)\}\}/g
+  const RANDOM_TAG_RE = /\{\{randomListing_(\d+):(\w+)\}\}/g
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
-  // Collect unique MLS numbers referenced in the template
-  const mlsNumbers = new Set<string>()
-  for (const [, mls] of text.matchAll(TAG_RE)) mlsNumbers.add(mls)
-  if (mlsNumbers.size === 0) return text
-
-  const mlsList = Array.from(mlsNumbers)
-
-  // Load internal properties matching any of the MLS numbers
-  const [internalProps, resoProps] = await Promise.all([
-    prisma.property.findMany({
-      where: { mlsNumber: { in: mlsList } },
-      select: {
-        id: true, mlsNumber: true,
-        address: true, city: true, province: true, postalCode: true,
-        price: true, images: true,
-      },
-    }),
-    prisma.resoProperty.findMany({
-      where: { OR: [{ listingKey: { in: mlsList } }, { listingId: { in: mlsList } }] },
-      select: {
-        id: true, listingKey: true, listingId: true,
-        streetNumber: true, streetName: true, streetSuffix: true,
-        unitNumber: true, city: true, stateOrProvince: true, postalCode: true,
-        listPrice: true, media: true,
-      },
-    }),
-  ])
-
-  // Build a lookup map keyed by MLS# → resolved field values
   type ListingData = { address: string; image: string; price: string; link: string }
-  const lookup = new Map<string, ListingData>()
 
-  for (const p of resoProps) {
-    const mls = mlsList.find(m => m === p.listingKey || m === p.listingId)
-    if (!mls) continue
-
-    const parts = [p.unitNumber, p.streetNumber, p.streetName, p.streetSuffix].filter(Boolean)
-    const street = parts.join(' ')
-    const address = [street, p.city, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
-
+  // ── Helper: parse a RESO property row into ListingData ───────────────────
+  function resoToData(p: {
+    listingKey: string | null; unitNumber: string | null; streetNumber: string | null
+    streetName: string | null; streetSuffix: string | null; city: string | null
+    stateOrProvince: string | null; postalCode: string | null
+    listPrice: number | null; media: string | null
+  }): ListingData {
+    const parts  = [p.unitNumber, p.streetNumber, p.streetName, p.streetSuffix].filter(Boolean)
+    const address = [[...parts].join(' '), p.city, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
     let image = ''
     try {
       const media = JSON.parse(p.media ?? '[]') as Array<{ url?: string; Order?: number }>
-      const sorted = media.sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
-      image = sorted[0]?.url ?? ''
+      image = media.sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))[0]?.url ?? ''
     } catch { /* leave empty */ }
-
-    const price = p.listPrice != null
-      ? `$${p.listPrice.toLocaleString('en-CA')}`
-      : ''
-
-    lookup.set(mls, {
+    return {
       address,
       image,
-      price,
-      link: `${appUrl}/listings/${p.listingKey}`,
-    })
+      price: p.listPrice != null ? `$${p.listPrice.toLocaleString('en-CA')}` : '',
+      link:  `${appUrl}/listings/${p.listingKey}`,
+    }
   }
 
-  // Internal properties overwrite RESO entries for the same MLS#
-  for (const p of internalProps) {
-    if (!p.mlsNumber) continue
-    const address = [p.address, p.city, p.province, p.postalCode].filter(Boolean).join(', ')
+  // ── 1. Resolve fixed {{listing:MLS:field}} tags ───────────────────────────
+  const mlsNumbers = new Set<string>()
+  for (const [, mls] of text.matchAll(TAG_RE)) mlsNumbers.add(mls)
 
-    let image = ''
-    try {
-      const imgs = JSON.parse(p.images ?? '[]') as string[]
-      image = imgs[0] ?? ''
-    } catch { /* leave empty */ }
+  const lookup = new Map<string, ListingData>()
 
-    lookup.set(p.mlsNumber, {
-      address,
-      image,
-      price: `$${p.price.toLocaleString('en-CA')}`,
-      link:  `${appUrl}/listings/${p.id}`,
-    })
+  if (mlsNumbers.size > 0) {
+    const mlsList = Array.from(mlsNumbers)
+
+    const [internalProps, resoProps] = await Promise.all([
+      prisma.property.findMany({
+        where: { mlsNumber: { in: mlsList } },
+        select: {
+          id: true, mlsNumber: true,
+          address: true, city: true, province: true, postalCode: true,
+          price: true, images: true,
+        },
+      }),
+      prisma.resoProperty.findMany({
+        where: { OR: [{ listingKey: { in: mlsList } }, { listingId: { in: mlsList } }] },
+        select: {
+          id: true, listingKey: true, listingId: true,
+          streetNumber: true, streetName: true, streetSuffix: true,
+          unitNumber: true, city: true, stateOrProvince: true, postalCode: true,
+          listPrice: true, media: true,
+        },
+      }),
+    ])
+
+    for (const p of resoProps) {
+      const mls = mlsList.find(m => m === p.listingKey || m === p.listingId)
+      if (!mls) continue
+      lookup.set(mls, resoToData(p))
+    }
+
+    for (const p of internalProps) {
+      if (!p.mlsNumber) continue
+      const address = [p.address, p.city, p.province, p.postalCode].filter(Boolean).join(', ')
+      let image = ''
+      try {
+        const imgs = JSON.parse(p.images ?? '[]') as string[]
+        image = imgs[0] ?? ''
+      } catch { /* leave empty */ }
+      lookup.set(p.mlsNumber, {
+        address,
+        image,
+        price: `$${p.price.toLocaleString('en-CA')}`,
+        link:  `${appUrl}/listings/${p.id}`,
+      })
+    }
   }
 
-  return text.replace(TAG_RE, (original, mls: string, field: string) => {
+  let result = text.replace(TAG_RE, (original, mls: string, field: string) => {
     const data = lookup.get(mls)
     if (!data) return original
     return (data as Record<string, string>)[field] ?? original
   })
+
+  // ── 2. Resolve {{randomListing_N:field}} tags ─────────────────────────────
+  const slotNumbers = new Set<number>()
+  for (const [, slot] of result.matchAll(RANDOM_TAG_RE)) slotNumbers.add(parseInt(slot, 10))
+
+  if (slotNumbers.size > 0) {
+    const slotsNeeded = slotNumbers.size
+    const poolSize    = Math.max(slotsNeeded * 5, 20)
+
+    // Fetch a pool of active listings and shuffle in JS for random selection
+    const pool = await prisma.resoProperty.findMany({
+      where:   { standardStatus: 'Active' },
+      select: {
+        listingKey: true, listingId: true,
+        streetNumber: true, streetName: true, streetSuffix: true,
+        unitNumber: true, city: true, stateOrProvince: true, postalCode: true,
+        listPrice: true, media: true,
+      },
+      take:    poolSize,
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    // Fisher-Yates shuffle
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+
+    // Assign one listing per slot (sorted slot order for determinism within template)
+    const slotMap = new Map<number, ListingData>()
+    const sortedSlots = Array.from(slotNumbers).sort((a, b) => a - b)
+    sortedSlots.forEach((slot, idx) => {
+      const p = pool[idx]
+      if (p) slotMap.set(slot, resoToData(p))
+    })
+
+    result = result.replace(RANDOM_TAG_RE, (original, slot: string, field: string) => {
+      const data = slotMap.get(parseInt(slot, 10))
+      if (!data) return original
+      return (data as Record<string, string>)[field] ?? original
+    })
+  }
+
+  return result
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────

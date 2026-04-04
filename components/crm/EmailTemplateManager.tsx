@@ -93,6 +93,11 @@ function applyPreview(text: string) {
     /\{\{listing:([^:}]+):(\w+)\}\}/g,
     (_, mls: string, field: string) => `[Listing ${mls} — ${field}]`,
   )
+  // Render random listing tags as inline placeholders
+  out = out.replace(
+    /\{\{randomListing_(\d+):(\w+)\}\}/g,
+    (_, slot: string, field: string) => `[Random Listing ${slot} — ${field}]`,
+  )
   return out
 }
 

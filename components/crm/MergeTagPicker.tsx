@@ -51,7 +51,8 @@ interface Props {
 }
 
 export function MergeTagPicker({ textareaRef, value, onChange }: Props) {
-  const [mlsInput, setMlsInput] = useState('')
+  const [mlsInput,    setMlsInput]    = useState('')
+  const [randomSlot,  setRandomSlot]  = useState('1')
 
   function insert(tag: string) {
     const el = textareaRef.current
@@ -75,6 +76,11 @@ export function MergeTagPicker({ textareaRef, value, onChange }: Props) {
     insert(`{{listing:${mls}:${field}}}`)
   }
 
+  function insertRandomTag(field: string) {
+    const slot = parseInt(randomSlot, 10) || 1
+    insert(`{{randomListing_${slot}:${field}}}`)
+  }
+
   return (
     <div className="rounded-lg border border-charcoal-100 bg-charcoal-50 px-2 py-1.5 space-y-1.5">
       {/* Standard merge tags */}
@@ -93,7 +99,7 @@ export function MergeTagPicker({ textareaRef, value, onChange }: Props) {
         ))}
       </div>
 
-      {/* Listing tags */}
+      {/* Fixed listing tags */}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-charcoal-200 pt-1.5">
         <span className="text-xs text-charcoal-400 shrink-0">Listing:</span>
         <input
@@ -112,6 +118,31 @@ export function MergeTagPicker({ textareaRef, value, onChange }: Props) {
             className="rounded bg-white border border-charcoal-200 px-1.5 py-0.5 text-xs text-charcoal-600 hover:bg-charcoal-900 hover:text-white hover:border-charcoal-900 transition-colors font-mono"
           >
             {`{{listing:…:${field}}}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Random listing tags */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-charcoal-200 pt-1.5">
+        <span className="text-xs text-charcoal-400 shrink-0">Random:</span>
+        <input
+          type="number"
+          min={1}
+          max={9}
+          value={randomSlot}
+          onChange={e => setRandomSlot(e.target.value)}
+          title="Slot number — all tags with the same slot resolve to the same listing per send"
+          className="w-14 rounded border border-charcoal-200 bg-white px-2 py-0.5 text-xs text-charcoal-900 focus:outline-none focus:ring-1 focus:ring-charcoal-400 font-mono"
+        />
+        {LISTING_FIELDS.map(({ field, label }) => (
+          <button
+            key={field}
+            type="button"
+            title={`Insert a random active listing's ${label.toLowerCase()} — slot ${randomSlot} tags all resolve to the same listing per send`}
+            onClick={() => insertRandomTag(field)}
+            className="rounded bg-white border border-charcoal-200 px-1.5 py-0.5 text-xs text-charcoal-600 hover:bg-charcoal-900 hover:text-white hover:border-charcoal-900 transition-colors font-mono"
+          >
+            {`{{randomListing_${randomSlot}:${field}}}`}
           </button>
         ))}
       </div>
