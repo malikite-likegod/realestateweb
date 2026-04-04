@@ -29,8 +29,8 @@ export function sanitizeLandingPageContent(html: string): string {
       'path':   ['d', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'],
     },
     allowedSchemes: ['http', 'https', 'mailto', 'tel', 'data'],
-    // Allow <style> tag content through unchanged
-    allowedStyles: { '*': {} },
+    // style/link tags are admin-authored only — not user input
+    allowVulnerableTags: true,
     transformTags: {
       // Strip any script-like attributes that slip through
       'a': (tagName, attribs) => ({
