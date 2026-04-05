@@ -171,9 +171,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
     fetch('/api/email-templates')
       .then(r => r.json())
       .then(d => setTemplates(
-        (d.data ?? [])
-          .filter((t: { isActive: boolean; id: string; name: string; subject: string; body: string }) => t.isActive)
-          .sort((a: EmailTemplateOption, b: EmailTemplateOption) => a.name.localeCompare(b.name))
+        (d.data ?? []).sort((a: EmailTemplateOption, b: EmailTemplateOption) => a.name.localeCompare(b.name))
       ))
       .catch(() => {})
   }, [])
@@ -451,15 +449,13 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
         <div className="flex flex-col gap-2">
           {activeTemplates.length > 0 && (
             <select
-              value={config.templateId as string || ''}
+              value=""
               onChange={e => {
                 const tpl = activeTemplates.find(t => t.id === e.target.value)
                 if (tpl) {
                   onChange('templateId', tpl.id)
                   onChange('subject',    tpl.subject)
                   onChange('body',       tpl.body)
-                } else {
-                  onChange('templateId', '')
                 }
               }}
               className="w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
