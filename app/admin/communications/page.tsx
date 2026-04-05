@@ -11,12 +11,13 @@
  */
 
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
-import { Phone, MessageSquare, Mail, PhoneMissed } from 'lucide-react'
+import { Phone, MessageSquare, Mail, PhoneMissed, BarChart2 } from 'lucide-react'
 import { InboxComposeButton }  from '@/components/communications/InboxComposeButton'
 import { InboxClientShell }    from '@/components/communications/InboxClientShell'
 
@@ -86,7 +87,18 @@ export default async function CommunicationsPage() {
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Communications' },
         ]}
-        actions={<InboxComposeButton />}
+        actions={
+          <>
+            <Link
+              href="/admin/communications/email-analytics"
+              className="inline-flex items-center gap-1.5 text-sm border border-charcoal-300 rounded-md px-3 py-1.5 text-charcoal-700 hover:bg-charcoal-50 transition-colors"
+            >
+              <BarChart2 size={14} />
+              Email Analytics
+            </Link>
+            <InboxComposeButton />
+          </>
+        }
       />
 
       {/* Summary stats */}
