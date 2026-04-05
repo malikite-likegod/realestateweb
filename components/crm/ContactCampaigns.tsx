@@ -34,6 +34,13 @@ type AvailableCampaign = {
   trigger: string
 }
 
+type CampaignStep = {
+  id:           string
+  order:        number
+  type:         string
+  delayMinutes: number
+}
+
 interface ContactCampaignsProps {
   contactId:          string
   initialEnrollments: Enrollment[]
@@ -49,15 +56,33 @@ const STATUS_CONFIG: Record<EnrollmentStatus, { label: string; variant: 'success
 
 export function ContactCampaigns({ contactId, initialEnrollments, availableCampaigns }: ContactCampaignsProps) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>(initialEnrollments)
-  const [selectedId,  setSelectedId]  = useState('')
-  const [enrolling,   setEnrolling]   = useState(false)
-  const [error,       setError]       = useState('')
+  const [selectedId,   setSelectedId]   = useState('')
+  const [steps,        setSteps]        = useState<CampaignStep[]>([])
+  const [startAtStep,  setStartAtStep]  = useState(0)
+  const [loadingSteps, setLoadingSteps] = useState(false)
+  const [enrolling,    setEnrolling]    = useState(false)
+  const [error,        setError]        = useState('')
 
   // Campaigns the contact isn't already actively enrolled in
   const enrolledSequenceIds = new Set(
     enrollments.filter(e => e.status === 'active' || e.status === 'paused').map(e => e.sequence.id)
   )
   const unenrolledCampaigns = availableCampaigns.filter(c => !enrolledSequenceIds.has(c.id))
+
+  async function handleCampaignSelect(id: string) {
+    setSelectedId(id)
+    setStartAtStep(0)
+    setSteps([])
+    if (!id) return
+    setLoadingSteps(true)
+    try {
+      const res  = await fetch(`/api/campaigns/${id}/steps`)
+      const json = await res.json()
+      if (json.data) setSteps(json.data)
+    } finally {
+      setLoadingSteps(false)
+    }
+  }
 
   async function handleEnroll() {
     if (!selectedId) return
@@ -67,7 +92,7 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
       const res  = await fetch(`/api/campaigns/${selectedId}/enroll`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ contactId }),
+        body:    JSON.stringify({ contactId, startAtStep }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Enrollment failed')
@@ -75,6 +100,8 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
       // Refresh enrollments from server
       await refreshEnrollments()
       setSelectedId('')
+      setSteps([])
+      setStartAtStep(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enroll')
     } finally {
@@ -111,27 +138,50 @@ export function ContactCampaigns({ contactId, initialEnrollments, availableCampa
 
       {/* Enroll section */}
       {unenrolledCampaigns.length > 0 && (
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedId}
-            onChange={e => setSelectedId(e.target.value)}
-            className="flex-1 rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
-          >
-            <option value="">Select a campaign to enroll…</option>
-            {unenrolledCampaigns.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.trigger.replace(/_/g, ' ')})
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="primary" size="sm"
-            leftIcon={<Plus size={14} />}
-            loading={enrolling}
-            onClick={handleEnroll}
-            disabled={!selectedId}>
-            Enroll
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedId}
+              onChange={e => handleCampaignSelect(e.target.value)}
+              className="flex-1 rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
+            >
+              <option value="">Select a campaign to enroll…</option>
+              {unenrolledCampaigns.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.trigger.replace(/_/g, ' ')})
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="primary" size="sm"
+              leftIcon={<Plus size={14} />}
+              loading={enrolling}
+              onClick={handleEnroll}
+              disabled={!selectedId}>
+              Enroll
+            </Button>
+          </div>
+          {selectedId && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-charcoal-500 shrink-0">Start at step:</label>
+              <select
+                value={startAtStep}
+                onChange={e => setStartAtStep(Number(e.target.value))}
+                disabled={loadingSteps || steps.length === 0}
+                className="rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900 disabled:opacity-50"
+              >
+                {steps.length === 0
+                  ? <option value={0}>{loadingSteps ? 'Loading…' : 'Step 1'}</option>
+                  : steps.map((s, i) => (
+                    <option key={s.id} value={i}>
+                      Step {i + 1}: {s.type.replace(/_/g, ' ')}
+                      {s.delayMinutes > 0 ? ` (after ${s.delayMinutes >= 1440 ? `${s.delayMinutes / 1440}d` : `${s.delayMinutes}m`} delay)` : ''}
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
+          )}
         </div>
       )}
 

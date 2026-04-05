@@ -7,8 +7,9 @@ import { prisma } from '@/lib/prisma'
 import { enrollContact, bulkEnroll } from '@/lib/automation/campaign-service'
 
 const schema = z.object({
-  contactId:  z.string().optional(),
-  contactIds: z.array(z.string()).optional(),
+  contactId:   z.string().optional(),
+  contactIds:  z.array(z.string()).optional(),
+  startAtStep: z.number().int().min(0).optional(),
 })
 
 interface Props { params: Promise<{ id: string }> }
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: Props) {
     }
 
     if (parsed.contactId) {
-      const enrollment = await enrollContact(id, parsed.contactId)
+      const enrollment = await enrollContact(id, parsed.contactId, parsed.startAtStep ?? 0)
       if (!enrollment) return NextResponse.json({ error: 'Campaign not found or inactive' }, { status: 400 })
       const [campaign, contact] = await Promise.all([
         prisma.automationSequence.findUnique({ where: { id }, select: { name: true } }),
