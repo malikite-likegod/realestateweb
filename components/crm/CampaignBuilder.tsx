@@ -43,6 +43,13 @@ interface TaskTypeOption {
   color: string
 }
 
+interface EmailTemplateOption {
+  id:      string
+  name:    string
+  subject: string
+  body:    string
+}
+
 interface InitialCampaignData {
   name:          string
   description:   string
@@ -115,7 +122,7 @@ const TRIGGER_LABELS: Record<TriggerType, string> = {
 
 function defaultConfig(type: StepType): Record<string, string | number> {
   switch (type) {
-    case 'send_email':        return { subject: '', body: '' }
+    case 'send_email':        return { subject: '', body: '', templateId: '' }
     case 'send_sms':          return { body: '' }
     case 'create_task':       return { title: '', description: '', priority: 'normal', taskTypeId: '' }
     case 'wait':              return {}
@@ -149,6 +156,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
   const [triggerTagId,  setTriggerTagId]  = useState<string>(initialData?.triggerTagId ?? '')
   const [tags,          setTags]          = useState<TagOption[]>([])
   const [taskTypes,     setTaskTypes]     = useState<TaskTypeOption[]>([])
+  const [templates,     setTemplates]     = useState<EmailTemplateOption[]>([])
   const [steps,         setSteps]         = useState<StepForm[]>(
     initialData?.steps?.length
       ? initialData.steps.map(initialStepForm)
@@ -160,6 +168,14 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
   useEffect(() => {
     fetch('/api/tags').then(r => r.json()).then(d => setTags(d.data ?? [])).catch(() => {})
     fetch('/api/task-types').then(r => r.json()).then(d => setTaskTypes(d.data ?? [])).catch(() => {})
+    fetch('/api/email-templates')
+      .then(r => r.json())
+      .then(d => setTemplates(
+        (d.data ?? [])
+          .filter((t: { isActive: boolean; id: string; name: string; subject: string; body: string }) => t.isActive)
+          .sort((a: EmailTemplateOption, b: EmailTemplateOption) => a.name.localeCompare(b.name))
+      ))
+      .catch(() => {})
   }, [])
 
   function addStep() {
@@ -394,6 +410,7 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
                 onChange={(k, v) => updateConfig(i, k, v)}
                 allCampaigns={allCampaigns}
                 currentCampaignId={campaignId ?? currentCampaignId}
+                templates={templates}
               />
             </div>
           ))}
@@ -410,12 +427,13 @@ export function CampaignBuilder({ onCreated, onUpdated, campaignId, initialData,
   )
 }
 
-function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }: {
+function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, templates }: {
   type:               StepType
   config:             Record<string, string | number>
   onChange:           (key: string, value: string | number) => void
   allCampaigns?:      CampaignSummary[]
   currentCampaignId?: string
+  templates?:         EmailTemplateOption[]
 }) {
   const [showPicker, setShowPicker] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -427,9 +445,31 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
   }
 
   switch (type) {
-    case 'send_email':
+    case 'send_email': {
+      const activeTemplates = templates ?? []
       return (
         <div className="flex flex-col gap-2">
+          {activeTemplates.length > 0 && (
+            <select
+              value={config.templateId as string || ''}
+              onChange={e => {
+                const tpl = activeTemplates.find(t => t.id === e.target.value)
+                if (tpl) {
+                  onChange('templateId', tpl.id)
+                  onChange('subject',    tpl.subject)
+                  onChange('body',       tpl.body)
+                } else {
+                  onChange('templateId', '')
+                }
+              }}
+              className="w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
+            >
+              <option value="">— Load from template —</option>
+              {activeTemplates.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
           <input type="text" placeholder="Email subject" value={config.subject as string}
             onChange={e => onChange('subject', e.target.value)} className={inputCls} />
           <MergeTagPicker textareaRef={bodyRef} value={config.body as string} onChange={v => onChange('body', v)} />
@@ -472,6 +512,7 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId }:
           )}
         </div>
       )
+    }
     case 'send_sms':
       return (
         <div className="flex flex-col gap-2">
