@@ -469,7 +469,7 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
           <input type="text" placeholder="Email subject" value={config.subject as string}
             onChange={e => onChange('subject', e.target.value)} className={inputCls} />
           <MergeTagPicker textareaRef={bodyRef} value={config.body as string} onChange={v => onChange('body', v)} />
-          <textarea ref={bodyRef} placeholder="Email body (HTML allowed)" rows={3} value={config.body as string}
+          <textarea ref={bodyRef} placeholder="Email body (HTML allowed)" rows={10} value={config.body as string}
             onChange={e => onChange('body', e.target.value)}
             className={`${inputCls} resize-none font-mono`} />
 
