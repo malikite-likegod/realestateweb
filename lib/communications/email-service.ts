@@ -241,6 +241,7 @@ export type SendEmailInput = {
   fromEmail?:   string
   ccEmails?:    string[]
   templateId?:  string
+  campaignId?:  string
   sentById?:    string
   attachments?: Array<{ filename: string; content: Buffer }>
 }
@@ -267,6 +268,7 @@ export async function sendEmail(input: SendEmailInput) {
         fromEmail,
         toEmail:    input.toEmail,
         templateId: input.templateId ?? null,
+        campaignId: input.campaignId ?? null,
         trackingId,
         sentById:   input.sentById ?? null,
       },
@@ -343,6 +345,7 @@ export async function sendEmail(input: SendEmailInput) {
       toEmail:    input.toEmail,
       ccEmails:   input.ccEmails ? JSON.stringify(input.ccEmails) : null,
       templateId: input.templateId ?? null,
+      campaignId: input.campaignId ?? null,
       trackingId,
       sentById:   input.sentById ?? null,
     },
