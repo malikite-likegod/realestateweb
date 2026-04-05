@@ -901,6 +901,8 @@ model EmailMessage {
   clickCount  Int            @default(0)
   trackingId   String?        @unique // random token for pixel tracking
   imapMessageId String?       @unique // IMAP Message-ID header — deduplicates inbound sync
+  campaignId    String?
+  campaign      EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   sentById    String?
   sentBy      User?          @relation(fields: [sentById], references: [id])
   sentAt      DateTime       @default(now())
@@ -924,6 +926,19 @@ model EmailTemplate {
   emails    EmailMessage[]
 
   @@map("email_templates")
+}
+
+// EmailCampaign: groups all EmailMessage records sent in one bulk send.
+model EmailCampaign {
+  id             String         @id @default(cuid())
+  name           String         // always mirrors subject line — not user-editable
+  subject        String
+  sentAt         DateTime       @default(now())  // scheduled time or now() at queue time
+  recipientCount Int            @default(0)      // contacts with valid email, after dedup
+  createdAt      DateTime       @default(now())
+  emails         EmailMessage[]
+
+  @@map("email_campaigns")
 }
 
 // ─── Analytics / Tracking ─────────────────────────────────────────────────────
