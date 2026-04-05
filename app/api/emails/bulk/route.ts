@@ -71,27 +71,45 @@ export async function POST(request: Request) {
     const runAt      = scheduledAt ? new Date(scheduledAt) : new Date()
     const bulkSendId = crypto.randomUUID()
 
-    // Batch-enqueue all jobs in one DB write
-    await prisma.jobQueue.createMany({
-      data: recipients.map(contact => ({
-        type:    'bulk_email_send',
-        payload: JSON.stringify({
-          contactId:  contact.id,
-          toEmail:    contact.email,
-          subject,
-          body:       emailBody,
-          templateId,
-          bulkSendId,
-        }),
-        runAt,
-      })),
+    // Create campaign record before enqueuing jobs.
+    // If job enqueue fails, clean up the orphaned campaign record.
+    const campaign = await prisma.emailCampaign.create({
+      data: {
+        name:           subject,
+        subject,
+        sentAt:         runAt,
+        recipientCount: recipients.length,
+      },
     })
 
+    // Batch-enqueue all jobs in one DB write
+    try {
+      await prisma.jobQueue.createMany({
+        data: recipients.map(contact => ({
+          type:    'bulk_email_send',
+          payload: JSON.stringify({
+            contactId:  contact.id,
+            toEmail:    contact.email,
+            subject,
+            body:       emailBody,
+            templateId,
+            bulkSendId,
+            campaignId: campaign.id,
+          }),
+          runAt,
+        })),
+      })
+    } catch (err) {
+      await prisma.emailCampaign.delete({ where: { id: campaign.id } })
+      throw err
+    }
+
     return NextResponse.json({
-      total:     allContacts.length,
-      scheduled: recipients.length,
+      total:      allContacts.length,
+      scheduled:  recipients.length,
       skipped,
       bulkSendId,
+      campaignId: campaign.id,
     })
   } catch (err) {
     console.error('[POST /api/emails/bulk]', err)
