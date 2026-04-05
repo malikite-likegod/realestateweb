@@ -179,6 +179,7 @@ async function runJob(type: JobType, payload: Record<string, unknown>): Promise<
         body:       payload.body       as string,
         toEmail:    payload.toEmail    as string,
         templateId: payload.templateId as string | undefined,
+        campaignId: payload.campaignId as string | undefined,
       })
       break
     }
