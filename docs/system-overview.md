@@ -1,6 +1,6 @@
 # LuxeRealty — System Overview
 
-> Last updated: 2026-04-03
+> Last updated: 2026-04-05
 
 ## What This System Is
 
@@ -150,7 +150,39 @@ Values pre-populate from `AGENT_NAME` / `AGENT_EMAIL` / `AGENT_PHONE` env vars w
 
 ---
 
+## Email Analytics
+
+Accessible at `/admin/communications/email-analytics`. Tracks open and click rates for bulk email sends.
+
+**How it works**
+
+When a bulk email send is initiated, a new `EmailCampaign` record is created and each outgoing `EmailMessage` is linked to it via `campaignId`. The `EmailCampaign` model stores:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Campaign name (defaults to subject line) |
+| `subject` | Email subject line |
+| `recipientCount` | Number of recipients at send time |
+| `sentAt` | Timestamp of the bulk send |
+
+Open/click metrics are derived from the linked `EmailMessage` records (`openCount`, `clickCount`, `openedAt`, `clickedAt`).
+
+**Pages**
+
+- `/admin/communications/email-analytics` — Campaign list with aggregate stats (total sent, avg open rate, avg click rate) and a per-campaign table
+- `/admin/communications/email-analytics/[id]` — Per-contact drilldown for a single campaign (status badge, opened-at, clicked-at per recipient)
+
+---
+
 ## Background Jobs
+
+### Campaign Enhancements
+
+**Email template picker in `send_email` steps**  
+When building a campaign, `send_email` steps can optionally reference an `EmailTemplate` via `templateId` in the step config. If a template is selected, its subject and body are used (with merge tags resolved at send time). A raw subject/body can still be entered manually when no template is selected.
+
+**Starting step on enroll**  
+When enrolling a single contact into a campaign, an optional `startAtStep` (zero-indexed integer) can be provided to skip earlier steps — useful for re-enrolling a contact partway through a sequence. The `GET /api/campaigns/[id]/steps` endpoint returns the ordered step list to populate the picker.
 
 The `JobQueue` model backs an in-process automation runner (enabled via `ENABLE_AUTOMATION_RUNNER=true`). Job types:
 
@@ -248,6 +280,9 @@ src/
     api/                      ← All API route handlers
     admin/
       email-templates/        ← Email template manager page
+      communications/
+        email-analytics/      ← Campaign analytics list
+        email-analytics/[id]/ ← Per-campaign contact drilldown
       ...                     ← Other admin dashboard pages
     portal/                   ← Contact portal pages
   lib/

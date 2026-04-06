@@ -1,6 +1,6 @@
 # LuxeRealty — API Reference
 
-> Last updated: 2026-04-03  
+> Last updated: 2026-04-05  
 > Base URL: `NEXT_PUBLIC_APP_URL` (e.g. `https://app.example.com`)
 
 ## Authentication
@@ -327,7 +327,11 @@ Log or list call records.
   "steps": [{
     "order": 1,
     "type": "send_email|send_sms|create_task|wait|update_lead_score|transfer_campaign|send_portal_invite",
-    "config": {},
+    "config": {
+      "subject": "string",
+      "body": "HTML string",
+      "templateId": "string?"
+    },
     "delayMinutes": 0
   }]
 }
@@ -335,8 +339,23 @@ Log or list call records.
 
 ### `GET|PATCH|DELETE /api/campaigns/[id]`
 
+### `GET /api/campaigns/[id]/steps`
+Returns ordered steps for a campaign. Used to populate the step picker when enrolling a contact at a specific starting point.
+
+**Response 200**
+```json
+{ "data": [{ "id": "string", "order": 0, "type": "send_email|send_sms|wait|...", "delayMinutes": 0 }] }
+```
+
 ### `POST /api/campaigns/[id]/enroll`
-**Body** `{ "contactId": "string" }`
+**Body**
+```json
+{
+  "contactId": "string",
+  "startAtStep": 0
+}
+```
+`startAtStep` is zero-indexed and optional (defaults to `0`). Use it to skip earlier steps when re-enrolling a contact partway through a campaign. For bulk enroll use `contactIds` instead of `contactId` (step picker not supported for bulk).
 
 ### `GET /api/campaigns/[id]/enrollments`
 
