@@ -46,7 +46,13 @@ export async function syncInbox(): Promise<SyncResult> {
     secure: port === 993,
     auth: { user, pass },
     logger: false,
+    socketTimeout: 30_000,    // 30s inactivity timeout — fail fast on dead connections
+    connectionTimeout: 15_000, // 15s to establish the initial connection
   })
+
+  // ImapFlow can emit 'error' events asynchronously after a socket timeout,
+  // bypassing any try/catch. Register a no-op handler to prevent uncaughtException.
+  client.on('error', () => {})
 
   let fetched   = 0
   let imported  = 0
