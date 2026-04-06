@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyCsrfOrigin } from '@/lib/csrf'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -209,6 +210,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { slug } = await params
   const body = await request.json()
   const { guestName, guestEmail, guestPhone, guestMessage, startAt: startAtStr } = body
