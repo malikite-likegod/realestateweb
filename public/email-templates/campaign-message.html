@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Campaign Message</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    * { box-sizing: border-box; }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; }
+    body { margin: 0; padding: 0; background-color: #f4f3f0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    .serif { font-family: Georgia, 'Times New Roman', serif; }
+    a { color: inherit; }
+
+    @media only screen and (max-width: 620px) {
+      .wrapper    { width: 100% !important; padding: 0 !important; }
+      .container  { width: 100% !important; border-radius: 0 !important; }
+      .hero-pad   { padding: 36px 24px !important; }
+      .msg-pad    { padding: 36px 24px !important; }
+      .list-pad   { padding: 32px 24px !important; }
+      .foot-pad   { padding: 28px 24px !important; }
+      .three-col td { display: block !important; width: 100% !important;
+                      padding-right: 0 !important; padding-left: 0 !important;
+                      padding-bottom: 16px !important; }
+      .listing-card { width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f3f0;">
+
+  <!-- Preheader -->
+  <div style="display:none;font-size:1px;color:#f4f3f0;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    {{firstName}}, a note from {{agentName}}.
+  </div>
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background-color:#f4f3f0;">
+    <tr>
+      <td align="center" style="padding:32px 16px;" class="wrapper">
+
+        <!-- Email container -->
+        <table class="container" width="600" cellpadding="0" cellspacing="0" border="0" role="presentation"
+          style="width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- ══════════════════════════════════════════
+               HEADER — dark charcoal with logo
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#1a1a1a;padding:28px 40px;" class="hero-pad">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="{{brandLogo}}" alt="{{agentBrokerage}}" height="44"
+                      style="height:44px;max-width:220px;object-fit:contain;display:block;" />
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <span style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+                      color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      From Your Agent
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               MESSAGE BODY — white section
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#ffffff;padding:48px 40px 40px;" class="msg-pad">
+
+              <!-- Gold accent line -->
+              <div style="width:48px;height:3px;background-color:#c9a84c;border-radius:2px;margin-bottom:28px;"></div>
+
+              <!-- Greeting -->
+              <p style="margin:0 0 20px;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+                color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                A Note for You
+              </p>
+              <h1 class="serif" style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:30px;
+                font-weight:700;line-height:1.25;color:#1a1a1a;letter-spacing:-0.5px;">
+                Hi {{firstName}},
+              </h1>
+
+              <!-- ─── Campaign message ───────────────────────────
+                   Replace the paragraphs below with your message.
+              ──────────────────────────────────────────────────── -->
+              <p style="margin:0 0 18px;font-size:16px;line-height:1.75;color:#3a3a3a;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                I wanted to reach out personally with something I thought you'd find valuable. Whether you're actively searching, just keeping an eye on the market, or simply curious about what your home might be worth — I'm here to help.
+              </p>
+              <p style="margin:0 0 18px;font-size:16px;line-height:1.75;color:#3a3a3a;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                Add your custom message here. You can write as much or as little as you like — this section is your space to connect with your contact in a personal, direct way.
+              </p>
+              <p style="margin:0 0 32px;font-size:16px;line-height:1.75;color:#3a3a3a;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                As always, don't hesitate to reach out with any questions. I'd love to hear from you.
+              </p>
+
+              <!-- Optional CTA button — remove or update the href as needed -->
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="border-radius:8px;background-color:#1a1a1a;">
+                    <a href="mailto:{{agentEmail}}"
+                      style="display:inline-block;padding:14px 32px;font-size:14px;font-weight:700;
+                      letter-spacing:0.5px;color:#ffffff;text-decoration:none;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      Reply to {{agentName}} →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               LISTINGS — subtle grey section
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#f9f8f6;padding:40px 40px 36px;" class="list-pad">
+
+              <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+                color:#c9a84c;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                Currently Available
+              </p>
+              <h3 class="serif" style="margin:0 0 28px;font-family:Georgia,'Times New Roman',serif;
+                font-size:20px;font-weight:700;color:#1a1a1a;">
+                Properties Worth Considering
+              </h3>
+
+              <!-- Three-column listing cards -->
+              <table class="three-col" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+
+                  <!-- Card 1 -->
+                  <td class="listing-card" width="33%" style="padding-right:8px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+                      style="border:1px solid #e8e4dc;border-radius:10px;overflow:hidden;background-color:#ffffff;">
+                      <tr>
+                        <td>
+                          <img src="{{randomListing_1:image}}" alt="Listing"
+                            width="176" style="width:100%;height:140px;object-fit:cover;display:block;" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px;">
+                          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1a1a1a;
+                            font-family:Georgia,'Times New Roman',serif;line-height:1.3;">
+                            {{randomListing_1:price}}
+                          </p>
+                          <p style="margin:0 0 12px;font-size:11px;line-height:1.5;color:#777777;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            {{randomListing_1:address}}
+                          </p>
+                          <a href="{{randomListing_1:link}}"
+                            style="display:inline-block;padding:7px 14px;font-size:11px;font-weight:600;
+                            color:#1a1a1a;text-decoration:none;border:1.5px solid #1a1a1a;border-radius:6px;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            View Details
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+
+                  <!-- Card 2 -->
+                  <td class="listing-card" width="33%" style="padding-right:4px;padding-left:4px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+                      style="border:1px solid #e8e4dc;border-radius:10px;overflow:hidden;background-color:#ffffff;">
+                      <tr>
+                        <td>
+                          <img src="{{randomListing_2:image}}" alt="Listing"
+                            width="176" style="width:100%;height:140px;object-fit:cover;display:block;" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px;">
+                          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1a1a1a;
+                            font-family:Georgia,'Times New Roman',serif;line-height:1.3;">
+                            {{randomListing_2:price}}
+                          </p>
+                          <p style="margin:0 0 12px;font-size:11px;line-height:1.5;color:#777777;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            {{randomListing_2:address}}
+                          </p>
+                          <a href="{{randomListing_2:link}}"
+                            style="display:inline-block;padding:7px 14px;font-size:11px;font-weight:600;
+                            color:#1a1a1a;text-decoration:none;border:1.5px solid #1a1a1a;border-radius:6px;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            View Details
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+
+                  <!-- Card 3 -->
+                  <td class="listing-card" width="33%" style="padding-left:8px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+                      style="border:1px solid #e8e4dc;border-radius:10px;overflow:hidden;background-color:#ffffff;">
+                      <tr>
+                        <td>
+                          <img src="{{randomListing_3:image}}" alt="Listing"
+                            width="176" style="width:100%;height:140px;object-fit:cover;display:block;" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px;">
+                          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1a1a1a;
+                            font-family:Georgia,'Times New Roman',serif;line-height:1.3;">
+                            {{randomListing_3:price}}
+                          </p>
+                          <p style="margin:0 0 12px;font-size:11px;line-height:1.5;color:#777777;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            {{randomListing_3:address}}
+                          </p>
+                          <a href="{{randomListing_3:link}}"
+                            style="display:inline-block;padding:7px 14px;font-size:11px;font-weight:600;
+                            color:#1a1a1a;text-decoration:none;border:1.5px solid #1a1a1a;border-radius:6px;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                            View Details
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               AGENT SIGNATURE — dark footer
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#1a1a1a;padding:36px 40px;" class="foot-pad">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td width="64" style="vertical-align:top;padding-right:20px;">
+                    <img src="{{agentImage}}" alt="{{agentName}}" width="64" height="64"
+                      style="width:64px;height:64px;border-radius:50%;object-fit:cover;display:block;
+                      border:2px solid #c9a84c;" />
+                  </td>
+                  <td style="vertical-align:top;">
+                    <p style="margin:0 0 2px;font-family:Georgia,'Times New Roman',serif;font-size:17px;
+                      font-weight:700;color:#ffffff;">
+                      {{agentName}}
+                    </p>
+                    <p style="margin:0 0 8px;font-size:12px;color:#c9a84c;letter-spacing:0.5px;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      {{agentDesignation}} · {{agentBrokerage}}
+                    </p>
+                    <p style="margin:0;font-size:12px;line-height:1.6;color:#888888;
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                      <a href="tel:{{agentPhone}}" style="color:#888888;text-decoration:none;">{{agentPhone}}</a>
+                      &nbsp;·&nbsp;
+                      <a href="mailto:{{agentEmail}}" style="color:#888888;text-decoration:none;">{{agentEmail}}</a><br />
+                      {{officeAddress}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               FOOTER — legal / unsubscribe
+          ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#111111;padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:11px;line-height:1.6;color:#555555;
+                font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                You're receiving this because you've connected with {{agentName}}.
+                &nbsp;·&nbsp;
+                {{officeAddress}}<br />
+                <a href="#" style="color:#c9a84c;text-decoration:none;">Unsubscribe</a>
+                &nbsp;·&nbsp;
+                <a href="#" style="color:#555555;text-decoration:none;">View in browser</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- / Email container -->
+
+      </td>
+    </tr>
+  </table>
+  <!-- / Outer wrapper -->
+
+</body>
+</html>
