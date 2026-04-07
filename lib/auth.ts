@@ -43,45 +43,45 @@ async function resolveApiKey(key: string) {
 }
 
 export async function getSession() {
-  // 1. Cookie-based JWT session
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth_token')?.value
-
-  if (token) {
-    try {
-      const payload = await verifyJwt(token)
-      if (payload?.sub) {
-        const user = await prisma.user.findUnique({
-          where: { id: payload.sub as string },
-          select: { id: true, name: true, email: true, role: true, avatarUrl: true, passwordChangedAt: true },
-        })
-        if (user) {
-          // Invalidate tokens issued before the last password change
-          if (user.passwordChangedAt && typeof payload.iat === 'number') {
-            if (payload.iat < user.passwordChangedAt.getTime() / 1000) return null
-          }
-          return user
-        }
-      }
-    } catch {
-      return null
-    }
-  }
-
-  // 2. Bearer API key — bypasses the interactive login / 2FA flow entirely.
-  //    API keys are issued by an authenticated admin, so they are pre-authorized.
+  // 1. Bearer API key — checked first so agents never hit the cookie path at all.
+  //    API keys are issued by an authenticated admin; no 2FA required.
   try {
     const headerStore = await headers()
     const authHeader = headerStore.get('authorization')
     if (authHeader?.startsWith('Bearer ')) {
       const user = await resolveApiKey(authHeader.slice(7))
       if (user) return { ...user, passwordChangedAt: null }
+      // Key present but invalid — don't fall through to cookie auth
+      return null
     }
   } catch {
-    // headers() throws outside of a request context (e.g. during build) — ignore
+    // headers() throws outside a request context (e.g. during static build) — fall through
   }
 
-  return null
+  // 2. Cookie-based JWT session (browser / admin UI)
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth_token')?.value
+    if (!token) return null
+
+    const payload = await verifyJwt(token)
+    if (!payload?.sub) return null
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub as string },
+      select: { id: true, name: true, email: true, role: true, avatarUrl: true, passwordChangedAt: true },
+    })
+    if (!user) return null
+
+    // Invalidate tokens issued before the last password change
+    if (user.passwordChangedAt && typeof payload.iat === 'number') {
+      if (payload.iat < user.passwordChangedAt.getTime() / 1000) return null
+    }
+
+    return user
+  } catch {
+    return null
+  }
 }
 
 export async function requireSession() {

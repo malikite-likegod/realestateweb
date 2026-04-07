@@ -1,21 +1,43 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { verifyPassword, createSession, isSecureContext } from '@/lib/auth'
+import { verifyPassword, createSession, isSecureContext, validateApiKey } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { signPendingJwt } from '@/lib/jwt'
 import { sendTransactionalEmail } from '@/lib/communications/email-service'
 import { logAuditEvent, extractIp, extractUserAgent } from '@/lib/audit'
+import type { NextRequest } from 'next/server'
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 })
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const ip = extractIp(request)
   const userAgent = extractUserAgent(request)
+
+  // API key auth — issued by an admin, so no password or 2FA required
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const user = await validateApiKey(authHeader, request)
+    if (user) {
+      const token = await createSession(user.id)
+      void logAuditEvent({ event: 'login_success', actor: user.email, userId: user.id, ip, userAgent, meta: { method: 'api_key' } })
+      const response = NextResponse.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } })
+      response.cookies.set('auth_token', token, {
+        httpOnly: true,
+        secure: isSecureContext,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+      })
+      return response
+    }
+    // Invalid API key — reject without falling through to password auth
+    return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+  }
 
   try {
     const body = await request.json()
