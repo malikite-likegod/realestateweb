@@ -92,7 +92,8 @@ async function getUnseenUids(
     await client.connect()
     const lock = await client.getMailboxLock(mailbox)
     try {
-      return (await client.search({ seen: false }, { uid: true })) ?? []
+      const result = await client.search({ seen: false }, { uid: true })
+      return Array.isArray(result) ? result : []
     } finally {
       lock.release()
     }
