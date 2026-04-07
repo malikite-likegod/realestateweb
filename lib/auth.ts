@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { NextRequest } from 'next/server'
 import { signJwt, verifyJwt, verifyContactJwt, verifyPendingContactJwt } from './jwt'
 import { prisma } from './prisma'
@@ -27,32 +27,61 @@ export async function createSession(userId: string): Promise<string> {
   return token
 }
 
+/** Validate a raw API key string and return the owning user, or null. */
+async function resolveApiKey(key: string) {
+  const prefix = key.slice(0, 8)
+  const apiKey = await prisma.apiKey.findFirst({
+    where: { prefix },
+    include: { user: { select: { id: true, name: true, email: true, role: true, avatarUrl: true } } },
+  })
+  if (!apiKey) return null
+  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null
+  const valid = await bcrypt.compare(key, apiKey.keyHash)
+  if (!valid) return null
+  await prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
+  return apiKey.user
+}
+
 export async function getSession() {
+  // 1. Cookie-based JWT session
   const cookieStore = await cookies()
   const token = cookieStore.get('auth_token')?.value
-  if (!token) return null
 
-  try {
-    const payload = await verifyJwt(token)
-    if (!payload?.sub) return null
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub as string },
-      select: { id: true, name: true, email: true, role: true, avatarUrl: true, passwordChangedAt: true },
-    })
-    if (!user) return null
-
-    // Invalidate tokens issued before the last password change
-    if (user.passwordChangedAt && typeof payload.iat === 'number') {
-      if (payload.iat < user.passwordChangedAt.getTime() / 1000) {
-        return null
+  if (token) {
+    try {
+      const payload = await verifyJwt(token)
+      if (payload?.sub) {
+        const user = await prisma.user.findUnique({
+          where: { id: payload.sub as string },
+          select: { id: true, name: true, email: true, role: true, avatarUrl: true, passwordChangedAt: true },
+        })
+        if (user) {
+          // Invalidate tokens issued before the last password change
+          if (user.passwordChangedAt && typeof payload.iat === 'number') {
+            if (payload.iat < user.passwordChangedAt.getTime() / 1000) return null
+          }
+          return user
+        }
       }
+    } catch {
+      return null
     }
-
-    return user
-  } catch {
-    return null
   }
+
+  // 2. Bearer API key — bypasses the interactive login / 2FA flow entirely.
+  //    API keys are issued by an authenticated admin, so they are pre-authorized.
+  try {
+    const headerStore = await headers()
+    const authHeader = headerStore.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      const user = await resolveApiKey(authHeader.slice(7))
+      if (user) return { ...user, passwordChangedAt: null }
+    }
+  } catch {
+    // headers() throws outside of a request context (e.g. during build) — ignore
+  }
+
+  return null
 }
 
 export async function requireSession() {
@@ -61,20 +90,12 @@ export async function requireSession() {
   return session
 }
 
+/** For route handlers that explicitly want to authenticate via API key only. */
 export async function validateApiKey(authHeader: string | null, _request: NextRequest) {
   if (!authHeader?.startsWith('Bearer ')) return null
-  const key = authHeader.slice(7)
-  const prefix = key.slice(0, 8)
-  const apiKey = await prisma.apiKey.findFirst({
-    where: { prefix },
-    include: { user: { select: { id: true, role: true } } },
-  })
-  if (!apiKey) return null
-  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null
-  const valid = await bcrypt.compare(key, apiKey.keyHash)
-  if (!valid) return null
-  await prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
-  return apiKey
+  const user = await resolveApiKey(authHeader.slice(7))
+  if (!user) return null
+  return user
 }
 
 export async function getContactSession() {
