@@ -154,9 +154,8 @@ export default async function SettingsPage() {
             {apiKeyCount} API key{apiKeyCount !== 1 ? 's' : ''} · {commandLogCount} commands executed
           </p>
           <div className="flex gap-3">
-            <Button variant="outline">Generate API Key</Button>
-            <Button variant="ghost" asChild>
-              <a href="/admin/settings/api-keys">Manage Keys</a>
+            <Button variant="primary" asChild>
+              <a href="/admin/settings/api-keys">Manage API Keys</a>
             </Button>
           </div>
         </Card>

@@ -70,6 +70,7 @@ export async function validateApiKey(authHeader: string | null, _request: NextRe
     include: { user: { select: { id: true, role: true } } },
   })
   if (!apiKey) return null
+  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null
   const valid = await bcrypt.compare(key, apiKey.keyHash)
   if (!valid) return null
   await prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
