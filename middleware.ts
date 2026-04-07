@@ -206,11 +206,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Any protected API route accepts a Bearer token (API key) in lieu of a session cookie.
-  // The route handler is still responsible for calling validateApiKey() to authenticate.
+  // Any protected API route accepts an API key in lieu of a session cookie.
+  // Supported formats: Authorization: Bearer <key> | Authorization: <key> | x-api-key: <key>
+  // The route handler validates the key via getSession() / validateApiKey().
   if (pathname.startsWith('/api/')) {
-    const auth = request.headers.get('authorization')
-    if (auth?.startsWith('Bearer ')) {
+    const auth   = request.headers.get('authorization')
+    const xKey   = request.headers.get('x-api-key')
+    if (auth || xKey) {
       return NextResponse.next()
     }
   }

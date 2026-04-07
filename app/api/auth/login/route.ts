@@ -18,10 +18,11 @@ export async function POST(request: NextRequest) {
   const ip = extractIp(request)
   const userAgent = extractUserAgent(request)
 
-  // API key auth — issued by an admin, so no password or 2FA required
-  const authHeader = request.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    const user = await validateApiKey(authHeader, request)
+  // API key auth — accepts Authorization: Bearer <key>, Authorization: <key>, or x-api-key: <key>.
+  // API keys are issued by an authenticated admin so no password or 2FA is required.
+  const hasApiKeyHeader = request.headers.get('authorization') || request.headers.get('x-api-key')
+  if (hasApiKeyHeader) {
+    const user = await validateApiKey(request.headers.get('authorization'), request)
     if (user) {
       const token = await createSession(user.id)
       void logAuditEvent({ event: 'login_success', actor: user.email, userId: user.id, ip, userAgent, meta: { method: 'api_key' } })
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       })
       return response
     }
-    // Invalid API key — reject without falling through to password auth
+    // Key header present but invalid — reject without falling through to password/2FA
     return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
   }
 

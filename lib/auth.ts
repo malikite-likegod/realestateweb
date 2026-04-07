@@ -27,6 +27,18 @@ export async function createSession(userId: string): Promise<string> {
   return token
 }
 
+/**
+ * Extract the raw API key from request headers.
+ * Accepts three formats so agents and proxies with different configs all work:
+ *   Authorization: Bearer <key>   (standard)
+ *   Authorization: <key>          (some agents omit "Bearer")
+ *   x-api-key: <key>              (custom header; survives proxies that strip Authorization)
+ */
+function extractRawKey(authorization: string | null, xApiKey: string | null): string | null {
+  if (authorization) return authorization.startsWith('Bearer ') ? authorization.slice(7) : authorization
+  return xApiKey
+}
+
 /** Validate a raw API key string and return the owning user, or null. */
 async function resolveApiKey(key: string) {
   const prefix = key.slice(0, 8)
@@ -43,15 +55,19 @@ async function resolveApiKey(key: string) {
 }
 
 export async function getSession() {
-  // 1. Bearer API key — checked first so agents never hit the cookie path at all.
+  // 1. API key — checked first so agents never touch the cookie / 2FA path.
+  //    Accepts Authorization: Bearer <key>, Authorization: <key>, or x-api-key: <key>.
   //    API keys are issued by an authenticated admin; no 2FA required.
   try {
     const headerStore = await headers()
-    const authHeader = headerStore.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      const user = await resolveApiKey(authHeader.slice(7))
+    const rawKey = extractRawKey(
+      headerStore.get('authorization'),
+      headerStore.get('x-api-key'),
+    )
+    if (rawKey) {
+      const user = await resolveApiKey(rawKey)
       if (user) return { ...user, passwordChangedAt: null }
-      // Key present but invalid — don't fall through to cookie auth
+      // Key header present but invalid — reject; do NOT fall through to cookie auth
       return null
     }
   } catch {
@@ -91,11 +107,10 @@ export async function requireSession() {
 }
 
 /** For route handlers that explicitly want to authenticate via API key only. */
-export async function validateApiKey(authHeader: string | null, _request: NextRequest) {
-  if (!authHeader?.startsWith('Bearer ')) return null
-  const user = await resolveApiKey(authHeader.slice(7))
-  if (!user) return null
-  return user
+export async function validateApiKey(authHeader: string | null, request: NextRequest) {
+  const rawKey = extractRawKey(authHeader, request.headers.get('x-api-key'))
+  if (!rawKey) return null
+  return resolveApiKey(rawKey)
 }
 
 export async function getContactSession() {
