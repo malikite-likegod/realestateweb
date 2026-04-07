@@ -206,8 +206,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // AI routes accept Bearer API key OR JWT
-  if (pathname.startsWith('/api/ai/')) {
+  // Any protected API route accepts a Bearer token (API key) in lieu of a session cookie.
+  // The route handler is still responsible for calling validateApiKey() to authenticate.
+  if (pathname.startsWith('/api/')) {
     const auth = request.headers.get('authorization')
     if (auth?.startsWith('Bearer ')) {
       return NextResponse.next()
