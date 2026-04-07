@@ -198,6 +198,13 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // ── Public lead-capture bypass ─────────────────────────────────────────────
+  // POST /api/contacts is a public endpoint (contact form, lead capture).
+  // The GET handler protects itself via getSession(); only POST needs to be open.
+  if (pathname === '/api/contacts' && request.method === 'POST') {
+    return NextResponse.next()
+  }
+
   // ── Admin / API auth ────────────────────────────────────────────────────────
   const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p))
   const isLoginFlow = pathname === '/admin/login' || pathname.startsWith('/admin/login/')
