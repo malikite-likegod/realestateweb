@@ -27,7 +27,7 @@ interface SyncResult {
   unmatched:  number
 }
 
-// Error codes from ImapFlow that indicate a transient connection drop
+// Error codes from ImapFlow that indicate a connection-level failure
 const CONNECTION_ERROR_CODES = new Set(['NoConnection', 'ETIMEOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND'])
 
 export async function syncInbox(): Promise<SyncResult> {
@@ -44,163 +44,203 @@ export async function syncInbox(): Promise<SyncResult> {
   // Dynamic import so webpack doesn't bundle this for the browser
   const { ImapFlow } = await import('imapflow')
 
-  // Retry once on transient connection errors (socket drop, brief network hiccup)
-  let lastError: unknown
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    const client = new ImapFlow({
+  const makeClient = (): ImapFlow => {
+    const c = new ImapFlow({
       host,
       port,
       secure: port === 993,
       auth: { user, pass },
-      logger: { debug: (obj: object) => console.log('[imap-trace]', obj), info: (obj: object) => console.log('[imap-debug]', obj), warn: (obj: object) => console.warn('[imap-debug]', obj), error: (obj: object) => console.error('[imap-debug]', obj) },
-      connectionTimeout: 15_000, // 15s to establish the initial TCP connection
-      greetingTimeout:   10_000, // 10s to receive the server's initial banner
-      socketTimeout:     30_000, // 30s idle socket timeout
+      logger: false,
+      connectionTimeout: 15_000,
+      greetingTimeout:   10_000,
+      socketTimeout:     30_000,
     })
-
-    // ImapFlow can emit 'error' events asynchronously after a socket drop,
-    // bypassing any try/catch. Register a no-op handler to prevent uncaughtException.
-    client.on('error', () => {})
-
-    try {
-      return await runSync(client, mailbox, user)
-    } catch (err: unknown) {
-      lastError = err
-      const code = (err as { code?: string }).code
-      if (attempt < 2 && code && CONNECTION_ERROR_CODES.has(code)) {
-        // Transient — retry with a fresh connection
-        continue
-      }
-      throw err
-    } finally {
-      // Never let a dead-connection logout throw and mask the real error
-      try { await client.logout() } catch {}
-    }
+    c.on('error', () => {})
+    return c
   }
 
-  throw lastError
-}
+  // Phase 1: get the list of unseen UIDs using a short-lived connection
+  const uids = await getUnseenUids(makeClient, mailbox)
+  if (uids.length === 0) return { fetched: 0, imported: 0, skipped: 0, unmatched: 0 }
 
-async function runSync(
-  client:  ImapFlow,
-  mailbox: string,
-  user:    string,
-): Promise<SyncResult> {
+  // Phase 2: process each UID individually so one bad message can't break the whole sync.
+  // If a message causes a connection error during fetch, we mark it seen (via a fresh
+  // connection) and move on rather than retrying forever.
   let fetched   = 0
   let imported  = 0
   let skipped   = 0
   let unmatched = 0
 
-  await client.connect()
-
-  const lock = await client.getMailboxLock(mailbox)
-
-  try {
-    // Search for unseen messages — use UID mode throughout for stability
-    const uids = await client.search({ seen: false }, { uid: true })
-    if (!uids || uids.length === 0) {
-      return { fetched: 0, imported: 0, skipped: 0, unmatched: 0 }
-    }
-
-    for await (const msg of client.fetch(uids, {
-      envelope: true,
-      bodyStructure: true,
-      source: true,
-    }, { uid: true })) {
-      fetched++
-
-      const envelope   = msg.envelope
-      const messageId  = envelope?.messageId ?? null
-      const subject    = envelope?.subject   ?? '(no subject)'
-      const sentAt     = envelope?.date      ?? new Date()
-      const fromAddr   = envelope?.from?.[0]
-      const fromEmail  = fromAddr?.address   ?? null
-      const fromName   = fromAddr?.name      ?? fromEmail ?? ''
-      const toAddr     = envelope?.to?.[0]
-      const toEmail    = toAddr?.address     ?? user
-
-      // Skip emails sent by the system itself to prevent notification loops
-      const systemEmails = [
-        user,
-        process.env.SMTP_FROM,
-        process.env.SMTP_USER,
-      ].filter(Boolean).map(e => e!.toLowerCase())
-      if (fromEmail && systemEmails.includes(fromEmail.toLowerCase())) {
-        await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })
-        skipped++
-        continue
-      }
-
-      // Deduplicate by IMAP Message-ID
-      if (messageId) {
-        const existing = await prisma.emailMessage.findUnique({
-          where: { imapMessageId: messageId },
-        })
-        if (existing) { skipped++; continue }
-      }
-
-      // Parse plain-text or HTML body from raw source
-      let body = ''
-      if (msg.source) {
-        const raw = msg.source.toString('utf8')
-        body = extractBody(raw)
-      }
-
-      // Match sender to a contact
-      const contact = fromEmail
-        ? await prisma.contact.findFirst({ where: { email: fromEmail } })
-        : null
-
-      if (!contact) unmatched++
-
-      await prisma.emailMessage.create({
-        data: {
-          direction:    'inbound',
-          status:       'sent',
-          subject,
-          body,
-          fromEmail:    fromEmail ?? undefined,
-          toEmail,
-          sentAt,
-          imapMessageId: messageId ?? undefined,
-          contactId:    contact?.id ?? undefined,
-        },
-      })
-
-      imported++
-
-      // ── Anti-spam compliance: auto opt-out when contact sends "unsubscribe" ──
-      if (contact && !contact.emailOptOut) {
-        const lowerSubject = subject.toLowerCase()
-        const lowerBody    = body.toLowerCase()
-        if (lowerSubject.includes('unsubscribe') || lowerBody.includes('unsubscribe')) {
-          await prisma.$transaction([
-            prisma.contact.update({
-              where: { id: contact.id },
-              data:  { emailOptOut: true },
-            }),
-            prisma.communicationOptLog.create({
-              data: {
-                contactId: contact.id,
-                channel:   'email',
-                action:    'opt_out',
-                reason:    'Auto opt-out: inbound email contained "unsubscribe"',
-              },
-            }),
-          ])
-        }
-      }
-
-      await notifyInboundEmail(contact, fromEmail ?? fromName, subject)
-
-      // Mark as seen on the server
-      await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })
-    }
-  } finally {
-    lock.release()
+  for (const uid of uids) {
+    const result = await processOneUid(makeClient, mailbox, user, uid)
+    fetched   += result.fetched
+    imported  += result.imported
+    skipped   += result.skipped
+    unmatched += result.unmatched
   }
 
   return { fetched, imported, skipped, unmatched }
+}
+
+/** Open a connection, search for unseen UIDs, close. */
+async function getUnseenUids(
+  makeClient: () => ImapFlow,
+  mailbox:    string,
+): Promise<number[]> {
+  const client = makeClient()
+  try {
+    await client.connect()
+    const lock = await client.getMailboxLock(mailbox)
+    try {
+      return (await client.search({ seen: false }, { uid: true })) ?? []
+    } finally {
+      lock.release()
+    }
+  } finally {
+    try { await client.logout() } catch {}
+  }
+}
+
+/** Fetch and process a single UID. On connection error, mark it seen and skip it. */
+async function processOneUid(
+  makeClient: () => ImapFlow,
+  mailbox:    string,
+  user:       string,
+  uid:        number,
+): Promise<SyncResult> {
+  const result: SyncResult = { fetched: 1, imported: 0, skipped: 0, unmatched: 0 }
+
+  const client = makeClient()
+  try {
+    await client.connect()
+    const lock = await client.getMailboxLock(mailbox)
+    try {
+      for await (const msg of client.fetch([uid], {
+        envelope:      true,
+        bodyStructure: true,
+        source:        true,
+      }, { uid: true })) {
+        const envelope  = msg.envelope
+        const messageId = envelope?.messageId ?? null
+        const subject   = envelope?.subject   ?? '(no subject)'
+        const sentAt    = envelope?.date      ?? new Date()
+        const fromAddr  = envelope?.from?.[0]
+        const fromEmail = fromAddr?.address   ?? null
+        const fromName  = fromAddr?.name      ?? fromEmail ?? ''
+        const toAddr    = envelope?.to?.[0]
+        const toEmail   = toAddr?.address     ?? user
+
+        // Skip emails sent by the system itself to prevent notification loops
+        const systemEmails = [
+          user,
+          process.env.SMTP_FROM,
+          process.env.SMTP_USER,
+        ].filter(Boolean).map(e => e!.toLowerCase())
+        if (fromEmail && systemEmails.includes(fromEmail.toLowerCase())) {
+          await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })
+          result.skipped++
+          return result
+        }
+
+        // Deduplicate by IMAP Message-ID
+        if (messageId) {
+          const existing = await prisma.emailMessage.findUnique({
+            where: { imapMessageId: messageId },
+          })
+          if (existing) {
+            result.skipped++
+            return result
+          }
+        }
+
+        // Parse plain-text or HTML body from raw source
+        let body = ''
+        if (msg.source) {
+          body = extractBody(msg.source.toString('utf8'))
+        }
+
+        // Match sender to a contact
+        const contact = fromEmail
+          ? await prisma.contact.findFirst({ where: { email: fromEmail } })
+          : null
+
+        if (!contact) result.unmatched++
+
+        await prisma.emailMessage.create({
+          data: {
+            direction:     'inbound',
+            status:        'sent',
+            subject,
+            body,
+            fromEmail:     fromEmail ?? undefined,
+            toEmail,
+            sentAt,
+            imapMessageId: messageId ?? undefined,
+            contactId:     contact?.id ?? undefined,
+          },
+        })
+
+        result.imported++
+
+        // ── Anti-spam compliance: auto opt-out when contact sends "unsubscribe" ──
+        if (contact && !contact.emailOptOut) {
+          const lowerSubject = subject.toLowerCase()
+          const lowerBody    = body.toLowerCase()
+          if (lowerSubject.includes('unsubscribe') || lowerBody.includes('unsubscribe')) {
+            await prisma.$transaction([
+              prisma.contact.update({
+                where: { id: contact.id },
+                data:  { emailOptOut: true },
+              }),
+              prisma.communicationOptLog.create({
+                data: {
+                  contactId: contact.id,
+                  channel:   'email',
+                  action:    'opt_out',
+                  reason:    'Auto opt-out: inbound email contained "unsubscribe"',
+                },
+              }),
+            ])
+          }
+        }
+
+        await notifyInboundEmail(contact, fromEmail ?? fromName, subject)
+
+        // Mark as seen on the server
+        await client.messageFlagsAdd(String(msg.uid), ['\\Seen'], { uid: true })
+      }
+    } finally {
+      lock.release()
+    }
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code
+    if (code && CONNECTION_ERROR_CODES.has(code)) {
+      // This message crashed the IMAP connection (e.g. corrupt body with DEFLATE compression).
+      // Mark it seen on a fresh connection so we don't retry it forever.
+      console.error(`[imap] UID ${uid} caused a connection error — marking seen and skipping`)
+      result.skipped++
+      const skipClient = makeClient()
+      try {
+        await skipClient.connect()
+        const lock = await skipClient.getMailboxLock(mailbox)
+        try {
+          await skipClient.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true })
+        } finally {
+          lock.release()
+        }
+      } catch {
+        // best-effort — next sync will retry
+      } finally {
+        try { await skipClient.logout() } catch {}
+      }
+    } else {
+      throw err
+    }
+  } finally {
+    try { await client.logout() } catch {}
+  }
+
+  return result
 }
 
 // ─── Body extraction ─────────────────────────────────────────────────────────
