@@ -52,8 +52,10 @@ export async function syncInbox(): Promise<SyncResult> {
       port,
       secure: port === 993,
       auth: { user, pass },
-      logger: false,
+      logger: { debug() {}, info: (obj: object) => console.log('[imap-debug]', obj), warn: (obj: object) => console.warn('[imap-debug]', obj), error: (obj: object) => console.error('[imap-debug]', obj) },
       connectionTimeout: 15_000, // 15s to establish the initial TCP connection
+      greetingTimeout:   10_000, // 10s to receive the server's initial banner
+      socketTimeout:     30_000, // 30s idle socket timeout
     })
 
     // ImapFlow can emit 'error' events asynchronously after a socket drop,
