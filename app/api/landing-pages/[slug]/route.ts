@@ -37,6 +37,16 @@ export async function PATCH(req: NextRequest, { params }: Props) {
       publishedAt: status === 'published' && !existing.publishedAt ? new Date() : existing.publishedAt,
     },
   })
+
+  // Pre-create tags so they appear in campaign builder immediately (not just on first lead)
+  if (autoTags) {
+    let tagNames: string[] = []
+    try { tagNames = JSON.parse(autoTags) } catch { /* ignore */ }
+    for (const name of tagNames) {
+      if (name.trim()) await prisma.tag.upsert({ where: { name: name.trim() }, update: {}, create: { name: name.trim() } })
+    }
+  }
+
   return NextResponse.json(page)
 }
 

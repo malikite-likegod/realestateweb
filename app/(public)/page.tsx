@@ -101,7 +101,7 @@ export default async function HomePage() {
       <HeroSection
         title="Find Your Dream Home"
         subtitle="Helping first time home buyers and upsizers navigate The Greater Toronto Area neighbourhoods."
-        backgroundImage="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80"
+        backgroundImage="/images/home_page_spash.png"
       >
         <div className="mt-10 flex justify-center">
           <SearchBar variant="hero" />
