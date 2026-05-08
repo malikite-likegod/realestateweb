@@ -140,7 +140,7 @@ export function TransactionsTab() {
                 onClick={() => openEdit(t)}
                 className="border-b border-charcoal-800/50 hover:bg-charcoal-800/30 cursor-pointer"
               >
-                <td className="px-4 py-3 text-charcoal-300 whitespace-nowrap">{fmtDate(t.date)}</td>
+                <td className="px-4 py-3 text-white whitespace-nowrap">{fmtDate(t.date)}</td>
                 <td className="px-4 py-3 text-white">{t.payee ?? '—'}</td>
                 <td className="px-4 py-3 text-charcoal-400">{t.categoryName ?? '—'}</td>
                 <td className={cn('px-4 py-3 font-medium', t.type === 'income' ? 'text-green-400' : 'text-white')}>
