@@ -214,6 +214,7 @@ export function BudgetTab() {
       {/* Allocation side panel */}
       {selectedId && (
         <AllocationPanel
+          key={selectedId}
           categoryId={selectedId}
           month={month}
           groups={groups}
