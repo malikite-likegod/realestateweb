@@ -83,32 +83,32 @@ export function TransactionsTab() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-charcoal-400">Month</label>
+          <label className="text-xs text-charcoal-500">Month</label>
           <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400" />
+            className="bg-white border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400" />
         </div>
-        <div className="flex rounded-lg overflow-hidden border border-charcoal-700">
+        <div className="flex rounded-lg overflow-hidden border border-charcoal-200">
           {(['all', 'income', 'expense'] as const).map(t => (
             <button key={t} onClick={() => setTypeFilter(t)}
               className={cn('px-3 py-2 text-sm capitalize transition-colors',
-                typeFilter === t ? 'bg-gold-400 text-charcoal-950' : 'text-charcoal-400 hover:text-white')}>
+                typeFilter === t ? 'bg-charcoal-900 text-white' : 'text-charcoal-600 hover:bg-charcoal-50')}>
               {t}
             </button>
           ))}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-charcoal-400">Payee</label>
+          <label className="text-xs text-charcoal-500">Payee</label>
           <input value={payeeFilter} onChange={e => setPayeeFilter(e.target.value)} placeholder="Search payee…"
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400 w-44" />
+            className="bg-white border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400 w-44" />
         </div>
         <Button onClick={openNew} className="ml-auto" leftIcon={<Plus size={16} />}>Add Transaction</Button>
       </div>
 
       {/* Table */}
-      <div className="bg-charcoal-900 border border-charcoal-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-charcoal-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-charcoal-800">
+            <tr className="border-b border-charcoal-100">
               {[
                 { label: 'Date',     sortKey: 'date' },
                 { label: 'Payee',    sortKey: null },
@@ -120,7 +120,7 @@ export function TransactionsTab() {
                 <th key={col.label}
                   onClick={() => col.sortKey && toggleSort(col.sortKey)}
                   className={cn('px-4 py-3 text-left text-xs text-charcoal-500 font-medium uppercase tracking-wider',
-                    col.sortKey && 'cursor-pointer hover:text-charcoal-300')}
+                    col.sortKey && 'cursor-pointer hover:text-charcoal-700')}
                 >
                   {col.label}
                   {col.sortKey && sort.startsWith(col.sortKey) && (
@@ -138,19 +138,19 @@ export function TransactionsTab() {
             ) : rows.map(t => (
               <tr key={t.id}
                 onClick={() => openEdit(t)}
-                className="border-b border-charcoal-800/50 hover:bg-charcoal-800/30 cursor-pointer"
+                className="border-b border-charcoal-100 hover:bg-charcoal-50 cursor-pointer"
               >
-                <td className="px-4 py-3 text-white whitespace-nowrap">{fmtDate(t.date)}</td>
-                <td className="px-4 py-3 text-white">{t.payee ?? '—'}</td>
-                <td className="px-4 py-3 text-charcoal-400">{t.categoryName ?? '—'}</td>
-                <td className={cn('px-4 py-3 font-medium', t.type === 'income' ? 'text-green-400' : 'text-white')}>
+                <td className="px-4 py-3 text-charcoal-900 whitespace-nowrap">{fmtDate(t.date)}</td>
+                <td className="px-4 py-3 text-charcoal-900">{t.payee ?? '—'}</td>
+                <td className="px-4 py-3 text-charcoal-500">{t.categoryName ?? '—'}</td>
+                <td className={cn('px-4 py-3 font-medium', t.type === 'income' ? 'text-green-700' : 'text-charcoal-900')}>
                   {t.type === 'income' ? '+' : ''}{fmt(t.amount)}
                 </td>
                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   {t.receiptUrl && (
                     t.receiptUrl.toLowerCase().endsWith('.pdf')
                       ? <a href={t.receiptUrl} target="_blank" rel="noopener noreferrer"
-                          className="text-gold-400 hover:underline text-xs">PDF</a>
+                          className="text-gold-500 hover:underline text-xs">PDF</a>
                       : <img src={t.receiptUrl} alt="receipt"
                           onClick={() => setLightbox(t.receiptUrl!)}
                           className="h-8 w-8 object-cover rounded cursor-pointer hover:opacity-80" />
@@ -158,14 +158,14 @@ export function TransactionsTab() {
                 </td>
                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <button onClick={() => deleteRow(t.id)}
-                    className="text-charcoal-600 hover:text-red-400 text-xs">Delete</button>
+                    className="text-charcoal-400 hover:text-red-600 text-xs">Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {!loading && total > 0 && (
-          <div className="px-4 py-3 border-t border-charcoal-800 text-xs text-charcoal-500">
+          <div className="px-4 py-3 border-t border-charcoal-100 text-xs text-charcoal-500">
             {total} transaction{total !== 1 ? 's' : ''}
           </div>
         )}

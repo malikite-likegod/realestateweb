@@ -33,15 +33,15 @@ function fmt(n: number) {
 }
 
 export function BudgetTab() {
-  const [month, setMonth]                   = useState(toMonth)
-  const [groups, setGroups]                 = useState<Group[]>([])
-  const [budgetData, setBudgetData]         = useState<BudgetData | null>(null)
-  const [loading, setLoading]               = useState(true)
-  const [selectedId, setSelectedId]         = useState<string | null>(null)
-  const [showAddGroup, setShowAddGroup]     = useState(false)
-  const [newGroupName, setNewGroupName]     = useState('')
-  const [showAddCat, setShowAddCat]         = useState<string | null>(null) // groupId
-  const [newCatName, setNewCatName]         = useState('')
+  const [month, setMonth]               = useState(toMonth)
+  const [groups, setGroups]             = useState<Group[]>([])
+  const [budgetData, setBudgetData]     = useState<BudgetData | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [selectedId, setSelectedId]     = useState<string | null>(null)
+  const [showAddGroup, setShowAddGroup] = useState(false)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [showAddCat, setShowAddCat]     = useState<string | null>(null)
+  const [newCatName, setNewCatName]     = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -88,11 +88,11 @@ export function BudgetTab() {
         {/* Month navigator + Ready to Assign */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button onClick={() => setMonth(prevMonth)} className="p-1 text-charcoal-400 hover:text-white">
+            <button onClick={() => setMonth(prevMonth)} className="p-1 text-charcoal-500 hover:text-charcoal-900 transition-colors">
               <ChevronLeft size={20} />
             </button>
-            <span className="text-white font-medium w-24 text-center">{month}</span>
-            <button onClick={() => setMonth(nextMonth)} className="p-1 text-charcoal-400 hover:text-white">
+            <span className="text-charcoal-900 font-semibold w-24 text-center">{month}</span>
+            <button onClick={() => setMonth(nextMonth)} className="p-1 text-charcoal-500 hover:text-charcoal-900 transition-colors">
               <ChevronRight size={20} />
             </button>
           </div>
@@ -100,8 +100,8 @@ export function BudgetTab() {
             <div className={cn(
               'px-4 py-2 rounded-lg text-sm font-medium',
               budgetData.readyToAssign >= 0
-                ? 'bg-green-900/30 text-green-400'
-                : 'bg-red-900/30 text-red-400',
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200',
             )}>
               Ready to Assign: {fmt(budgetData.readyToAssign)}
             </div>
@@ -109,7 +109,7 @@ export function BudgetTab() {
         </div>
 
         {/* Table header */}
-        <div className="grid grid-cols-4 gap-2 px-3 py-2 text-xs text-charcoal-500 font-medium uppercase tracking-wider">
+        <div className="grid grid-cols-4 gap-2 px-3 py-2 text-xs text-charcoal-500 font-medium uppercase tracking-wider border-b border-charcoal-100">
           <span className="col-span-1">Category</span>
           <span className="text-right">Assigned</span>
           <span className="text-right">Activity</span>
@@ -124,13 +124,13 @@ export function BudgetTab() {
           </div>
         ) : (
           groups.map(group => (
-            <div key={group.id} className="flex flex-col gap-1">
+            <div key={group.id} className="flex flex-col gap-0.5">
               {/* Group header */}
-              <div className="flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-charcoal-400 uppercase tracking-wider bg-charcoal-900/60 rounded">
+              <div className="flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-charcoal-600 uppercase tracking-wider bg-charcoal-50 rounded-lg">
                 <span>{group.name}</span>
                 <button
                   onClick={() => { setShowAddCat(group.id); setNewCatName('') }}
-                  className="text-charcoal-600 hover:text-gold-400 flex items-center gap-0.5"
+                  className="text-charcoal-400 hover:text-gold-500 flex items-center gap-0.5 font-medium"
                 >
                   <Plus size={12} /> Add
                 </button>
@@ -138,9 +138,9 @@ export function BudgetTab() {
 
               {/* Category rows */}
               {group.categories.map(cat => {
-                const alloc    = allocMap.get(cat.id)
-                const assigned = alloc?.assigned ?? 0
-                const activity = alloc?.activity ?? 0
+                const alloc     = allocMap.get(cat.id)
+                const assigned  = alloc?.assigned ?? 0
+                const activity  = alloc?.activity ?? 0
                 const available = alloc?.available ?? 0
                 const isSelected = selectedId === cat.id
                 const isOver = cat.goalType === 'monthly_limit' && cat.goalAmount && activity > cat.goalAmount
@@ -151,19 +151,21 @@ export function BudgetTab() {
                     key={cat.id}
                     onClick={() => setSelectedId(isSelected ? null : cat.id)}
                     className={cn(
-                      'grid grid-cols-4 gap-2 px-3 py-2.5 rounded-lg text-sm text-left w-full transition-colors',
-                      isSelected ? 'bg-charcoal-800' : 'hover:bg-charcoal-900/50',
+                      'grid grid-cols-4 gap-2 px-3 py-2.5 rounded-lg text-sm text-left w-full transition-colors border',
+                      isSelected
+                        ? 'bg-charcoal-100 border-charcoal-200'
+                        : 'bg-white border-transparent hover:bg-charcoal-50 hover:border-charcoal-100',
                     )}
                   >
                     <span className="col-span-1 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                      <span className="text-white truncate">{cat.name}</span>
+                      <span className="text-charcoal-900 truncate font-medium">{cat.name}</span>
                     </span>
-                    <span className="text-right text-charcoal-300">{fmt(assigned)}</span>
-                    <span className="text-right text-charcoal-300">{fmt(activity)}</span>
+                    <span className="text-right text-charcoal-600">{fmt(assigned)}</span>
+                    <span className="text-right text-charcoal-600">{fmt(activity)}</span>
                     <span className={cn(
-                      'text-right font-medium',
-                      isOver ? 'text-red-400' : isNear ? 'text-yellow-400' : available >= 0 ? 'text-green-400' : 'text-red-400',
+                      'text-right font-semibold',
+                      isOver ? 'text-red-600' : isNear ? 'text-amber-600' : available >= 0 ? 'text-green-700' : 'text-red-600',
                     )}>
                       {fmt(available)}
                     </span>
@@ -173,14 +175,14 @@ export function BudgetTab() {
 
               {/* Inline add-category form */}
               {showAddCat === group.id && (
-                <div className="flex gap-2 px-3">
+                <div className="flex gap-2 px-3 py-1">
                   <input
                     autoFocus
                     value={newCatName}
                     onChange={e => setNewCatName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addCategory(group.id); if (e.key === 'Escape') setShowAddCat(null) }}
                     placeholder="Category name…"
-                    className="flex-1 bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-gold-400"
+                    className="flex-1 border border-charcoal-200 rounded-lg px-3 py-1.5 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400 bg-white"
                   />
                   <Button size="sm" onClick={() => addCategory(group.id)}>Add</Button>
                   <Button size="sm" variant="ghost" onClick={() => setShowAddCat(null)}>Cancel</Button>
@@ -199,7 +201,7 @@ export function BudgetTab() {
               onChange={e => setNewGroupName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addGroup(); if (e.key === 'Escape') setShowAddGroup(false) }}
               placeholder="Group name…"
-              className="flex-1 bg-charcoal-900 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
+              className="flex-1 border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400 bg-white"
             />
             <Button size="sm" onClick={addGroup}>Add</Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAddGroup(false)}>Cancel</Button>

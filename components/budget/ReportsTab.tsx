@@ -22,6 +22,13 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(n)
 }
 
+const chartGrid   = '#e3e3e3'
+const chartTick   = { fill: '#666666', fontSize: 11 }
+const chartTooltip = { backgroundColor: '#ffffff', border: '1px solid #c8c8c8', borderRadius: 8 }
+const chartLabel   = { color: '#1a1a1a' }
+const inputCls     = 'bg-white border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400'
+const inputSmCls   = 'bg-white border border-charcoal-200 rounded-lg px-2 py-1.5 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400'
+
 // ── Spending by Category ──────────────────────────────────────────────────────
 
 type SpendRow = { categoryId: string | null; categoryName: string; groupName: string; color: string; total: number }
@@ -46,22 +53,12 @@ function SpendingView() {
     <div className="flex flex-col gap-4">
       <div className="flex gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-charcoal-400">From</label>
-          <input
-            type="month"
-            value={from}
-            onChange={e => setFrom(e.target.value)}
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
-          />
+          <label className="text-xs text-charcoal-500">From</label>
+          <input type="month" value={from} onChange={e => setFrom(e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-charcoal-400">To</label>
-          <input
-            type="month"
-            value={to}
-            onChange={e => setTo(e.target.value)}
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
-          />
+          <label className="text-xs text-charcoal-500">To</label>
+          <input type="month" value={to} onChange={e => setTo(e.target.value)} className={inputCls} />
         </div>
       </div>
 
@@ -73,21 +70,17 @@ function SpendingView() {
         <>
           <ResponsiveContainer width="100%" height={Math.max(200, data.length * 40)}>
             <BarChart data={data} layout="vertical" margin={{ left: 130, right: 24, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis type="number" tickFormatter={fmt} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-              <YAxis type="category" dataKey="categoryName" width={120} tick={{ fill: '#d1d5db', fontSize: 12 }} />
-              <Tooltip
-                formatter={(v: number) => fmt(v)}
-                contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }}
-                labelStyle={{ color: '#fff' }}
-              />
-              <Bar dataKey="total" fill="#d4a93a" radius={[0, 4, 4, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+              <XAxis type="number" tickFormatter={fmt} tick={chartTick} />
+              <YAxis type="category" dataKey="categoryName" width={120} tick={{ fill: '#434343', fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={chartTooltip} labelStyle={chartLabel} />
+              <Bar dataKey="total" fill="#d4a517" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
 
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-charcoal-800">
+              <tr className="border-b border-charcoal-100">
                 <th className="text-left px-3 py-2 text-xs text-charcoal-500 font-medium uppercase">Category</th>
                 <th className="text-left px-3 py-2 text-xs text-charcoal-500 font-medium uppercase">Group</th>
                 <th className="text-right px-3 py-2 text-xs text-charcoal-500 font-medium uppercase">Total</th>
@@ -95,15 +88,15 @@ function SpendingView() {
             </thead>
             <tbody>
               {data.map((row, i) => (
-                <tr key={i} className="border-b border-charcoal-800/50">
-                  <td className="px-3 py-2.5 text-white">{row.categoryName}</td>
-                  <td className="px-3 py-2.5 text-charcoal-400">{row.groupName}</td>
-                  <td className="px-3 py-2.5 text-right font-medium text-white">{fmt(row.total)}</td>
+                <tr key={i} className="border-b border-charcoal-100">
+                  <td className="px-3 py-2.5 text-charcoal-900">{row.categoryName}</td>
+                  <td className="px-3 py-2.5 text-charcoal-500">{row.groupName}</td>
+                  <td className="px-3 py-2.5 text-right font-medium text-charcoal-900">{fmt(row.total)}</td>
                 </tr>
               ))}
-              <tr className="bg-charcoal-900/50">
-                <td colSpan={2} className="px-3 py-2.5 text-charcoal-400 font-medium">Total</td>
-                <td className="px-3 py-2.5 text-right font-semibold text-gold-400">
+              <tr className="bg-charcoal-50">
+                <td colSpan={2} className="px-3 py-2.5 text-charcoal-600 font-medium">Total</td>
+                <td className="px-3 py-2.5 text-right font-semibold text-gold-500">
                   {fmt(data.reduce((s, row) => s + row.total, 0))}
                 </td>
               </tr>
@@ -136,22 +129,12 @@ function IncomeExpensesView() {
     <div className="flex flex-col gap-4">
       <div className="flex gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-charcoal-400">From</label>
-          <input
-            type="month"
-            value={from}
-            onChange={e => setFrom(e.target.value)}
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
-          />
+          <label className="text-xs text-charcoal-500">From</label>
+          <input type="month" value={from} onChange={e => setFrom(e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-charcoal-400">To</label>
-          <input
-            type="month"
-            value={to}
-            onChange={e => setTo(e.target.value)}
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
-          />
+          <label className="text-xs text-charcoal-500">To</label>
+          <input type="month" value={to} onChange={e => setTo(e.target.value)} className={inputCls} />
         </div>
       </div>
 
@@ -160,18 +143,14 @@ function IncomeExpensesView() {
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={data} margin={{ top: 8, right: 20, bottom: 8, left: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-            <YAxis tickFormatter={fmt} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-            <Tooltip
-              formatter={(v: number) => fmt(v)}
-              contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }}
-              labelStyle={{ color: '#fff' }}
-            />
-            <Legend wrapperStyle={{ color: '#d1d5db' }} />
-            <Bar dataKey="income"   name="Income"   fill="#4ade80" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="expenses" name="Expenses" fill="#f87171" radius={[2, 2, 0, 0]} />
-            <Line dataKey="net" name="Net" stroke="#d4a93a" strokeWidth={2} dot={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+            <XAxis dataKey="month" tick={chartTick} />
+            <YAxis tickFormatter={fmt} tick={chartTick} />
+            <Tooltip formatter={(v: number) => fmt(v)} contentStyle={chartTooltip} labelStyle={chartLabel} />
+            <Legend wrapperStyle={{ color: '#434343' }} />
+            <Bar dataKey="income"   name="Income"   fill="#16a34a" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="expenses" name="Expenses" fill="#dc2626" radius={[2, 2, 0, 0]} />
+            <Line dataKey="net" name="Net" stroke="#d4a517" strokeWidth={2} dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       )}
@@ -237,45 +216,41 @@ function NetWorthView() {
           {chartData.length >= 2 && (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={chartData} margin={{ top: 8, right: 20, bottom: 8, left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <YAxis tickFormatter={fmt} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <Tooltip
-                  formatter={(v: number) => fmt(v)}
-                  contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Line dataKey="netWorth" name="Net Worth" stroke="#d4a93a" strokeWidth={2} dot={{ fill: '#d4a93a' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="month" tick={chartTick} />
+                <YAxis tickFormatter={fmt} tick={chartTick} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={chartTooltip} labelStyle={chartLabel} />
+                <Line dataKey="netWorth" name="Net Worth" stroke="#d4a517" strokeWidth={2} dot={{ fill: '#d4a517' }} />
               </LineChart>
             </ResponsiveContainer>
           )}
 
           {/* Entry form */}
-          <div className="bg-charcoal-900 border border-charcoal-800 rounded-xl p-5 flex flex-col gap-5">
-            <h3 className="text-white font-medium">Update {editMonth} Net Worth</h3>
+          <div className="bg-white border border-charcoal-200 rounded-xl p-5 flex flex-col gap-5">
+            <h3 className="text-charcoal-900 font-medium">Update {editMonth} Net Worth</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Assets */}
               <div className="flex flex-col gap-3">
-                <span className="text-sm font-medium text-green-400">Assets</span>
+                <span className="text-sm font-medium text-green-700">Assets</span>
                 {assets.map((a, i) => (
                   <div key={i} className="flex gap-2">
                     <input
                       value={a.label}
                       onChange={e => updAsset(i, 'label', e.target.value)}
                       placeholder="e.g. Cash, Car"
-                      className="flex-1 bg-charcoal-800 border border-charcoal-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-gold-400"
+                      className={`flex-1 ${inputSmCls}`}
                     />
                     <input
                       type="number"
                       value={a.amount || ''}
                       onChange={e => updAsset(i, 'amount', parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-28 bg-charcoal-800 border border-charcoal-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-gold-400"
+                      className={`w-28 ${inputSmCls}`}
                     />
                     <button
                       onClick={() => setAssets(assets.filter((_, j) => j !== i))}
-                      className="text-charcoal-600 hover:text-red-400 px-1"
+                      className="text-charcoal-400 hover:text-red-600 px-1"
                     >
                       ×
                     </button>
@@ -283,7 +258,7 @@ function NetWorthView() {
                 ))}
                 <button
                   onClick={() => setAssets([...assets, { label: '', amount: 0 }])}
-                  className="text-xs text-charcoal-400 hover:text-gold-400 self-start"
+                  className="text-xs text-charcoal-500 hover:text-gold-500 self-start"
                 >
                   + Add asset
                 </button>
@@ -291,25 +266,25 @@ function NetWorthView() {
 
               {/* Liabilities */}
               <div className="flex flex-col gap-3">
-                <span className="text-sm font-medium text-red-400">Liabilities</span>
+                <span className="text-sm font-medium text-red-600">Liabilities</span>
                 {liabilities.map((l, i) => (
                   <div key={i} className="flex gap-2">
                     <input
                       value={l.label}
                       onChange={e => updLiability(i, 'label', e.target.value)}
                       placeholder="e.g. Mortgage, Car Loan"
-                      className="flex-1 bg-charcoal-800 border border-charcoal-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-gold-400"
+                      className={`flex-1 ${inputSmCls}`}
                     />
                     <input
                       type="number"
                       value={l.amount || ''}
                       onChange={e => updLiability(i, 'amount', parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-28 bg-charcoal-800 border border-charcoal-700 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-gold-400"
+                      className={`w-28 ${inputSmCls}`}
                     />
                     <button
                       onClick={() => setLiabilities(liabilities.filter((_, j) => j !== i))}
-                      className="text-charcoal-600 hover:text-red-400 px-1"
+                      className="text-charcoal-400 hover:text-red-600 px-1"
                     >
                       ×
                     </button>
@@ -317,17 +292,17 @@ function NetWorthView() {
                 ))}
                 <button
                   onClick={() => setLiabilities([...liabilities, { label: '', amount: 0 }])}
-                  className="text-xs text-charcoal-400 hover:text-gold-400 self-start"
+                  className="text-xs text-charcoal-500 hover:text-gold-500 self-start"
                 >
                   + Add liability
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-charcoal-800">
-              <p className="text-sm text-charcoal-400">
+            <div className="flex items-center justify-between pt-2 border-t border-charcoal-100">
+              <p className="text-sm text-charcoal-600">
                 Net worth preview:{' '}
-                <span className={cn('font-semibold', previewNet >= 0 ? 'text-green-400' : 'text-red-400')}>
+                <span className={cn('font-semibold', previewNet >= 0 ? 'text-green-700' : 'text-red-600')}>
                   {fmt(previewNet)}
                 </span>
               </p>
@@ -361,8 +336,8 @@ export function ReportsTab() {
             className={cn(
               'px-4 py-2 rounded-full text-sm font-medium transition-colors',
               view === v.key
-                ? 'bg-gold-400 text-charcoal-950'
-                : 'bg-charcoal-800 text-charcoal-400 hover:text-white'
+                ? 'bg-charcoal-900 text-white'
+                : 'bg-charcoal-100 text-charcoal-600 hover:bg-charcoal-200'
             )}
           >
             {v.label}

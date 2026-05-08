@@ -72,39 +72,41 @@ export function AllocationPanel({ categoryId, month, groups, allocData, onClose,
   }
 
   return (
-    <div className="w-72 shrink-0 bg-charcoal-900 border border-charcoal-700 rounded-xl p-4 flex flex-col gap-4 sticky top-4">
+    <div className="w-72 shrink-0 bg-white border border-charcoal-200 rounded-xl p-4 flex flex-col gap-4 sticky top-4 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-          <span className="font-medium text-white">{cat.name}</span>
+          <span className="font-semibold text-charcoal-900">{cat.name}</span>
         </div>
-        <button onClick={onClose} className="text-charcoal-400 hover:text-white"><X size={16} /></button>
+        <button onClick={onClose} className="text-charcoal-400 hover:text-charcoal-700 transition-colors">
+          <X size={16} />
+        </button>
       </div>
 
       {/* Assign */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-charcoal-400 uppercase tracking-wider font-medium">Assign for {month}</label>
+        <label className="text-xs text-charcoal-500 uppercase tracking-wider font-medium">Assign for {month}</label>
         <div className="flex gap-2">
           <input
             type="number" value={assigned} min="0" step="0.01"
             onChange={e => setAssigned(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') saveAllocation() }}
-            className="flex-1 bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
+            className="flex-1 border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400 bg-white"
           />
           <Button size="sm" onClick={saveAllocation} loading={saving}>Save</Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 text-sm">
+      <div className="grid grid-cols-2 gap-3 text-sm bg-charcoal-50 rounded-lg p-3">
         <div>
-          <div className="text-xs text-charcoal-400">Activity</div>
-          <div className="text-white font-medium">{fmt(activity)}</div>
+          <div className="text-xs text-charcoal-500 font-medium">Activity</div>
+          <div className="text-charcoal-900 font-semibold mt-0.5">{fmt(activity)}</div>
         </div>
         <div>
-          <div className="text-xs text-charcoal-400">Available</div>
-          <div className={cn('font-medium', available >= 0 ? 'text-green-400' : 'text-red-400')}>
+          <div className="text-xs text-charcoal-500 font-medium">Available</div>
+          <div className={cn('font-semibold mt-0.5', available >= 0 ? 'text-green-700' : 'text-red-600')}>
             {fmt(available)}
           </div>
         </div>
@@ -114,15 +116,15 @@ export function AllocationPanel({ categoryId, month, groups, allocData, onClose,
       {cat.goalType && !showGoal && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-charcoal-400 uppercase tracking-wider">
+            <span className="text-xs text-charcoal-500 uppercase tracking-wider font-medium">
               {cat.goalType === 'monthly_limit' ? 'Spending Limit' : 'Savings Target'}
             </span>
-            <button onClick={() => setShowGoal(true)} className="text-xs text-gold-400 hover:underline">Edit</button>
+            <button onClick={() => setShowGoal(true)} className="text-xs text-gold-500 hover:underline font-medium">Edit</button>
           </div>
-          <div className="h-2 bg-charcoal-800 rounded-full overflow-hidden">
+          <div className="h-2 bg-charcoal-100 rounded-full overflow-hidden">
             <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-xs text-charcoal-400">
+          <p className="text-xs text-charcoal-600">
             {cat.goalType === 'monthly_limit'
               ? `${fmt(activity)} of ${fmt(goalAmt)}`
               : `${fmt(available)} of ${fmt(goalAmt)}${days !== null ? ` · ${days}d left` : ''}`
@@ -137,7 +139,7 @@ export function AllocationPanel({ categoryId, month, groups, allocData, onClose,
           <select
             value={goalType}
             onChange={e => setGoalType(e.target.value)}
-            className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
+            className="border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400 bg-white"
           >
             <option value="">No goal</option>
             <option value="monthly_limit">Monthly Spending Limit</option>
@@ -148,7 +150,7 @@ export function AllocationPanel({ categoryId, month, groups, allocData, onClose,
               type="number" value={goalAmount} min="0" step="0.01"
               onChange={e => setGoalAmount(e.target.value)}
               placeholder="Goal amount"
-              className="bg-charcoal-800 border border-charcoal-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold-400"
+              className="border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-400 bg-white"
             />
           )}
           <div className="flex gap-2">
@@ -159,7 +161,7 @@ export function AllocationPanel({ categoryId, month, groups, allocData, onClose,
       ) : !cat.goalType && (
         <button
           onClick={() => setShowGoal(true)}
-          className="text-xs text-charcoal-400 hover:text-gold-400 flex items-center gap-1 self-start"
+          className="text-xs text-charcoal-500 hover:text-gold-500 flex items-center gap-1 self-start transition-colors"
         >
           <Plus size={12} /> Add Goal
         </button>
