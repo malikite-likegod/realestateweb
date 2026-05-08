@@ -68,11 +68,12 @@ export function TransactionModal({ open, initial, groups, onClose, onSaved }: Pr
     }
 
     const isEdit = !!initial?.id
-    await fetch(
+    const res = await fetch(
       isEdit ? `/api/budget/transactions/${initial.id}` : '/api/budget/transactions',
       { method: isEdit ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
     )
     setSaving(false)
+    if (!res.ok) return
     onSaved(); onClose()
   }
 

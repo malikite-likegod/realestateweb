@@ -152,7 +152,7 @@ export function TransactionsTab() {
                       ? <a href={t.receiptUrl} target="_blank" rel="noopener noreferrer"
                           className="text-gold-400 hover:underline text-xs">PDF</a>
                       : <img src={t.receiptUrl} alt="receipt"
-                          onClick={() => setLightbox(t.receiptUrl)}
+                          onClick={() => setLightbox(t.receiptUrl!)}
                           className="h-8 w-8 object-cover rounded cursor-pointer hover:opacity-80" />
                   )}
                 </td>
@@ -173,6 +173,7 @@ export function TransactionsTab() {
 
       {/* Transaction modal */}
       <TransactionModal
+        key={editDraft?.id ?? 'new'}
         open={modalOpen}
         initial={editDraft}
         groups={groups}
