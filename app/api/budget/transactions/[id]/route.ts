@@ -58,6 +58,8 @@ export async function DELETE(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
+  const existing = await prisma.transaction.findUnique({ where: { id } })
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   await prisma.transaction.delete({ where: { id } })
   return NextResponse.json({ data: { deleted: true } })
 }
