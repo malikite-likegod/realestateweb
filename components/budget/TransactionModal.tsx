@@ -128,11 +128,14 @@ export function TransactionModal({ open, initial, groups, onClose, onSaved }: Pr
             <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
               className="border border-charcoal-200 rounded-lg px-3 py-2 text-charcoal-900 text-sm focus:outline-none focus:border-charcoal-900">
               <option value="">Select category…</option>
-              {groups.map(g => (
-                <optgroup key={g.id} label={g.name}>
-                  {g.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </optgroup>
-              ))}
+              {groups.length === 0
+                ? <option disabled value="">No categories yet — add them in the Budget tab</option>
+                : groups.map(g => (
+                    <optgroup key={g.id} label={g.name}>
+                      {g.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </optgroup>
+                  ))
+              }
             </select>
             {errors.categoryId && <p className="text-xs text-red-500">{errors.categoryId}</p>}
           </div>

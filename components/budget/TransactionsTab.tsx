@@ -35,6 +35,7 @@ export function TransactionsTab() {
   const [groups, setGroups]           = useState<Group[]>([])
   const [modalOpen, setModalOpen]     = useState(false)
   const [editDraft, setEditDraft]     = useState<Partial<TransactionDraft> | undefined>()
+  const [modalKey, setModalKey]       = useState(0)
   const [lightbox, setLightbox]       = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -66,7 +67,7 @@ export function TransactionsTab() {
     setModalOpen(true)
   }
 
-  function openNew() { setEditDraft(undefined); setModalOpen(true) }
+  function openNew() { setEditDraft(undefined); setModalKey(k => k + 1); setModalOpen(true) }
 
   async function deleteRow(id: string) {
     if (!confirm('Delete this transaction?')) return
@@ -173,7 +174,7 @@ export function TransactionsTab() {
 
       {/* Transaction modal */}
       <TransactionModal
-        key={editDraft?.id ?? 'new'}
+        key={editDraft?.id ?? `new-${modalKey}`}
         open={modalOpen}
         initial={editDraft}
         groups={groups}
