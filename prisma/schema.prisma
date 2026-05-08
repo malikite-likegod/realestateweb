@@ -1294,3 +1294,78 @@ model GateView {
   @@index([sessionId])
   @@map("gate_views")
 }
+
+// ─── Budget & Expense Tracker ─────────────────────────────────────────────────
+
+model BudgetGroup {
+  id         String           @id @default(cuid())
+  name       String
+  order      Int              @default(0)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  categories BudgetCategory[]
+
+  @@map("budget_groups")
+}
+
+model BudgetCategory {
+  id             String             @id @default(cuid())
+  groupId        String
+  group          BudgetGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name           String
+  order          Int                @default(0)
+  color          String             @default("#6366f1")
+  goalType       String?            // monthly_limit | savings_target
+  goalAmount     Float?
+  goalTargetDate DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  allocations    BudgetAllocation[]
+  transactions   Transaction[]
+
+  @@map("budget_categories")
+}
+
+model BudgetAllocation {
+  id         String         @id @default(cuid())
+  categoryId String
+  category   BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  month      String         // YYYY-MM
+  assigned   Float          @default(0)
+  note       String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([categoryId, month])
+  @@index([month])
+  @@map("budget_allocations")
+}
+
+model Transaction {
+  id         String          @id @default(cuid())
+  type       String          // income | expense
+  categoryId String?
+  category   BudgetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  amount     Float
+  date       DateTime
+  payee      String?
+  notes      String?
+  receiptUrl String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([type, date])
+  @@index([categoryId, date])
+  @@map("transactions")
+}
+
+model NetWorthEntry {
+  id          String   @id @default(cuid())
+  month       String   @unique // YYYY-MM
+  assets      String   // JSON: [{label: string, amount: number}]
+  liabilities String   // JSON: [{label: string, amount: number}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("net_worth_entries")
+}
