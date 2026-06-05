@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
 import { Input, Textarea, Select, Button } from '@/components/ui'
 import { useToast } from '@/components/ui'
+import { MarketReportPreview } from '../MarketReportPreview'
 import type { MarketReport } from '@prisma/client'
 
 interface Props { report: MarketReport }
@@ -15,6 +16,7 @@ export function MarketReportEditForm({ report }: Props) {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [bodyTab, setBodyTab] = useState<'edit' | 'preview'>('edit')
   const [form, setForm] = useState({
     title: report.title,
     reportMonth: report.reportMonth ?? '',
@@ -74,9 +76,21 @@ export function MarketReportEditForm({ report }: Props) {
           { label: 'Market Reports', href: '/admin/market-reports' },
           { label: report.title },
         ]}
+        actions={
+          report.status === 'published' ? (
+            <a
+              href={`/market-report/${report.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gold-600 hover:text-gold-700 font-medium underline underline-offset-2"
+            >
+              View live report
+            </a>
+          ) : undefined
+        }
       />
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-3xl">
-        <Card>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <Card className="max-w-3xl">
           <h2 className="text-sm font-semibold text-charcoal-700 mb-4">Report Details</h2>
           <div className="flex flex-col gap-4">
             <Input label="Title *" required value={form.title} onChange={set('title')} />
@@ -95,15 +109,45 @@ export function MarketReportEditForm({ report }: Props) {
           </div>
         </Card>
 
-        <Card>
-          <h2 className="text-sm font-semibold text-charcoal-700 mb-4">Market Overview (Public Content)</h2>
-          <div className="flex flex-col gap-4">
-            <Input label="Excerpt" value={form.excerpt} onChange={set('excerpt')} />
-            <Textarea label="Body (HTML supported) *" required rows={16} value={form.body} onChange={set('body')} />
+        {/* Market overview content — full width when previewing */}
+        <Card className={bodyTab === 'preview' ? '' : 'max-w-3xl'}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-charcoal-700">Market Overview (Public Content)</h2>
+            <div className="flex rounded-lg border border-charcoal-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setBodyTab('edit')}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${bodyTab === 'edit' ? 'bg-charcoal-800 text-white' : 'bg-white text-charcoal-600 hover:bg-charcoal-50'}`}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => setBodyTab('preview')}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${bodyTab === 'preview' ? 'bg-charcoal-800 text-white' : 'bg-white text-charcoal-600 hover:bg-charcoal-50'}`}
+              >
+                Preview
+              </button>
+            </div>
           </div>
+
+          {bodyTab === 'edit' ? (
+            <div className="flex flex-col gap-4">
+              <Input label="Excerpt" value={form.excerpt} onChange={set('excerpt')} />
+              <Textarea
+                label="Body (HTML supported) *"
+                required
+                rows={16}
+                value={form.body}
+                onChange={set('body')}
+              />
+            </div>
+          ) : (
+            <MarketReportPreview data={form} />
+          )}
         </Card>
 
-        <Card>
+        <Card className="max-w-3xl">
           <h2 className="text-sm font-semibold text-charcoal-700 mb-1">Lead Capture Form Copy</h2>
           <p className="text-xs text-charcoal-400 mb-4">These appear above the contact form on the report page.</p>
           <div className="flex flex-col gap-4">
@@ -112,7 +156,7 @@ export function MarketReportEditForm({ report }: Props) {
           </div>
         </Card>
 
-        <Card>
+        <Card className="max-w-3xl">
           <h2 className="text-sm font-semibold text-charcoal-700 mb-4">SEO (optional)</h2>
           <div className="flex flex-col gap-4">
             <Input label="Meta Title" value={form.metaTitle} onChange={set('metaTitle')} />
@@ -120,7 +164,7 @@ export function MarketReportEditForm({ report }: Props) {
           </div>
         </Card>
 
-        <div className="flex justify-between gap-3">
+        <div className="flex justify-between gap-3 max-w-3xl">
           <Button type="button" variant="ghost" onClick={handleDelete} className="text-red-500 hover:text-red-700">Delete Report</Button>
           <div className="flex gap-3">
             <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>

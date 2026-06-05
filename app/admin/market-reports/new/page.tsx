@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout'
 import { Card } from '@/components/layout'
 import { Input, Textarea, Button } from '@/components/ui'
 import { useToast } from '@/components/ui'
+import { MarketReportPreview } from '../MarketReportPreview'
 
 const defaultForm = {
   title: '',
@@ -28,6 +29,7 @@ export default function NewMarketReportPage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(defaultForm)
+  const [bodyTab, setBodyTab] = useState<'edit' | 'preview'>('edit')
   const intentRef = useRef<'draft' | 'published'>('draft')
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -64,9 +66,9 @@ export default function NewMarketReportPage() {
           { label: 'New' },
         ]}
       />
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         {/* Core details */}
-        <Card>
+        <Card className="max-w-3xl">
           <h2 className="text-sm font-semibold text-charcoal-700 mb-4">Report Details</h2>
           <div className="flex flex-col gap-4">
             <Input label="Title *" required value={form.title} onChange={set('title')} placeholder="e.g. Toronto Real Estate Market Update" />
@@ -79,24 +81,47 @@ export default function NewMarketReportPage() {
           </div>
         </Card>
 
-        {/* Market overview content */}
-        <Card>
-          <h2 className="text-sm font-semibold text-charcoal-700 mb-4">Market Overview (Public Content)</h2>
-          <div className="flex flex-col gap-4">
-            <Input label="Excerpt" value={form.excerpt} onChange={set('excerpt')} placeholder="Short summary shown in listings and previews" />
-            <Textarea
-              label="Body (HTML supported) *"
-              required
-              rows={16}
-              value={form.body}
-              onChange={set('body')}
-              placeholder="Write the market overview here. This is the public-facing content visitors will read before being prompted to request the full report."
-            />
+        {/* Market overview content — full width when previewing */}
+        <Card className={bodyTab === 'preview' ? '' : 'max-w-3xl'}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-charcoal-700">Market Overview (Public Content)</h2>
+            <div className="flex rounded-lg border border-charcoal-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setBodyTab('edit')}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${bodyTab === 'edit' ? 'bg-charcoal-800 text-white' : 'bg-white text-charcoal-600 hover:bg-charcoal-50'}`}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => setBodyTab('preview')}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${bodyTab === 'preview' ? 'bg-charcoal-800 text-white' : 'bg-white text-charcoal-600 hover:bg-charcoal-50'}`}
+              >
+                Preview
+              </button>
+            </div>
           </div>
+
+          {bodyTab === 'edit' ? (
+            <div className="flex flex-col gap-4">
+              <Input label="Excerpt" value={form.excerpt} onChange={set('excerpt')} placeholder="Short summary shown in listings and previews" />
+              <Textarea
+                label="Body (HTML supported) *"
+                required
+                rows={16}
+                value={form.body}
+                onChange={set('body')}
+                placeholder="Write the market overview here. HTML is fully supported — paste complete HTML from Claude including <style> tags."
+              />
+            </div>
+          ) : (
+            <MarketReportPreview data={form} />
+          )}
         </Card>
 
         {/* Lead capture CTA */}
-        <Card>
+        <Card className="max-w-3xl">
           <h2 className="text-sm font-semibold text-charcoal-700 mb-1">Lead Capture Form Copy</h2>
           <p className="text-xs text-charcoal-400 mb-4">These appear above the contact form at the bottom of the report page.</p>
           <div className="flex flex-col gap-4">
@@ -106,7 +131,7 @@ export default function NewMarketReportPage() {
         </Card>
 
         {/* SEO */}
-        <Card>
+        <Card className="max-w-3xl">
           <h2 className="text-sm font-semibold text-charcoal-700 mb-4">SEO (optional)</h2>
           <div className="flex flex-col gap-4">
             <Input label="Meta Title" value={form.metaTitle} onChange={set('metaTitle')} />
@@ -115,7 +140,7 @@ export default function NewMarketReportPage() {
         </Card>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 max-w-3xl">
           <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
           <Button type="submit" variant="secondary" loading={loading} onClick={() => { intentRef.current = 'draft' }}>Save as Draft</Button>
           <Button type="submit" variant="primary" loading={loading} onClick={() => { intentRef.current = 'published' }}>Publish</Button>
