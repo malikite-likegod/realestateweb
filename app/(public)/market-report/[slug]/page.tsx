@@ -77,17 +77,17 @@ export default async function MarketReportPage({ params }: Props) {
 
       {/* Market overview + lead form */}
       <Section>
-        <Container size="lg">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-            {/* Overview content — takes up 3/4 */}
-            <div className="lg:col-span-3">
+        <Container size="xl">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+            {/* Overview content — takes up 4/5 */}
+            <div className="lg:col-span-4">
               <div className="prose prose-charcoal max-w-none prose-headings:font-serif prose-a:text-gold-600">
                 <div dangerouslySetInnerHTML={{ __html: sanitizeLandingPageContent(report.body) }} />
               </div>
             </div>
 
             {/* Lead capture form — sticky in sidebar */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 lg:col-start-5">
               <div className="sticky top-24 rounded-2xl border border-charcoal-100 bg-white shadow-sm p-6">
                 <MarketReportLeadForm
                   reportSlug={slug}
