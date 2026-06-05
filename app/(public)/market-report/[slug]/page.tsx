@@ -78,9 +78,9 @@ export default async function MarketReportPage({ params }: Props) {
       {/* Market overview + lead form */}
       <Section>
         <Container size="lg">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Overview content — takes up 2/3 */}
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+            {/* Overview content — takes up 3/4 */}
+            <div className="lg:col-span-3">
               <div className="prose prose-charcoal max-w-none prose-headings:font-serif prose-a:text-gold-600">
                 <div dangerouslySetInnerHTML={{ __html: sanitizeLandingPageContent(report.body) }} />
               </div>
