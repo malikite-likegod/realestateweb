@@ -106,7 +106,7 @@ export default async function HomePage() {
         <div className="mt-10 flex justify-center">
           <SearchBar variant="hero" />
         </div>
-        <div className="mt-6 flex justify-center gap-8 text-white/70 text-sm">
+        <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-2 text-white/70 text-sm">
           <span>🏠 100+ Transactions</span>
           <span>⭐ 4.9/5 Rating</span>
           <span>🏆 19+ Years of Experience</span>

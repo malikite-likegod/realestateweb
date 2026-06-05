@@ -57,8 +57,8 @@ export default async function MarketReportPage({ params }: Props) {
               </span>
             )}
           </div>
-          <h1 className="font-serif text-4xl font-bold text-charcoal-900">{report.title}</h1>
-          {report.excerpt && <p className="mt-3 text-lg text-charcoal-500">{report.excerpt}</p>}
+          <h1 className="font-serif text-2xl sm:text-4xl font-bold text-charcoal-900">{report.title}</h1>
+          {report.excerpt && <p className="mt-3 text-base sm:text-lg text-charcoal-500">{report.excerpt}</p>}
           <div className="mt-4 flex items-center gap-4 text-sm text-charcoal-400">
             {report.authorName && <span>By {report.authorName}</span>}
             {report.publishedAt && (
@@ -70,7 +70,7 @@ export default async function MarketReportPage({ params }: Props) {
 
       {/* Cover image */}
       {report.coverImage && (
-        <div className="relative w-full aspect-[21/9] max-h-[500px]">
+        <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] max-h-[500px]">
           <Image src={report.coverImage} alt={report.title} fill className="object-cover" priority />
         </div>
       )}
@@ -86,8 +86,8 @@ export default async function MarketReportPage({ params }: Props) {
               </div>
             </div>
 
-            {/* Lead capture form — sticky in sidebar */}
-            <div className="lg:col-span-1 lg:col-start-5">
+            {/* Lead capture form — desktop sidebar only; mobile uses the bottom CTA section */}
+            <div className="hidden lg:block lg:col-span-1 lg:col-start-5">
               <div className="sticky top-24 rounded-2xl border border-charcoal-100 bg-white shadow-sm p-6">
                 <MarketReportLeadForm
                   reportSlug={slug}

@@ -57,7 +57,7 @@ export function MarketReportLeadForm({ reportSlug, ctaTitle, ctaSubtitle }: Prop
       {ctaSubtitle && <p className="text-charcoal-500 mb-6">{ctaSubtitle}</p>}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-charcoal-700">First Name *</label>
             <input

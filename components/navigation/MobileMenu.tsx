@@ -49,8 +49,8 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
               ))}
             </nav>
             <div className="px-6 py-6 border-t border-charcoal-100 flex flex-col gap-3">
-              <a href="tel:+16471234567" className="flex items-center gap-2 text-charcoal-600">
-                <Phone size={16} /> (647) 123-4567
+              <a href="tel:+14168888352" className="flex items-center gap-2 text-charcoal-600">
+                <Phone size={16} /> (416) 888-8352
               </a>
               <Button variant="gold" fullWidth onClick={onClose} asChild>
                 <Link href="/contact">Get in Touch</Link>

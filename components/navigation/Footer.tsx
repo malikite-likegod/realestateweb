@@ -48,7 +48,7 @@ export function Footer() {
                 alt={APP_NAME}
                 width={640}
                 height={192}
-                className="h-48 w-auto object-contain"
+                className="h-20 sm:h-32 md:h-48 w-auto object-contain"
                 priority
               />
             </Link>
