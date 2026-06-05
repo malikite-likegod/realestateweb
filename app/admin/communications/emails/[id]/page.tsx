@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils'
 import { Mail, User, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { EmailDetailActions } from '@/components/communications/EmailDetailActions'
-import { sanitizeContent } from '@/lib/sanitize'
+import { sanitizeEmailBody } from '@/lib/sanitize'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -92,7 +92,7 @@ export default async function EmailDetailPage({ params }: Props) {
         {/* Body — rendered in a sandboxed iframe so inbound HTML cannot run scripts */}
         <Card>
           <iframe
-            srcDoc={sanitizeContent(email.body ?? '')}
+            srcDoc={sanitizeEmailBody(email.body ?? '')}
             sandbox="allow-same-origin"
             className="w-full min-h-96 border-0 rounded"
             title="Email content"

@@ -99,12 +99,18 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
   }
 
   function insertReportBlock(report: MarketReportSummary) {
-    const html = buildReportEmailBlock(report, window.location.origin)
-    const el = bodyRef.current
-    if (!el) { setBody(prev => prev + '\n\n' + html); return }
-    const start = el.selectionStart
-    const end   = el.selectionEnd
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin
+    const html   = buildReportEmailBlock(report, appUrl)
+    const el     = bodyRef.current
+    if (!el) {
+      setBody(prev => prev + '\n\n' + html)
+      toast('success', 'Report block inserted', report.title)
+      return
+    }
+    const start = el.selectionStart ?? 0
+    const end   = el.selectionEnd   ?? 0
     setBody(body.slice(0, start) + html + body.slice(end))
+    toast('success', 'Report block inserted', report.title)
     requestAnimationFrame(() => {
       el.focus()
       el.setSelectionRange(start + html.length, start + html.length)
@@ -211,6 +217,7 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
                   type="button"
                   onClick={() => {
                     const sel = document.getElementById('composer-report-select') as HTMLSelectElement
+                    if (!sel.value) { toast('error', 'No report selected', 'Choose a market report from the dropdown first.'); return }
                     const report = marketReports.find(r => r.id === sel.value)
                     if (report) insertReportBlock(report)
                   }}
@@ -219,6 +226,7 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
                   Insert
                 </button>
               </div>
+              <p className="text-[10px] text-charcoal-400 mt-1">Inserts a styled report card into the body. The HTML in the textarea will render as a formatted block in the recipient&apos;s email client.</p>
             </div>
           )}
 

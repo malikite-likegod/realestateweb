@@ -45,6 +45,43 @@ export function sanitizeLandingPageContent(html: string): string {
 }
 
 /**
+ * Sanitizes an email body for display in a sandboxed iframe.
+ * Allows inline styles (needed to render formatted email blocks like market
+ * report cards) while still stripping scripts and event handlers.
+ * Only use inside a sandboxed iframe — not for inline dangerouslySetInnerHTML.
+ */
+export function sanitizeEmailBody(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+      'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'hr',
+      'strong', 'b', 'em', 'i', 'u', 's', 'strike',
+      'ul', 'ol', 'li',
+      'blockquote', 'pre', 'code',
+      'a', 'img',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    ]),
+    allowedAttributes: {
+      '*':   ['style', 'class', 'id'],
+      'a':   ['href', 'title', 'target', 'rel', 'style', 'class'],
+      'img': ['src', 'alt', 'width', 'height', 'style', 'class'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+    transformTags: {
+      'a': (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          ...(attribs.href?.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {}),
+        },
+      }),
+      // Strip tracking pixels and other scripts embedded via img src
+      'script': () => ({ tagName: 'script', attribs: {} }),
+    },
+  })
+}
+
+/**
  * Sanitizes rich HTML content (blog posts, market reports, email bodies).
  * Allows common formatting tags while stripping scripts and event handlers.
  */

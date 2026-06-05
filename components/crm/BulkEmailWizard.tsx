@@ -137,13 +137,19 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
   }
 
   function insertReportBlock(report: MarketReportSummary) {
-    const html = buildReportEmailBlock(report, window.location.origin)
-    const el = bodyRef.current
-    if (!el) { setBody(prev => prev + '\n\n' + html); return }
-    const start = el.selectionStart
-    const end   = el.selectionEnd
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin
+    const html   = buildReportEmailBlock(report, appUrl)
+    const el     = bodyRef.current
+    if (!el) {
+      setBody(prev => prev + '\n\n' + html)
+      toast('success', 'Report block inserted', report.title)
+      return
+    }
+    const start = el.selectionStart ?? 0
+    const end   = el.selectionEnd   ?? 0
     const next  = body.slice(0, start) + html + body.slice(end)
     setBody(next)
+    toast('success', 'Report block inserted', report.title)
     requestAnimationFrame(() => {
       el.focus()
       el.setSelectionRange(start + html.length, start + html.length)
@@ -367,6 +373,7 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
                   type="button"
                   onClick={() => {
                     const sel = document.getElementById('bulk-report-select') as HTMLSelectElement
+                    if (!sel.value) { toast('error', 'No report selected', 'Choose a market report from the dropdown first.'); return }
                     const report = marketReports.find(r => r.id === sel.value)
                     if (report) insertReportBlock(report)
                   }}
