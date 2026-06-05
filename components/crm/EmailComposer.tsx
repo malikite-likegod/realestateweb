@@ -22,6 +22,17 @@ type EmailTemplate = {
   body:    string
 }
 
+type MarketReportSummary = { id: string; slug: string; title: string; area: string | null; reportMonth: string | null; excerpt: string | null }
+
+function buildReportEmailBlock(report: MarketReportSummary, origin: string): string {
+  const label = [report.area, report.reportMonth].filter(Boolean).join(' · ') || 'Market Report'
+  return `<div style="font-family:Arial,sans-serif;max-width:600px;background:#fafaf9;border-left:4px solid #c9a227;border-radius:4px;padding:20px 24px;margin:16px 0">
+  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#b45309;margin:0 0 6px">${label}</p>
+  <h2 style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#1c1917;margin:0 0 10px;line-height:1.3">${report.title}</h2>${report.excerpt ? `\n  <p style="font-size:14px;color:#6b7280;margin:0 0 16px;line-height:1.6">${report.excerpt}</p>` : ''}
+  <a href="${origin}/market-report/${report.slug}" style="display:inline-block;padding:10px 20px;background:#1c1917;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;border-radius:6px">Read the Full Report →</a>
+</div>`
+}
+
 export type EmailEntry = {
   id:          string
   direction:   'inbound' | 'outbound'
@@ -48,20 +59,21 @@ interface EmailComposerProps {
 }
 
 export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = false, initialSubject, initialBody }: EmailComposerProps) {
-  const [templates, setTemplates] = useState<EmailTemplate[]>([])
-  const [subject, setSubject]     = useState(initialSubject ?? '')
-  const [body, setBody]           = useState(initialBody ?? '')
-  const [signature, setSignature] = useState('')
-  const [templateId, setTemplateId] = useState('')
-  const [attachments, setAttachments] = useState<PickedFile[]>([])
-  const [showPicker,  setShowPicker]  = useState(false)
-  const [expanded,    setExpanded]    = useState<string | null>(null)
-  const [sending,     setSending]     = useState(false)
-  const [sentEmails,  setSentEmails]  = useState<EmailEntry[]>(emails)
-  const { toast }                     = useToast()
-  const bodyRef                       = useRef<HTMLTextAreaElement>(null)
+  const [templates, setTemplates]         = useState<EmailTemplate[]>([])
+  const [marketReports, setMarketReports] = useState<MarketReportSummary[]>([])
+  const [subject, setSubject]             = useState(initialSubject ?? '')
+  const [body, setBody]                   = useState(initialBody ?? '')
+  const [signature, setSignature]         = useState('')
+  const [templateId, setTemplateId]       = useState('')
+  const [attachments, setAttachments]     = useState<PickedFile[]>([])
+  const [showPicker,  setShowPicker]      = useState(false)
+  const [expanded,    setExpanded]        = useState<string | null>(null)
+  const [sending,     setSending]         = useState(false)
+  const [sentEmails,  setSentEmails]      = useState<EmailEntry[]>(emails)
+  const { toast }                         = useToast()
+  const bodyRef                           = useRef<HTMLTextAreaElement>(null)
 
-  // Load templates and signature on mount
+  // Load templates, signature, and published market reports on mount
   useEffect(() => {
     fetch('/api/email-templates')
       .then(r => r.json())
@@ -70,6 +82,10 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
     fetch('/api/settings/signature')
       .then(r => r.json())
       .then(json => { if (json.data?.emailSignature) setSignature(json.data.emailSignature) })
+      .catch(() => {})
+    fetch('/api/market-reports?status=published')
+      .then(r => r.json())
+      .then(d => setMarketReports(Array.isArray(d) ? d : []))
       .catch(() => {})
   }, [])
 
@@ -80,6 +96,19 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
     setTemplateId(id)
     setSubject(tmpl.subject)
     setBody(tmpl.body)
+  }
+
+  function insertReportBlock(report: MarketReportSummary) {
+    const html = buildReportEmailBlock(report, window.location.origin)
+    const el = bodyRef.current
+    if (!el) { setBody(prev => prev + '\n\n' + html); return }
+    const start = el.selectionStart
+    const end   = el.selectionEnd
+    setBody(body.slice(0, start) + html + body.slice(end))
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(start + html.length, start + html.length)
+    })
   }
 
   function removeAttachment(index: number) {
@@ -161,6 +190,37 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
               className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
             />
           </div>
+
+          {marketReports.length > 0 && (
+            <div>
+              <label className="text-xs text-charcoal-500 mb-1 block">Insert Market Report</label>
+              <div className="flex gap-2">
+                <select
+                  id="composer-report-select"
+                  defaultValue=""
+                  className="flex-1 rounded-lg border border-charcoal-200 bg-white px-3 py-1.5 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-charcoal-900"
+                >
+                  <option value="">— Select a report —</option>
+                  {marketReports.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {[r.area, r.reportMonth].filter(Boolean).join(' · ')}{r.area || r.reportMonth ? ' — ' : ''}{r.title}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sel = document.getElementById('composer-report-select') as HTMLSelectElement
+                    const report = marketReports.find(r => r.id === sel.value)
+                    if (report) insertReportBlock(report)
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-charcoal-800 text-white text-xs font-medium hover:bg-charcoal-900 transition-colors whitespace-nowrap"
+                >
+                  Insert
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-charcoal-500">Body</label>

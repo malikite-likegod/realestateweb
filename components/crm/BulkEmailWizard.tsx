@@ -19,6 +19,16 @@ import type { ContactWithTags, Tag }   from '@/types'
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type EmailTemplate = { id: string; name: string; subject: string; body: string }
+type MarketReportSummary = { id: string; slug: string; title: string; area: string | null; reportMonth: string | null; excerpt: string | null }
+
+function buildReportEmailBlock(report: MarketReportSummary, origin: string): string {
+  const label = [report.area, report.reportMonth].filter(Boolean).join(' · ') || 'Market Report'
+  return `<div style="font-family:Arial,sans-serif;max-width:600px;background:#fafaf9;border-left:4px solid #c9a227;border-radius:4px;padding:20px 24px;margin:16px 0">
+  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#b45309;margin:0 0 6px">${label}</p>
+  <h2 style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#1c1917;margin:0 0 10px;line-height:1.3">${report.title}</h2>${report.excerpt ? `\n  <p style="font-size:14px;color:#6b7280;margin:0 0 16px;line-height:1.6">${report.excerpt}</p>` : ''}
+  <a href="${origin}/market-report/${report.slug}" style="display:inline-block;padding:10px 20px;background:#1c1917;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;border-radius:6px">Read the Full Report →</a>
+</div>`
+}
 
 interface Props {
   contacts:        ContactWithTags[]
@@ -63,22 +73,27 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
   const [search, setSearch]         = useState('')
 
   // Step 2 state
-  const [templates, setTemplates]   = useState<EmailTemplate[]>([])
-  const [templateId, setTemplateId] = useState('')
-  const [subject, setSubject]       = useState('')
-  const [body, setBody]             = useState('')
+  const [templates, setTemplates]         = useState<EmailTemplate[]>([])
+  const [marketReports, setMarketReports] = useState<MarketReportSummary[]>([])
+  const [templateId, setTemplateId]       = useState('')
+  const [subject, setSubject]             = useState('')
+  const [body, setBody]                   = useState('')
 
   // Step 3 state
   const [scheduledAt, setScheduledAt] = useState('')
   const [sending, setSending]         = useState(false)
 
-  // Load templates
+  // Load templates and published market reports
   useEffect(() => {
     const controller = new AbortController()
     fetch('/api/email-templates', { signal: controller.signal })
       .then(r => r.json())
       .then(d => setTemplates(d.data ?? []))
       .catch(err => { if (err.name !== 'AbortError') console.error('[BulkEmailWizard] template fetch failed:', err) })
+    fetch('/api/market-reports?status=published', { signal: controller.signal })
+      .then(r => r.json())
+      .then(d => setMarketReports(Array.isArray(d) ? d : []))
+      .catch(() => {})
     return () => controller.abort()
   }, [])
 
@@ -119,6 +134,20 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
     setTemplateId(id)
     const tpl = templates.find(t => t.id === id)
     if (tpl) { setSubject(tpl.subject); setBody(tpl.body) }
+  }
+
+  function insertReportBlock(report: MarketReportSummary) {
+    const html = buildReportEmailBlock(report, window.location.origin)
+    const el = bodyRef.current
+    if (!el) { setBody(prev => prev + '\n\n' + html); return }
+    const start = el.selectionStart
+    const end   = el.selectionEnd
+    const next  = body.slice(0, start) + html + body.slice(end)
+    setBody(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(start + html.length, start + html.length)
+    })
   }
 
   // ── Step 3: Send ────────────────────────────────────────────────────────
@@ -312,6 +341,41 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Market report insert */}
+          {marketReports.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-1">
+                Insert Market Report
+              </label>
+              <div className="flex gap-2">
+                <select
+                  id="bulk-report-select"
+                  defaultValue=""
+                  className="flex-1 px-3 py-2 rounded-lg border border-charcoal-200 text-sm focus:outline-none focus:ring-1 focus:ring-charcoal-400 bg-white"
+                >
+                  <option value="">— Select a report —</option>
+                  {marketReports.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {[r.area, r.reportMonth].filter(Boolean).join(' · ')}{r.area || r.reportMonth ? ' — ' : ''}{r.title}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sel = document.getElementById('bulk-report-select') as HTMLSelectElement
+                    const report = marketReports.find(r => r.id === sel.value)
+                    if (report) insertReportBlock(report)
+                  }}
+                  className="px-3 py-2 rounded-lg bg-charcoal-800 text-white text-xs font-medium hover:bg-charcoal-900 transition-colors whitespace-nowrap"
+                >
+                  Insert Block
+                </button>
+              </div>
+              <p className="text-[10px] text-charcoal-400 mt-1">Inserts a formatted report card with a link at the cursor position.</p>
             </div>
           )}
 

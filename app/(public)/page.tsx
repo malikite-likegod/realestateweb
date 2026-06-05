@@ -14,6 +14,7 @@ import { parseJsonSafe } from '@/lib/utils'
 import { getBrokerageFilter } from '@/lib/site-settings'
 import { Home, TrendingUp, Phone, Users, Shield, Clock } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { PropertySummary } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -75,6 +76,19 @@ async function getFeaturedProperties(): Promise<PropertySummary[]> {
   }
 }
 
+async function getPublishedReports() {
+  try {
+    return await prisma.marketReport.findMany({
+      where: { status: 'published' },
+      orderBy: { publishedAt: 'desc' },
+      take: 3,
+      select: { id: true, slug: true, title: true, area: true, reportMonth: true, excerpt: true, coverImage: true },
+    })
+  } catch {
+    return []
+  }
+}
+
 const testimonials = [
   { name: 'Shawn & Diana Bennett', location: 'Alliston, Ontario', text: 'Michael Taylor made our home selling and buyer easy, quick and smooth. With the selling process he arranged staging, which resulted in a quick sale of the home. As for the buying he would find what were in our wants list and also give us realistic advice, during this process. He made all the scheduling and was very responsive when we found a home that we wanted to view. Closing was easy and he was about the client, us, and making sure that we don’t over-do it. All in all I can confidently recommend Michael. ', rating: 5 },
   { name: 'Mary & Chuk Law', location: 'Scarborough, Toronto', text: 'Throughout the buying/selling process, he provided invaluable insights, guided me through each step, and ensured that I felt confident in my decisions. Mike’s dedication to client satisfaction is truly commendable, and I couldn’t have asked for a better advocate in my real estate journey.', rating: 5 },
@@ -93,7 +107,10 @@ const features = [
 ]
 
 export default async function HomePage() {
-  const featuredProperties = await getFeaturedProperties()
+  const [featuredProperties, publishedReports] = await Promise.all([
+    getFeaturedProperties(),
+    getPublishedReports(),
+  ])
 
   return (
     <>
@@ -185,6 +202,56 @@ export default async function HomePage() {
           </SplitSection>
         </Container>
       </Section>
+
+      {/* Market Reports */}
+      {publishedReports.length > 0 && (
+        <Section padding="lg">
+          <Container>
+            <ContentBlock
+              eyebrow="Market Insights"
+              title="Local Real Estate Reports"
+              body="Stay informed with the latest sales data, price trends, and market conditions for your area."
+              centered
+            />
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {publishedReports.map(report => (
+                <Link
+                  key={report.id}
+                  href={`/market-report/${report.slug}`}
+                  className="group rounded-2xl border border-charcoal-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {report.coverImage ? (
+                    <div className="relative aspect-[16/9] overflow-hidden">
+                      <Image src={report.coverImage} alt={report.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  ) : (
+                    <div className="aspect-[16/9] bg-charcoal-50 flex items-center justify-center">
+                      <TrendingUp size={32} className="text-charcoal-200" />
+                    </div>
+                  )}
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      {report.area && (
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-gold-600">{report.area}</span>
+                      )}
+                      {report.reportMonth && (
+                        <span className="text-[10px] text-charcoal-400">{report.reportMonth}</span>
+                      )}
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-charcoal-900 leading-snug mb-2 group-hover:text-gold-700 transition-colors">
+                      {report.title}
+                    </h3>
+                    {report.excerpt && (
+                      <p className="text-sm text-charcoal-500 line-clamp-2">{report.excerpt}</p>
+                    )}
+                    <p className="mt-3 text-xs font-semibold text-gold-600">Read Report →</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Container>
+        </Section>
+      )}
 
       {/* Testimonials */}
       <Section padding="xl">
