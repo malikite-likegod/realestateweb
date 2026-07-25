@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { ampreGet } from './client'
-import type { ResoPropertyRaw, ResoMediaRaw, ResoMemberRaw, ResoOfficeRaw, ResoSyncResult } from './types'
+import type { ResoPropertyRaw, ResoMediaRaw, ResoMemberRaw, ResoOfficeRaw, ResoSyncResult, AmpreODataResponse } from './types'
 
 const BATCH_SIZE = 1000
 const EPOCH      = new Date('1970-01-01T00:00:00Z')
@@ -36,6 +36,10 @@ function cursorFilter(tsField: string, _keyField: string, lastTs: Date, _lastKey
 
 function activeFilter(): string {
   return `StandardStatus eq 'Active'`
+}
+
+function closedFilter(): string {
+  return `StandardStatus eq 'Closed'`
 }
 
 function combineFilters(...filters: (string | null)[]): string {
@@ -277,6 +281,176 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
       deleted:    result.removed,
       errors:     result.errors.length,
       notes:      result.errors.length ? result.errors.join('\n') : null,
+      durationMs: result.durationMs,
+    },
+  })
+
+  return result
+}
+
+// ─── Closed Property Sync ──────────────────────────────────────────────────
+// Pulls sold/closed listings for the "top agents" leaderboard. Closed data was
+// never fetched before this job existed, so we don't know in advance which of
+// the close-price/date and buyer-side fields this account's PropTx tier will
+// actually return. We probe tiers from richest to leanest and stick with the
+// first one that succeeds for the rest of the run.
+
+const CLOSED_BASE_SELECT = [
+  'ListingKey', 'StandardStatus', 'ModificationTimestamp',
+  'PropertyType', 'PropertySubType', 'ListPrice',
+  'City', 'StateOrProvince', 'ListOfficeKey', 'ListOfficeName',
+]
+const CLOSED_SALE_FIELDS  = ['ListAgentFullName', 'ClosePrice', 'CloseDate', 'PurchaseContractDate']
+const CLOSED_BUYER_FIELDS = ['BuyerAgentFullName', 'BuyerOfficeKey', 'BuyerOfficeName']
+
+const CLOSED_SELECT_TIERS = [
+  [...CLOSED_BASE_SELECT, ...CLOSED_SALE_FIELDS, ...CLOSED_BUYER_FIELDS].join(','), // tier 0: everything
+  [...CLOSED_BASE_SELECT, ...CLOSED_SALE_FIELDS].join(','),                        // tier 1: no buyer side
+  CLOSED_BASE_SELECT.join(','),                                                    // tier 2: confirmed-safe fields only
+]
+const CLOSED_TIER_LABELS = [
+  'full (sale + buyer-side fields)',
+  'sale fields only (no buyer-side)',
+  'base fields only (no sale or buyer-side fields)',
+]
+
+async function fetchClosedPage(
+  filter: string,
+  startTier: number,
+): Promise<{ tier: number; batch: AmpreODataResponse<ResoPropertyRaw> }> {
+  let lastErr: unknown
+  for (let tier = startTier; tier < CLOSED_SELECT_TIERS.length; tier++) {
+    try {
+      const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
+        $filter:  filter,
+        $orderby: 'ModificationTimestamp asc',
+        $top:     BATCH_SIZE,
+        $select:  CLOSED_SELECT_TIERS[tier],
+      })
+      return { tier, batch }
+    } catch (e) {
+      lastErr = e
+      console.warn(`[closed_property] Tier "${CLOSED_TIER_LABELS[tier]}" rejected by API, falling back: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
+}
+
+export async function syncClosedProperty(): Promise<ResoSyncResult> {
+  const start  = Date.now()
+  const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
+  const syncType = 'closed_property'
+
+  let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
+  let tier = 0 // start optimistic each run; drops down if the API rejects a select, resets to 0 next run
+
+  console.log(`[closed_property] Starting sync from ${toODataTs(lastTimestamp)}`)
+
+  try {
+    while (true) {
+      const { tier: usedTier, batch } = await fetchClosedPage(
+        combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), closedFilter()),
+        tier,
+      )
+      tier = usedTier // stick with whichever tier worked, for the rest of this run
+
+      const records = batch.value.filter(r => !!r.ModificationTimestamp)
+
+      if (records.length > 0) {
+        const now = new Date()
+        const ops = records.map(r => {
+          const closePrice = toFloat(r.ClosePrice)
+          const closeDate = r.CloseDate ? new Date(r.CloseDate) : null
+          const purchaseContractDate = r.PurchaseContractDate ? new Date(r.PurchaseContractDate) : null
+          const listAgentFullName = r.ListAgentFullName ?? null
+          const buyerAgentFullName = r.BuyerAgentFullName ?? null
+          const buyerOfficeKey = r.BuyerOfficeKey ?? null
+          const buyerOfficeName = r.BuyerOfficeName ?? null
+
+          return prisma.resoProperty.upsert({
+            where: { listingKey: r.ListingKey },
+            update: {
+              standardStatus:        r.StandardStatus,
+              propertyType:          r.PropertyType    || undefined,
+              propertySubType:       r.PropertySubType || undefined,
+              listPrice:             toFloat(r.ListPrice) ?? undefined,
+              listOfficeKey:         r.ListOfficeKey   || undefined,
+              listOfficeName:        r.ListOfficeName  || undefined,
+              modificationTimestamp: new Date(r.ModificationTimestamp!),
+              lastSyncedAt:          now,
+              closePrice:            closePrice ?? undefined,
+              closeDate:             closeDate ?? undefined,
+              purchaseContractDate:  purchaseContractDate ?? undefined,
+              listAgentFullName:     listAgentFullName ?? undefined,
+              buyerAgentFullName:    buyerAgentFullName ?? undefined,
+              buyerOfficeKey:        buyerOfficeKey ?? undefined,
+              buyerOfficeName:       buyerOfficeName ?? undefined,
+            },
+            create: {
+              listingKey:            r.ListingKey,
+              city:                  r.City            ?? '',
+              stateOrProvince:       r.StateOrProvince ?? '',
+              standardStatus:        r.StandardStatus,
+              propertyType:          r.PropertyType    ?? null,
+              propertySubType:       r.PropertySubType ?? null,
+              listPrice:             toFloat(r.ListPrice),
+              listOfficeKey:         r.ListOfficeKey   ?? null,
+              listOfficeName:        r.ListOfficeName  ?? null,
+              modificationTimestamp: new Date(r.ModificationTimestamp!),
+              lastSyncedAt:          now,
+              closePrice,
+              closeDate,
+              purchaseContractDate,
+              listAgentFullName,
+              buyerAgentFullName,
+              buyerOfficeKey,
+              buyerOfficeName,
+            },
+            select: { createdAt: true, updatedAt: true },
+          })
+        })
+
+        try {
+          const upserted = await prisma.$transaction(ops)
+          for (const res of upserted) {
+            if (res.createdAt.getTime() === res.updatedAt.getTime()) {
+              result.added++
+            } else {
+              result.updated++
+            }
+          }
+        } catch (e) {
+          const msg = `Batch: ${e instanceof Error ? e.message : String(e)}`
+          console.error(`[closed_property] ${msg}`)
+          result.errors.push(msg)
+        }
+
+        const last = records[records.length - 1]
+        lastTimestamp = new Date(last.ModificationTimestamp!)
+        lastKey       = last.ListingKey
+        await saveCheckpoint(syncType, lastTimestamp, lastKey)
+      }
+
+      if (batch.value.length < BATCH_SIZE) break
+    }
+  } catch (e) {
+    const msg = `Sync failed: ${e instanceof Error ? e.message : String(e)}`
+    console.error(`[closed_property] ${msg}`)
+    result.errors.push(msg)
+  }
+
+  result.durationMs = Date.now() - start
+  const tierNote = `Fields used: ${CLOSED_TIER_LABELS[tier]}`
+  console.log(`[closed_property] Done — added=${result.added} updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms — ${tierNote}`)
+
+  await prisma.resoSyncLog.create({
+    data: {
+      syncType,
+      added:      result.added,
+      updated:    result.updated,
+      deleted:    result.removed,
+      errors:     result.errors.length,
+      notes:      [tierNote, ...result.errors].join('\n'),
       durationMs: result.durationMs,
     },
   })

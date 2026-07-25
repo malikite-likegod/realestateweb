@@ -9,6 +9,14 @@ function applySelect(item: Record<string, unknown>, select: string): Record<stri
   return Object.fromEntries(fields.filter(f => f in item).map(f => [f, item[f]]))
 }
 
+// Real PropTx 400s on the entire request if $select names a field the account's tier doesn't
+// expose. Buyer-side fields aren't confirmed available on this account's feed, so the mock
+// rejects them by default — this exercises services/reso/sync.ts's closed_property tiered
+// fallback locally. Set MOCK_RESO_UNSUPPORTED_FIELDS='' to simulate a tier with full access.
+const UNSUPPORTED_SELECT_FIELDS = (
+  process.env.MOCK_RESO_UNSUPPORTED_FIELDS ?? 'BuyerAgentFullName,BuyerOfficeKey,BuyerOfficeName'
+).split(',').map(s => s.trim()).filter(Boolean)
+
 function applyOrderBy(items: typeof MOCK_RESO_LISTINGS, orderby: string): typeof MOCK_RESO_LISTINGS {
   // Support comma-separated multi-field sort: "ModificationTimestamp,ListingKey"
   // Each field may optionally be followed by " asc" or " desc"
@@ -42,6 +50,14 @@ export async function GET(request: Request) {
   const top     = Math.min(500, parseInt(searchParams.get('$top')  ?? '20', 10))
   const skip    = parseInt(searchParams.get('$skip') ?? '0', 10)
   const orderby = searchParams.get('$orderby') ?? ''
+
+  if (select) {
+    const requested = select.split(',').map(s => s.trim())
+    const rejected = requested.find(f => UNSUPPORTED_SELECT_FIELDS.includes(f))
+    if (rejected) {
+      return NextResponse.json({ error: `Invalid $select field: ${rejected}` }, { status: 400 })
+    }
+  }
 
   const clauses = parseODataFilter(filter)
   let data: typeof MOCK_RESO_LISTINGS = applyFilter(MOCK_RESO_LISTINGS as unknown as Record<string, unknown>[], clauses) as unknown as typeof MOCK_RESO_LISTINGS

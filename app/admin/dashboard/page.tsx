@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getPipelineReport } from '@/lib/pipeline/pipeline-service'
 import { previewOverdueContacts } from '@/lib/followups/analyzer-service'
+import { getTopAgentsReport } from '@/lib/top-agents/report-service'
 import { DashboardLayout } from '@/components/dashboard'
 import { StatsCard } from '@/components/analytics'
 import {
@@ -13,6 +14,7 @@ import {
   PipelineSummaryWidget,
   RecentPortalLoginsWidget,
   FollowUpsWidget,
+  TopAgentsWidget,
 } from '@/components/dashboard'
 import { Users, Briefcase, Building2, CheckSquare } from 'lucide-react'
 import type { ContactWithTags } from '@/types'
@@ -41,6 +43,7 @@ export default async function DashboardPage() {
     inboundEmails,
     recentPortalLogins,
     overdueFollowUps,
+    topAgentsReport,
   ] = await Promise.all([
     prisma.contact.count(),
     prisma.deal.count(),
@@ -107,6 +110,7 @@ export default async function DashboardPage() {
       },
     }),
     previewOverdueContacts(),
+    getTopAgentsReport(),
   ])
 
   const listingCount = manualListingCount + resoListingCount
@@ -192,6 +196,11 @@ export default async function DashboardPage() {
         {/* Follow-ups */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <FollowUpsWidget overdue={overdueFollowUps} />
+        </div>
+
+        {/* Top Agents */}
+        <div className="grid grid-cols-1 gap-6">
+          <TopAgentsWidget report={topAgentsReport} />
         </div>
       </div>
     </DashboardLayout>

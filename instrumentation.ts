@@ -123,9 +123,9 @@ export async function register() {
     }
 
     console.log('[mls-sync] Interval elapsed — running scheduled sync')
-    const { syncIdxProperty, syncDlaProperty, syncVoxMember, syncVoxOffice, syncIdxMedia } = await import('./services/reso/sync')
+    const { syncIdxProperty, syncDlaProperty, syncVoxMember, syncVoxOffice, syncIdxMedia, syncClosedProperty } = await import('./services/reso/sync')
     await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
-    await Promise.all([syncDlaProperty(), syncIdxMedia()])
+    await Promise.all([syncDlaProperty(), syncIdxMedia(), syncClosedProperty()])
     console.log('[mls-sync] Scheduled sync complete')
   }
 }

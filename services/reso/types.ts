@@ -77,6 +77,13 @@ export interface ResoPropertyRaw {
   MediaChangeTimestamp?:     string
   ListAgentFullName?:        string
   MajorChangeTimestamp?:     string
+  // Closed-sale fields — attempted for the closed_property sync, not part of the confirmed IDX/DLA select lists
+  ClosePrice?:               number | string
+  CloseDate?:                string
+  PurchaseContractDate?:     string
+  BuyerAgentFullName?:       string
+  BuyerOfficeKey?:           string
+  BuyerOfficeName?:          string
 }
 
 export interface ResoMemberRaw {

@@ -450,11 +450,18 @@ model ResoProperty {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
+  // Buyer side — only populated where the MLS feed exposes it (not confirmed available on all boards/tiers)
+  buyerAgentKey         String?
+  buyerAgentFullName    String?
+  buyerOfficeKey        String?
+  buyerOfficeName       String?
+
   contactInterests      ContactPropertyInterest[]
 
   @@index([modificationTimestamp])
   @@index([standardStatus])
   @@index([standardStatus, city])
+  @@index([standardStatus, closeDate])
   @@map("reso_properties")
 }
 

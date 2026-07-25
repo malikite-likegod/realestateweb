@@ -17,12 +17,13 @@ import { AgentMlsNameCard }   from '@/components/admin/AgentMlsNameCard'
 import { AgentProfileCard }   from '@/components/admin/AgentProfileCard'
 import type { AgentProfileSettings } from '@/components/admin/AgentProfileCard'
 import { BrandLogoCard }      from '@/components/admin/BrandLogoCard'
+import { TopAgentsSettingsCard } from '@/components/admin/TopAgentsSettingsCard'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, topAgentsRows, closedPropertySubTypes] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -43,6 +44,13 @@ export default async function SettingsPage() {
       where: { key: { in: ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image'] } },
     }),
     prisma.siteSettings.findUnique({ where: { key: 'brand_logo' } }),
+    prisma.siteSettings.findMany({
+      where: { key: { in: ['top_agents_price_min', 'top_agents_price_max', 'top_agents_property_types', 'top_agents_lookback_months'] } },
+    }),
+    prisma.resoProperty.groupBy({
+      by:     ['propertySubType'],
+      where:  { standardStatus: 'Closed', propertySubType: { not: null } },
+    }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
 
@@ -58,6 +66,13 @@ export default async function SettingsPage() {
     agent_email:       agentProfileMap['agent_email']       ?? process.env.AGENT_EMAIL ?? '',
     agent_image:       agentProfileMap['agent_image']       ?? '',
   }
+  const topAgentsMap: Record<string, string> = {}
+  for (const r of topAgentsRows) topAgentsMap[r.key] = r.value
+  const availablePropertyTypes = closedPropertySubTypes
+    .map(g => g.propertySubType)
+    .filter((t): t is string => !!t)
+    .sort()
+
   const totpEnabled = tfaUser?.totpEnabled ?? false
 
   const twilioConfigured  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
@@ -145,6 +160,14 @@ export default async function SettingsPage() {
           dlaSync={toSyncInfo(dlaSync)}
           voxMemberSync={toSyncInfo(voxMemberSync)}
           voxOfficeSync={toSyncInfo(voxOfficeSync)}
+        />
+
+        <TopAgentsSettingsCard
+          initialPriceMin={topAgentsMap['top_agents_price_min'] ?? ''}
+          initialPriceMax={topAgentsMap['top_agents_price_max'] ?? ''}
+          initialPropertyTypes={topAgentsMap['top_agents_property_types'] ? topAgentsMap['top_agents_property_types'].split(',').filter(Boolean) : []}
+          initialLookbackMonths={topAgentsMap['top_agents_lookback_months'] ?? '12'}
+          availablePropertyTypes={availablePropertyTypes}
         />
 
         {/* AI */}
