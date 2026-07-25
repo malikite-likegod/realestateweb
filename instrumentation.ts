@@ -81,7 +81,31 @@ export async function register() {
     } catch (err: unknown) {
       console.error('[mls-sync] Error running scheduled sync:', err)
     }
+
+    try {
+      await runFollowUpAnalysisIfDue()
+    } catch (err: unknown) {
+      console.error('[followups] Error running scheduled analysis:', err)
+    }
   }, intervalMs)
+
+  async function runFollowUpAnalysisIfDue() {
+    const FOLLOWUP_INTERVAL_MS = 20 * 60 * 60 * 1000 // ~daily, matches the vercel.json cron cadence
+    const key = 'followup_last_analyzed_at'
+    const last = await prisma.siteSettings.findUnique({ where: { key } })
+    if (last && Date.now() - new Date(last.value).getTime() < FOLLOWUP_INTERVAL_MS) return
+
+    console.log('[followups] Interval elapsed — running follow-up analysis')
+    const { analyzeFollowUps } = await import('./lib/followups/analyzer-service')
+    const result = await analyzeFollowUps()
+    console.log(`[followups] Analyzed ${result.analyzed} contacts, created ${result.tasksCreated} tasks, ${result.anniversariesFlagged} anniversaries flagged`)
+
+    await prisma.siteSettings.upsert({
+      where:  { key },
+      update: { value: new Date().toISOString() },
+      create: { key, value: new Date().toISOString() },
+    })
+  }
 
   async function runMlsSyncIfDue() {
     const [lastSync, intervalMinutes] = await Promise.all([

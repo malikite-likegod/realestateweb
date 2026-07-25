@@ -106,6 +106,7 @@ model Contact {
   province     String?
   postalCode   String?
   country      String   @default("CA")
+  preferredChannel String? // email | text | call — agent-set override for follow-up channel recommendations
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -830,6 +831,27 @@ model JobQueue {
 
   @@index([status, runAt])
   @@map("job_queue")
+}
+
+// FollowUpRule: configurable cadence per derived contact segment, used by the
+// follow-up analyzer (lib/followups/analyzer-service.ts) to decide when a
+// contact is overdue for a touch and which channel to recommend.
+// segment is derived at analysis time, not stored on Contact:
+//   hot|warm|cool  ← Contact.classification (cold mapped to "cool")
+//   past_client    ← Contact.status === 'past_client'
+//   soi            ← contact has a Tag named "SOI"
+model FollowUpRule {
+  id               String   @id @default(cuid())
+  segment          String   @unique // hot | warm | cool | past_client | soi
+  intervalDays     Int                     // contact is "overdue" once this many days pass since last touch
+  preferredChannel String   @default("email") // email | text | call — default recommendation for this segment
+  taskTitleTemplate String  @default("Follow up with {{firstName}} {{lastName}}")
+  priority         String   @default("normal") // low | normal | high | urgent
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("follow_up_rules")
 }
 
 // ─── Communications ───────────────────────────────────────────────────────────
