@@ -105,6 +105,8 @@ export default async function SettingsPage() {
       added:    log.added,
       updated:  log.updated,
       deleted:  log.deleted,
+      errors:   log.errors,
+      notes:    log.notes,
     } : null
   }
 

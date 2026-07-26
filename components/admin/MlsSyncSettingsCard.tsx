@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card } from '@/components/layout'
 import { Button } from '@/components/ui'
 
-type SyncInfo = { syncedAt: string; added: number; updated: number; deleted: number } | null
+type SyncInfo = { syncedAt: string; added: number; updated: number; deleted: number; errors: number; notes: string | null } | null
 
 interface Props {
   initialIntervalMinutes: number
@@ -101,13 +101,18 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
           { label: 'VOX members',      sync: voxMemberSync },
           { label: 'VOX offices',      sync: voxOfficeSync },
         ] as const).map(({ label, sync }) => (
-          <div key={label} className="flex justify-between">
-            <span className="text-charcoal-500">{label}</span>
-            <span className="font-medium text-charcoal-900">
-              {sync
-                ? `${new Date(sync.syncedAt).toLocaleString()} — ${sync.added} added, ${sync.updated} updated`
-                : 'Never'}
-            </span>
+          <div key={label} className="flex flex-col">
+            <div className="flex justify-between">
+              <span className="text-charcoal-500">{label}</span>
+              <span className={`font-medium ${sync && sync.errors > 0 ? 'text-red-600' : 'text-charcoal-900'}`}>
+                {sync
+                  ? `${new Date(sync.syncedAt).toLocaleString()} — ${sync.added} added, ${sync.updated} updated${sync.errors > 0 ? `, ${sync.errors} error(s)` : ''}`
+                  : 'Never'}
+              </span>
+            </div>
+            {sync?.notes && (
+              <pre className="text-xs text-red-600 whitespace-pre-wrap mt-1 mb-1">{sync.notes}</pre>
+            )}
           </div>
         ))}
       </div>
