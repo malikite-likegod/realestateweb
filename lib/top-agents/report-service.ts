@@ -45,6 +45,18 @@ export type TopAgentsReport = {
     propertyTypes:  string[]
     lookbackMonths: number
   }
+  // Funnel counts so an empty result can be diagnosed at a glance instead of
+  // guessing which filter stage dropped everything.
+  diagnostics: {
+    totalListingsSynced:      number  // every resoProperty row, no filters at all
+    totalActiveListings:      number  // standardStatus = 'Active', no other filters
+    matchingStatusOrLookback: number  // Active, or listed within the lookback window
+    matchingAfterPriceFilter: number  // + list price range
+    matchingAfterTypeFilter:  number  // + property type — this is what "listings" below equals
+    matchingWithAgentName:    number  // of those, how many actually have a listAgentFullName
+                                       // (if this is far lower than matchingAfterTypeFilter, the
+                                       // DLA sync hasn't enriched those listings with an agent name yet)
+  }
 }
 
 const TOP_N = 10
@@ -95,17 +107,26 @@ export async function getTopAgentsReport(): Promise<TopAgentsReport> {
   // currently representing the agent's book of business right now); the
   // lookback window only bounds how far back a no-longer-Active listing can
   // still count, so old closed/expired deals eventually age out.
-  const listings = await prisma.resoProperty.findMany({
-    where: {
-      OR: [
-        { standardStatus: 'Active' },
-        { listingContractDate: { gte: cutoff } },
-      ],
-      ...priceFilter,
-      ...typeFilter,
-    },
-    select: { listAgentFullName: true, listOfficeName: true, listPrice: true },
-  })
+  const statusOrLookbackFilter = {
+    OR: [
+      { standardStatus: 'Active' },
+      { listingContractDate: { gte: cutoff } },
+    ],
+  }
+
+  const [totalListingsSynced, totalActiveListings, matchingStatusOrLookback, matchingAfterPriceFilter, listings] = await Promise.all([
+    prisma.resoProperty.count(),
+    prisma.resoProperty.count({ where: { standardStatus: 'Active' } }),
+    prisma.resoProperty.count({ where: statusOrLookbackFilter }),
+    prisma.resoProperty.count({ where: { ...statusOrLookbackFilter, ...priceFilter } }),
+    prisma.resoProperty.findMany({
+      where: { ...statusOrLookbackFilter, ...priceFilter, ...typeFilter },
+      select: { listAgentFullName: true, listOfficeName: true, listPrice: true },
+    }),
+  ])
+
+  const matchingWithAgentName = listings.filter(d => !!d.listAgentFullName).length
+
   const listingSide = rank(
     listings
       .filter(d => d.listPrice != null)
@@ -136,5 +157,13 @@ export async function getTopAgentsReport(): Promise<TopAgentsReport> {
     listingSide,
     buyerSide,
     settings: { priceMin, priceMax, propertyTypes, lookbackMonths },
+    diagnostics: {
+      totalListingsSynced,
+      totalActiveListings,
+      matchingStatusOrLookback,
+      matchingAfterPriceFilter,
+      matchingAfterTypeFilter: listings.length,
+      matchingWithAgentName,
+    },
   }
 }

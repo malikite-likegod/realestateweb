@@ -73,6 +73,7 @@ export function TopAgentsSettingsCard({
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Min price"
+            hint="Full dollar amount, e.g. 500000 for $500K"
             type="number"
             min={0}
             placeholder="No minimum"
@@ -81,6 +82,7 @@ export function TopAgentsSettingsCard({
           />
           <Input
             label="Max price"
+            hint="Full dollar amount, e.g. 1000000 for $1M"
             type="number"
             min={0}
             placeholder="No maximum"
