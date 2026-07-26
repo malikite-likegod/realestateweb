@@ -63,9 +63,10 @@ export function TopAgentsSettingsCard({
     <Card>
       <h3 className="font-semibold text-charcoal-900 mb-1">Top Agents Leaderboard</h3>
       <p className="text-sm text-charcoal-400 mb-4">
-        Controls the &ldquo;Top Agents&rdquo; dashboard widget, which ranks agents by closed
-        deals in the price range and property types below. Useful for researching how the
-        busiest agents in your market are generating leads.
+        Controls the &ldquo;Top Agents&rdquo; dashboard widget, which ranks listing agents by
+        listing count (any status — a listing keeps counting after it&rsquo;s no longer active)
+        within the list-price range and property types below. Useful for researching which
+        agents are generating the most leads in a market segment.
       </p>
 
       <div className="flex flex-col gap-4">
@@ -90,6 +91,7 @@ export function TopAgentsSettingsCard({
 
         <Select
           label="Lookback window"
+          hint="Based on when each listing was first listed, not when/if it closed."
           options={LOOKBACK_OPTIONS}
           value={lookbackMonths}
           onChange={e => setLookbackMonths(e.target.value)}

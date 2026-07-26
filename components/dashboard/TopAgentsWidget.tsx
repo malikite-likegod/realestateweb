@@ -1,9 +1,13 @@
 /**
  * TopAgentsWidget
  *
- * Dashboard widget ranking agents (and their brokerages) by closed-deal count
- * within the price range / property types / lookback window configured in
- * Settings. For competitive research — seeing who's winning the most deals.
+ * Dashboard widget ranking listing agents (and their brokerages) by listing
+ * count within the list-price range / property types / lookback window
+ * configured in Settings — a lead-gen research tool, so it counts every
+ * synced listing regardless of status (a listing keeps counting after it's
+ * no longer active). The buyer's-agent section is a separate, best-effort
+ * breakdown scoped to Closed listings, since buyer-agent data only exists
+ * once a deal closes and isn't guaranteed to be available from every feed.
  */
 
 import Link from 'next/link'
@@ -23,11 +27,11 @@ function describeFilters(settings: TopAgentsReport['settings']): string {
     parts.push(`${settings.priceMin != null ? fmt(settings.priceMin) : 'Any'}–${settings.priceMax != null ? fmt(settings.priceMax) : 'Any'}`)
   }
   parts.push(settings.propertyTypes.length > 0 ? settings.propertyTypes.join(', ') : 'All property types')
-  parts.push(`last ${settings.lookbackMonths} month${settings.lookbackMonths === 1 ? '' : 's'}`)
+  parts.push(`listed in the last ${settings.lookbackMonths} month${settings.lookbackMonths === 1 ? '' : 's'}`)
   return parts.join(' · ')
 }
 
-function RankingTable({ rankings, emptyLabel }: { rankings: AgentRanking[]; emptyLabel: string }) {
+function RankingTable({ rankings, unitLabel, emptyLabel }: { rankings: AgentRanking[]; unitLabel: string; emptyLabel: string }) {
   if (rankings.length === 0) {
     return <p className="text-sm text-charcoal-400 py-6 text-center">{emptyLabel}</p>
   }
@@ -41,7 +45,7 @@ function RankingTable({ rankings, emptyLabel }: { rankings: AgentRanking[]; empt
               <p className="font-medium text-charcoal-900">{r.agentName}</p>
               {r.officeName && <p className="text-xs text-charcoal-400">{r.officeName}</p>}
             </td>
-            <td className="py-2 pr-2 text-right text-charcoal-900 font-semibold whitespace-nowrap">{r.dealCount} deals</td>
+            <td className="py-2 pr-2 text-right text-charcoal-900 font-semibold whitespace-nowrap">{r.dealCount} {unitLabel}</td>
             <td className="py-2 text-right text-charcoal-500 whitespace-nowrap">{fmt(r.volume)}</td>
           </tr>
         ))}
@@ -71,7 +75,7 @@ export function TopAgentsWidget({ report }: TopAgentsWidgetProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h4 className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-1">Listing Agents</h4>
-          <RankingTable rankings={report.listingSide} emptyLabel="No closed deals match these filters yet." />
+          <RankingTable rankings={report.listingSide} unitLabel="listings" emptyLabel="No listings match these filters yet." />
         </div>
         <div>
           <h4 className="text-xs font-semibold text-charcoal-500 uppercase tracking-wide mb-1">Buyer&rsquo;s Agents</h4>
@@ -80,7 +84,7 @@ export function TopAgentsWidget({ report }: TopAgentsWidgetProps) {
               Buyer&rsquo;s agent data isn&rsquo;t available from your MLS feed for these deals.
             </p>
           ) : (
-            <RankingTable rankings={report.buyerSide} emptyLabel="No closed deals match these filters yet." />
+            <RankingTable rankings={report.buyerSide} unitLabel="closed deals" emptyLabel="No closed deals match these filters yet." />
           )}
         </div>
       </div>

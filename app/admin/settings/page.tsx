@@ -23,7 +23,7 @@ export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, topAgentsRows, closedPropertySubTypes] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, topAgentsRows, propertySubTypeGroups] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -49,7 +49,7 @@ export default async function SettingsPage() {
     }),
     prisma.resoProperty.groupBy({
       by:     ['propertySubType'],
-      where:  { standardStatus: 'Closed', propertySubType: { not: null } },
+      where:  { propertySubType: { not: null } },
     }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
@@ -68,7 +68,7 @@ export default async function SettingsPage() {
   }
   const topAgentsMap: Record<string, string> = {}
   for (const r of topAgentsRows) topAgentsMap[r.key] = r.value
-  const availablePropertyTypes = closedPropertySubTypes
+  const availablePropertyTypes = propertySubTypeGroups
     .map(g => g.propertySubType)
     .filter((t): t is string => !!t)
     .sort()
