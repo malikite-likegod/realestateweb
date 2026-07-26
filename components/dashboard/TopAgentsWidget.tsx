@@ -27,7 +27,7 @@ function describeFilters(settings: TopAgentsReport['settings']): string {
     parts.push(`${settings.priceMin != null ? fmt(settings.priceMin) : 'Any'}–${settings.priceMax != null ? fmt(settings.priceMax) : 'Any'}`)
   }
   parts.push(settings.propertyTypes.length > 0 ? settings.propertyTypes.join(', ') : 'All property types')
-  parts.push(`listed in the last ${settings.lookbackMonths} month${settings.lookbackMonths === 1 ? '' : 's'}`)
+  parts.push(`all active, plus inactive from the last ${settings.lookbackMonths} month${settings.lookbackMonths === 1 ? '' : 's'}`)
   return parts.join(' · ')
 }
 

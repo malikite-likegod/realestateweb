@@ -296,7 +296,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
 // first one that succeeds for the rest of the run.
 
 const CLOSED_BASE_SELECT = [
-  'ListingKey', 'StandardStatus', 'ModificationTimestamp',
+  'ListingKey', 'StandardStatus', 'ModificationTimestamp', 'OriginalEntryTimestamp',
   'PropertyType', 'PropertySubType', 'ListPrice',
   'City', 'StateOrProvince', 'ListOfficeKey', 'ListOfficeName',
 ]
@@ -396,6 +396,10 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
               listPrice:             toFloat(r.ListPrice),
               listOfficeKey:         r.ListOfficeKey   ?? null,
               listOfficeName:        r.ListOfficeName  ?? null,
+              // Only set on create — if this listing was already synced while Active, the
+              // original IDX sync's listingContractDate is authoritative and must not be
+              // overwritten (this closed-sync $select doesn't reliably carry it on every tier).
+              listingContractDate:   r.OriginalEntryTimestamp ? new Date(r.OriginalEntryTimestamp) : null,
               modificationTimestamp: new Date(r.ModificationTimestamp!),
               lastSyncedAt:          now,
               closePrice,

@@ -91,7 +91,7 @@ export function TopAgentsSettingsCard({
 
         <Select
           label="Lookback window"
-          hint="Based on when each listing was first listed, not when/if it closed."
+          hint="Active listings always count, regardless of age. This only limits how far back a no-longer-active listing can still count."
           options={LOOKBACK_OPTIONS}
           value={lookbackMonths}
           onChange={e => setLookbackMonths(e.target.value)}

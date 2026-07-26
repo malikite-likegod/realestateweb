@@ -90,11 +90,17 @@ export async function getTopAgentsReport(): Promise<TopAgentsReport> {
   const typeFilter = propertyTypes.length > 0 ? { propertySubType: { in: propertyTypes } } : {}
 
   // Listing side: every synced listing regardless of status — a listing keeps
-  // counting toward its agent even after it's no longer Active. Lookback is
-  // anchored to when it was originally listed, not when/if it closed.
+  // counting toward its agent even after it's no longer Active. Active listings
+  // always count no matter how long ago they were first listed (they're
+  // currently representing the agent's book of business right now); the
+  // lookback window only bounds how far back a no-longer-Active listing can
+  // still count, so old closed/expired deals eventually age out.
   const listings = await prisma.resoProperty.findMany({
     where: {
-      listingContractDate: { gte: cutoff },
+      OR: [
+        { standardStatus: 'Active' },
+        { listingContractDate: { gte: cutoff } },
+      ],
       ...priceFilter,
       ...typeFilter,
     },
