@@ -7,6 +7,7 @@ import { SplitSection } from '@/components/layout'
 import { FeatureGrid } from '@/components/layout'
 import { TestimonialCarousel, PropertyGrid, AgentProfileCard } from '@/components/real-estate'
 import { LeadCaptureForm } from '@/components/forms'
+import { ToolsGrid } from '@/components/tools'
 import { Button } from '@/components/ui'
 import { SearchBar } from '@/components/navigation'
 import { prisma } from '@/lib/prisma'
@@ -183,6 +184,21 @@ export default async function HomePage() {
               </Button>
             </ContentBlock>
           </SplitSection>
+        </Container>
+      </Section>
+
+      {/* Real Estate Tools */}
+      <Section padding="lg">
+        <Container>
+          <ContentBlock
+            eyebrow="Free Tools"
+            title="Real Estate Tools"
+            body="Plan your next move with free, easy-to-use tools — starting with a mortgage affordability calculator, with more on the way."
+            centered
+          />
+          <div className="mt-12">
+            <ToolsGrid />
+          </div>
         </Container>
       </Section>
 

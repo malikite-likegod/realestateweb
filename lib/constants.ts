@@ -55,6 +55,7 @@ export const NAV_LINKS = [
   { label: 'Buy', href: '/buying' },
   { label: 'Sell', href: '/selling' },
   { label: 'Listings', href: '/listings' },
+  { label: 'Tools', href: '/tools' },
   { label: 'Communities', href: '/communities' },
   { label: 'Blog', href: '/blog' },
   { label: 'Relocation', href: '/relocation' },

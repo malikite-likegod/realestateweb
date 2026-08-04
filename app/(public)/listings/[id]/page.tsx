@@ -5,6 +5,7 @@ import { getGateSettings } from '@/lib/site-settings'
 import { Container } from '@/components/layout'
 import { PropertyGallery } from '@/components/real-estate'
 import { PropertyInquiryForm } from '@/components/forms'
+import { MortgagePaymentEstimateWidget } from '@/components/tools'
 import { ListingGateModal } from '@/components/public/ListingGateModal'
 import { Badge } from '@/components/ui'
 import { formatPrice, parseJsonSafe } from '@/lib/utils'
@@ -134,11 +135,12 @@ export default async function ListingDetailPage({ params }: Props) {
               )}
             </div>
 
-            <div>
+            <div className="flex flex-col gap-6">
               <PropertyInquiryForm
                 propertyId={property.id}
                 propertyTitle={address}
               />
+              <MortgagePaymentEstimateWidget listPrice={property.listPrice ?? 0} />
             </div>
           </div>
         </Container>
