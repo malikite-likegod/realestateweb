@@ -77,6 +77,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const images     = mediaItems.length > 0 ? mediaItems.map(m => m.url) : ['/images/minimal-light-placeholder.svg']
   const address    = [property.streetNumber, property.streetName, property.streetSuffix, property.streetDirPrefix, property.streetDirSuffix, property.unitNumber ? `#${property.unitNumber}` : null].filter(Boolean).join(' ')
   const returnUrl  = `/listings/${id}`
+  const isForSale  = !(property.transactionType ?? '').toLowerCase().includes('lease')
 
   return (
     <div className="pt-20">
@@ -140,7 +141,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 propertyId={property.id}
                 propertyTitle={address}
               />
-              <MortgagePaymentEstimateWidget listPrice={property.listPrice ?? 0} />
+              {isForSale && <MortgagePaymentEstimateWidget listPrice={property.listPrice ?? 0} />}
             </div>
           </div>
         </Container>
