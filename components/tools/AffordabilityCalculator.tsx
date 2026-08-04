@@ -24,6 +24,7 @@ export function AffordabilityCalculator({ initialPrice, initialRate }: Affordabi
   const [creditTier, setCreditTier] = useState<CreditTier>('good')
   const [isFirstTimeBuyer, setIsFirstTimeBuyer] = useState(false)
 
+  const [purchasePriceOverride, setPurchasePriceOverride] = useState<number | undefined>(initialPrice)
   const [downPayment, setDownPayment] = useState(50_000)
   const [contractRatePercent, setContractRatePercent] = useState((initialRate ?? DEFAULT_ASSUMPTIONS.contractRate) * 100)
   const [amortizationYears, setAmortizationYears] = useState(DEFAULT_ASSUMPTIONS.amortizationYears)
@@ -52,9 +53,11 @@ export function AffordabilityCalculator({ initialPrice, initialRate }: Affordabi
 
   const result = useMemo(() => calculateMaxAffordability(input), [input])
 
+  const purchasePrice = purchasePriceOverride ?? result.maxPurchasePrice
+
   const targetPriceCheck = useMemo(
-    () => (initialPrice && initialPrice > 0 ? checkStressTestPass(input, initialPrice) : null),
-    [input, initialPrice]
+    () => (purchasePrice > 0 ? checkStressTestPass(input, purchasePrice) : null),
+    [input, purchasePrice]
   )
 
   return (
@@ -68,7 +71,7 @@ export function AffordabilityCalculator({ initialPrice, initialRate }: Affordabi
               ) : (
                 <Badge variant="warning"><span className="inline-flex items-center gap-1"><XCircle size={12} /> May not qualify yet</span></Badge>
               )}
-              <span className="text-sm text-charcoal-600">for {formatPrice(initialPrice ?? 0)}, based on the figures below</span>
+              <span className="text-sm text-charcoal-600">for {formatPrice(purchasePrice)}, based on the figures below</span>
             </div>
             {targetPriceCheck.suggestions.length > 0 && (
               <ul className="list-disc pl-5 space-y-1 text-sm text-charcoal-600">
@@ -103,6 +106,10 @@ export function AffordabilityCalculator({ initialPrice, initialRate }: Affordabi
               label: 'Property & Down Payment',
               content: (
                 <PropertyDownPaymentFields
+                  purchasePrice={purchasePrice}
+                  onPurchasePriceChange={setPurchasePriceOverride}
+                  isPurchasePriceOverridden={purchasePriceOverride != null}
+                  onResetPurchasePrice={() => setPurchasePriceOverride(undefined)}
                   downPayment={downPayment}
                   onDownPaymentChange={setDownPayment}
                   contractRatePercent={contractRatePercent}

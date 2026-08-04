@@ -10,6 +10,10 @@ const AMORTIZATION_OPTIONS = [
 ]
 
 interface PropertyDownPaymentFieldsProps {
+  purchasePrice: number
+  onPurchasePriceChange: (value: number) => void
+  isPurchasePriceOverridden: boolean
+  onResetPurchasePrice: () => void
   downPayment: number
   onDownPaymentChange: (value: number) => void
   contractRatePercent: number
@@ -30,6 +34,30 @@ interface PropertyDownPaymentFieldsProps {
 export function PropertyDownPaymentFields(props: PropertyDownPaymentFieldsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="sm:col-span-2">
+        <Input
+          label="Purchase Price"
+          type="number"
+          min={0}
+          value={Math.round(props.purchasePrice) || ''}
+          onChange={e => props.onPurchasePriceChange(Number(e.target.value))}
+          leftIcon={<span>$</span>}
+          hint={
+            props.isPurchasePriceOverridden
+              ? undefined
+              : "Defaults to your estimated maximum affordability — edit it to check a specific home's price."
+          }
+        />
+        {props.isPurchasePriceOverridden && (
+          <button
+            type="button"
+            onClick={props.onResetPurchasePrice}
+            className="mt-1.5 text-xs font-medium text-gold-600 hover:text-gold-700 transition-colors"
+          >
+            Reset to my estimated maximum affordability
+          </button>
+        )}
+      </div>
       <Input
         label="Down Payment Available"
         type="number"
