@@ -1,5 +1,6 @@
 import { Container, Section, PageHeader } from '@/components/layout'
 import { AffordabilityCalculator } from '@/components/tools'
+import { getMortgageRate } from '@/lib/site-settings'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ interface Props {
 export default async function AffordabilityCalculatorPage({ searchParams }: Props) {
   const { price } = await searchParams
   const initialPrice = price ? Number(price) : undefined
+  const initialRate = await getMortgageRate()
 
   return (
     <div className="pt-20">
@@ -24,7 +26,10 @@ export default async function AffordabilityCalculatorPage({ searchParams }: Prop
             subtitle="Enter your finances to see what you could qualify for, including the mortgage stress test, minimum down payment, and estimated closing costs."
             breadcrumbs={[{ label: 'Tools', href: '/tools' }, { label: 'Affordability Calculator' }]}
           />
-          <AffordabilityCalculator initialPrice={initialPrice && Number.isFinite(initialPrice) ? initialPrice : undefined} />
+          <AffordabilityCalculator
+            initialPrice={initialPrice && Number.isFinite(initialPrice) ? initialPrice : undefined}
+            initialRate={initialRate}
+          />
         </Container>
       </Section>
     </div>

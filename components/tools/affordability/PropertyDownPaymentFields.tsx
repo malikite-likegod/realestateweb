@@ -46,7 +46,7 @@ export function PropertyDownPaymentFields(props: PropertyDownPaymentFieldsProps)
         value={props.contractRatePercent || ''}
         onChange={e => props.onContractRatePercentChange(Number(e.target.value))}
         rightIcon={<span>%</span>}
-        hint="Your expected contract rate — used to compute the stress test qualifying rate."
+        hint="Pre-filled with today's posted rate — edit it if you've been quoted a different rate."
       />
       <Select
         label="Amortization Period"

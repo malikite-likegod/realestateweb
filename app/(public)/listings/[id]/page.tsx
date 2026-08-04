@@ -1,7 +1,7 @@
 import { headers, cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { PropertyService } from '@/lib/property-service'
-import { getGateSettings } from '@/lib/site-settings'
+import { getGateSettings, getMortgageRate } from '@/lib/site-settings'
 import { Container } from '@/components/layout'
 import { PropertyGallery } from '@/components/real-estate'
 import { PropertyInquiryForm } from '@/components/forms'
@@ -78,6 +78,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const address    = [property.streetNumber, property.streetName, property.streetSuffix, property.streetDirPrefix, property.streetDirSuffix, property.unitNumber ? `#${property.unitNumber}` : null].filter(Boolean).join(' ')
   const returnUrl  = `/listings/${id}`
   const isForSale  = !(property.transactionType ?? '').toLowerCase().includes('lease')
+  const mortgageRate = isForSale ? await getMortgageRate() : null
 
   return (
     <div className="pt-20">
@@ -141,7 +142,9 @@ export default async function ListingDetailPage({ params }: Props) {
                 propertyId={property.id}
                 propertyTitle={address}
               />
-              {isForSale && <MortgagePaymentEstimateWidget listPrice={property.listPrice ?? 0} />}
+              {isForSale && (
+                <MortgagePaymentEstimateWidget listPrice={property.listPrice ?? 0} contractRate={mortgageRate ?? undefined} />
+              )}
             </div>
           </div>
         </Container>

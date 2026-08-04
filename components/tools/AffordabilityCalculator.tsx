@@ -13,9 +13,11 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 
 interface AffordabilityCalculatorProps {
   initialPrice?: number
+  /** Current rate (decimal, e.g. 0.0499), sourced from Settings → Mortgage Calculator. Falls back to a static default if unset. */
+  initialRate?: number
 }
 
-export function AffordabilityCalculator({ initialPrice }: AffordabilityCalculatorProps) {
+export function AffordabilityCalculator({ initialPrice, initialRate }: AffordabilityCalculatorProps) {
   const [province, setProvince] = useState<Province>('ON')
   const [grossAnnualIncome, setGrossAnnualIncome] = useState(100_000)
   const [monthlyDebts, setMonthlyDebts] = useState(300)
@@ -23,7 +25,7 @@ export function AffordabilityCalculator({ initialPrice }: AffordabilityCalculato
   const [isFirstTimeBuyer, setIsFirstTimeBuyer] = useState(false)
 
   const [downPayment, setDownPayment] = useState(50_000)
-  const [contractRatePercent, setContractRatePercent] = useState(DEFAULT_ASSUMPTIONS.contractRate * 100)
+  const [contractRatePercent, setContractRatePercent] = useState((initialRate ?? DEFAULT_ASSUMPTIONS.contractRate) * 100)
   const [amortizationYears, setAmortizationYears] = useState(DEFAULT_ASSUMPTIONS.amortizationYears)
   const [propertyTaxAnnual, setPropertyTaxAnnual] = useState(0)
   const [condoFeesMonthly, setCondoFeesMonthly] = useState(0)

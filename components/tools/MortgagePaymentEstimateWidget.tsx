@@ -11,9 +11,11 @@ import { ArrowRight, Calculator } from 'lucide-react'
 
 interface MortgagePaymentEstimateWidgetProps {
   listPrice: number
+  /** Current rate (decimal, e.g. 0.0499), sourced from Settings → Mortgage Calculator. Falls back to a static default if unset. */
+  contractRate?: number
 }
 
-export function MortgagePaymentEstimateWidget({ listPrice }: MortgagePaymentEstimateWidgetProps) {
+export function MortgagePaymentEstimateWidget({ listPrice, contractRate }: MortgagePaymentEstimateWidgetProps) {
   const minDownPayment = useMemo(() => getMinimumDownPayment(listPrice), [listPrice])
   const minPercent = Math.round(minDownPayment.minDownPaymentPercent * 100)
   const defaultPercent = Math.max(minPercent, 20)
@@ -21,8 +23,8 @@ export function MortgagePaymentEstimateWidget({ listPrice }: MortgagePaymentEsti
   const [downPaymentPercent, setDownPaymentPercent] = useState(defaultPercent)
 
   const estimate = useMemo(
-    () => estimateListingMortgagePayment(listPrice, downPaymentPercent / 100),
-    [listPrice, downPaymentPercent]
+    () => estimateListingMortgagePayment(listPrice, downPaymentPercent / 100, { contractRate }),
+    [listPrice, downPaymentPercent, contractRate]
   )
 
   if (!listPrice || listPrice <= 0) return null

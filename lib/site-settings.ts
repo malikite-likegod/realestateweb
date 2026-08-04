@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { DEFAULT_ASSUMPTIONS } from '@/lib/mortgage'
 
 export const getBlurModeEnabled = unstable_cache(
   async () => {
@@ -33,6 +34,17 @@ export const getMlsSyncInterval = unstable_cache(
   },
   ['mls-sync-interval'],
   { revalidate: 60 }
+)
+
+/** Returns the admin-set "today's rate" for the mortgage calculator, as a decimal (e.g. 0.0499). */
+export const getMortgageRate = unstable_cache(
+  async () => {
+    const row = await prisma.siteSettings.findUnique({ where: { key: 'mortgage_current_rate_percent' } })
+    const percent = row ? parseFloat(row.value) : NaN
+    return Number.isFinite(percent) && percent > 0 ? percent / 100 : DEFAULT_ASSUMPTIONS.contractRate
+  },
+  ['mortgage-current-rate'],
+  { revalidate: 300, tags: ['mortgage_rate'] }
 )
 
 export const getBrokerageFilter = unstable_cache(

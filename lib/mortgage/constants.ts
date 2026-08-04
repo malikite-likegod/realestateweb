@@ -52,7 +52,11 @@ export const CMHC_PREMIUM_TIERS = [
 // not financeable) is a known v1 simplification and is NOT included in premiumAmount below.
 
 export const DEFAULT_ASSUMPTIONS = {
-  /** Illustrative posted rate — NOT a live rate feed. */
+  /**
+   * Fallback rate used only if no admin-set rate exists in Settings → Mortgage Calculator.
+   * Once an admin sets a current rate there, `lib/site-settings.ts#getMortgageRate` is the
+   * source of truth — this value is not a live feed and should not be relied on alone.
+   */
   contractRate: 0.0499,
   amortizationYears: 25,
   creditTier: 'good' as CreditTier,
