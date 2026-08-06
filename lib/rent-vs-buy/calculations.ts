@@ -38,3 +38,19 @@ export function priceForTargetMonthlyPayment(targetPayment: number, assumptions:
   }
   return (lo + hi) / 2
 }
+
+/**
+ * The price range whose estimated payment falls within `toleranceDollars` of `targetPayment`.
+ * Down payment % is fixed, so loan-to-value (and therefore CMHC premium tier) doesn't change
+ * with price, making the payment strictly increasing in price — this range is a valid bound to
+ * query a listings price filter with, not just an approximation.
+ */
+export function priceRangeForTargetPayment(
+  targetPayment: number,
+  toleranceDollars: number,
+  assumptions: RentVsBuyAssumptions
+): { minPrice: number; maxPrice: number } {
+  const minPrice = priceForTargetMonthlyPayment(Math.max(targetPayment - toleranceDollars, 1), assumptions)
+  const maxPrice = priceForTargetMonthlyPayment(targetPayment + toleranceDollars, assumptions)
+  return { minPrice, maxPrice }
+}

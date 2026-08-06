@@ -10,33 +10,25 @@ export interface RentVsBuyAssumptions {
   amortizationYears: number
 }
 
-export interface MockListing {
+/** A real for-sale listing (ResoProperty) matched against the user's target monthly payment. */
+export interface RentVsBuyListing {
   id: string
+  listingKey: string
   address: string
-  neighbourhood: string
+  neighbourhood: string | null
   city: string
-  distanceKm: number
+  /** Straight-line distance from the searched city, in km. Null if the city couldn't be geocoded. */
+  distanceKm: number | null
   price: number
-  beds: number
-  baths: number
-  sqft: number
-}
-
-export interface ListingWithEstimate extends MockListing {
+  beds: number | null
+  baths: number | null
+  sqft: number | null
   estimatedMonthlyPayment: number
 }
 
-export interface ListingSearchParams {
-  city: string
-  maxDistanceKm: number
-  targetMonthlyPayment: number
-  toleranceDollars: number
-  assumptions: RentVsBuyAssumptions
-}
-
-export interface ListingSearchResult {
-  listings: ListingWithEstimate[]
+export interface RentVsBuySearchResponse {
+  listings: RentVsBuyListing[]
   matchedCityName: string
-  /** False when the entered city isn't in our benchmark table — estimates fall back to a generic regional price. */
-  cityRecognized: boolean
+  /** False when the searched city couldn't be geocoded — results are city-matched only, not distance-filtered. */
+  distanceAvailable: boolean
 }

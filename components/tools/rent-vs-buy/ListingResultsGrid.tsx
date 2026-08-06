@@ -1,11 +1,30 @@
+import { Spinner } from '@/components/ui'
 import { ListingCard } from './ListingCard'
-import type { ListingSearchResult } from '@/lib/rent-vs-buy'
+import type { RentVsBuySearchResponse } from '@/lib/rent-vs-buy'
 
 interface ListingResultsGridProps {
-  searchResult: ListingSearchResult | null
+  searchResult: RentVsBuySearchResponse | null
+  loading: boolean
+  error: boolean
 }
 
-export function ListingResultsGrid({ searchResult }: ListingResultsGridProps) {
+export function ListingResultsGrid({ searchResult, loading, error }: ListingResultsGridProps) {
+  if (loading && !searchResult) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-charcoal-200 p-8 text-sm text-charcoal-500">
+        <Spinner size={16} /> Searching nearby listings…
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-dashed border-charcoal-200 p-8 text-center text-sm text-charcoal-500">
+        Something went wrong searching for listings. Try again in a moment.
+      </div>
+    )
+  }
+
   if (!searchResult) {
     return (
       <div className="rounded-2xl border border-dashed border-charcoal-200 p-8 text-center text-sm text-charcoal-500">
@@ -17,17 +36,17 @@ export function ListingResultsGrid({ searchResult }: ListingResultsGridProps) {
   if (searchResult.listings.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-charcoal-200 p-8 text-center text-sm text-charcoal-500">
-        No matching homes found. Try widening your maximum distance.
+        No matching homes found right now. Try widening your maximum distance, or check back as new listings come on the market.
       </div>
     )
   }
 
   return (
     <div>
-      {!searchResult.cityRecognized && (
+      {!searchResult.distanceAvailable && (
         <p className="mb-3 text-xs text-charcoal-500">
-          We don&apos;t have detailed local pricing for &quot;{searchResult.matchedCityName}&quot; yet, so these
-          estimates use average regional pricing.
+          We couldn&apos;t pinpoint &quot;{searchResult.matchedCityName}&quot; on the map, so these are matched by
+          city name only — distance isn&apos;t shown.
         </p>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

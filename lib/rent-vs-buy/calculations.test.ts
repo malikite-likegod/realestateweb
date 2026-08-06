@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { calculateTotalMonthlyHousingCost, estimateMonthlyPaymentForPrice, priceForTargetMonthlyPayment, sumLeaseCosts } from './calculations'
-import { searchListingsNearTarget } from './mock-listings'
-import { PAYMENT_MATCH_TOLERANCE_DOLLARS } from './constants'
+import {
+  calculateTotalMonthlyHousingCost,
+  estimateMonthlyPaymentForPrice,
+  priceForTargetMonthlyPayment,
+  priceRangeForTargetPayment,
+  sumLeaseCosts,
+} from './calculations'
 import type { RentVsBuyAssumptions } from './types'
 
 const ASSUMPTIONS: RentVsBuyAssumptions = { downPaymentPercent: 0.05, contractRate: 0.0499, amortizationYears: 25 }
@@ -39,54 +43,21 @@ describe('priceForTargetMonthlyPayment', () => {
   })
 })
 
-describe('searchListingsNearTarget', () => {
-  it('returns listings whose estimated payment is within tolerance of the target', () => {
-    const result = searchListingsNearTarget({
-      city: 'Mississauga',
-      maxDistanceKm: 25,
-      targetMonthlyPayment: 3200,
-      toleranceDollars: PAYMENT_MATCH_TOLERANCE_DOLLARS,
-      assumptions: ASSUMPTIONS,
-    })
+describe('priceRangeForTargetPayment', () => {
+  it('brackets a price range whose payments fall within tolerance', () => {
+    const { minPrice, maxPrice } = priceRangeForTargetPayment(3200, 100, ASSUMPTIONS)
+    expect(minPrice).toBeLessThan(maxPrice)
+    expect(estimateMonthlyPaymentForPrice(minPrice, ASSUMPTIONS)).toBeCloseTo(3100, 0)
+    expect(estimateMonthlyPaymentForPrice(maxPrice, ASSUMPTIONS)).toBeCloseTo(3300, 0)
+  })
 
-    expect(result.listings.length).toBeGreaterThanOrEqual(3)
-    expect(result.cityRecognized).toBe(true)
-    expect(result.matchedCityName).toBe('Mississauga')
-    for (const listing of result.listings) {
-      expect(listing.estimatedMonthlyPayment).toBeGreaterThanOrEqual(3200 - PAYMENT_MATCH_TOLERANCE_DOLLARS - 1)
-      expect(listing.estimatedMonthlyPayment).toBeLessThanOrEqual(3200 + PAYMENT_MATCH_TOLERANCE_DOLLARS + 1)
-      expect(listing.distanceKm).toBeGreaterThanOrEqual(0)
-      expect(listing.distanceKm).toBeLessThanOrEqual(25)
+  it('every price inside the range estimates a payment within tolerance', () => {
+    const { minPrice, maxPrice } = priceRangeForTargetPayment(2800, 100, ASSUMPTIONS)
+    for (const fraction of [0, 0.25, 0.5, 0.75, 1]) {
+      const price = minPrice + (maxPrice - minPrice) * fraction
+      const payment = estimateMonthlyPaymentForPrice(price, ASSUMPTIONS)
+      expect(payment).toBeGreaterThanOrEqual(2800 - 100 - 1)
+      expect(payment).toBeLessThanOrEqual(2800 + 100 + 1)
     }
-  })
-
-  it('is deterministic for the same inputs', () => {
-    const params = { city: 'Barrie', maxDistanceKm: 25, targetMonthlyPayment: 2800, toleranceDollars: 100, assumptions: ASSUMPTIONS }
-    const first = searchListingsNearTarget(params)
-    const second = searchListingsNearTarget(params)
-    expect(first.listings.map(l => l.id)).toEqual(second.listings.map(l => l.id))
-  })
-
-  it('falls back to a generic benchmark for an unrecognized city without crashing', () => {
-    const result = searchListingsNearTarget({
-      city: 'Nowheresville',
-      maxDistanceKm: 25,
-      targetMonthlyPayment: 2500,
-      toleranceDollars: 100,
-      assumptions: ASSUMPTIONS,
-    })
-    expect(result.cityRecognized).toBe(false)
-    expect(result.listings.length).toBeGreaterThan(0)
-  })
-
-  it('returns no listings when the target payment is zero', () => {
-    const result = searchListingsNearTarget({
-      city: 'Toronto',
-      maxDistanceKm: 25,
-      targetMonthlyPayment: 0,
-      toleranceDollars: 100,
-      assumptions: ASSUMPTIONS,
-    })
-    expect(result.listings).toEqual([])
   })
 })

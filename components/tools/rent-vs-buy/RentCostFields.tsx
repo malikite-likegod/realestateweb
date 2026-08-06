@@ -1,6 +1,7 @@
 'use client'
 
-import { Input } from '@/components/ui'
+import { useEffect, useState } from 'react'
+import { AutocompleteInput, Input } from '@/components/ui'
 import { Plus, X } from 'lucide-react'
 import type { LeaseCostItem } from '@/lib/rent-vs-buy'
 
@@ -18,6 +19,15 @@ interface RentCostFieldsProps {
 }
 
 export function RentCostFields(props: RentCostFieldsProps) {
+  const [cityOptions, setCityOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/search/geo?level=areas')
+      .then(r => r.json())
+      .then((data: string[]) => setCityOptions(data))
+      .catch(() => {})
+  }, [])
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -29,14 +39,16 @@ export function RentCostFields(props: RentCostFieldsProps) {
           onChange={e => props.onMonthlyRentChange(Number(e.target.value))}
           leftIcon={<span>$</span>}
         />
-        <Input
-          label="City or Town"
-          type="text"
-          placeholder="e.g. Mississauga"
-          value={props.city}
-          onChange={e => props.onCityChange(e.target.value)}
-          hint="Where you currently live — we'll look for homes nearby."
-        />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-charcoal-700">City or Town</label>
+          <AutocompleteInput
+            options={cityOptions}
+            value={props.city}
+            onChange={props.onCityChange}
+            placeholder="e.g. Mississauga"
+          />
+          <p className="text-xs text-charcoal-500">Where you currently live — we&apos;ll look for homes nearby.</p>
+        </div>
       </div>
 
       <div>

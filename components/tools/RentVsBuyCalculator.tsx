@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/layout'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/mortgage'
 import {
@@ -8,10 +8,9 @@ import {
   PAYMENT_MATCH_TOLERANCE_DOLLARS,
   RENT_VS_BUY_ASSUMPTIONS,
   calculateTotalMonthlyHousingCost,
-  searchListingsNearTarget,
   sumLeaseCosts,
 } from '@/lib/rent-vs-buy'
-import type { LeaseCostItem } from '@/lib/rent-vs-buy'
+import type { LeaseCostItem, RentVsBuySearchResponse } from '@/lib/rent-vs-buy'
 import { RentCostFields } from './rent-vs-buy/RentCostFields'
 import { CostSummaryPanel } from './rent-vs-buy/CostSummaryPanel'
 import { ListingResultsGrid } from './rent-vs-buy/ListingResultsGrid'
@@ -28,6 +27,8 @@ function makeCostItemId() {
   return `cost-${Date.now()}-${costItemCounter}`
 }
 
+const SEARCH_DEBOUNCE_MS = 500
+
 export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
   const [monthlyRent, setMonthlyRent] = useState(2_200)
   const [otherCosts, setOtherCosts] = useState<LeaseCostItem[]>([
@@ -35,6 +36,10 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
   ])
   const [city, setCity] = useState('')
   const [maxDistanceKm, setMaxDistanceKm] = useState(DEFAULT_MAX_DISTANCE_KM)
+
+  const [searchResult, setSearchResult] = useState<RentVsBuySearchResponse | null>(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState(false)
 
   const contractRate = initialRate ?? DEFAULT_ASSUMPTIONS.contractRate
 
@@ -50,16 +55,48 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
   const otherCostsTotal = useMemo(() => sumLeaseCosts(otherCosts), [otherCosts])
   const totalMonthlyCost = useMemo(() => calculateTotalMonthlyHousingCost(monthlyRent, otherCosts), [monthlyRent, otherCosts])
 
-  const searchResult = useMemo(() => {
-    if (!city.trim() || totalMonthlyCost <= 0) return null
-    return searchListingsNearTarget({
-      city,
-      maxDistanceKm: maxDistanceKm > 0 ? maxDistanceKm : DEFAULT_MAX_DISTANCE_KM,
-      targetMonthlyPayment: totalMonthlyCost,
-      toleranceDollars: PAYMENT_MATCH_TOLERANCE_DOLLARS,
-      assumptions,
-    })
-  }, [city, maxDistanceKm, totalMonthlyCost, assumptions])
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    if (!city.trim() || totalMonthlyCost <= 0) {
+      setSearchResult(null)
+      setSearchLoading(false)
+      setSearchError(false)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      setSearchLoading(true)
+      setSearchError(false)
+
+      const params = new URLSearchParams({
+        city,
+        maxDistanceKm: String(maxDistanceKm > 0 ? maxDistanceKm : DEFAULT_MAX_DISTANCE_KM),
+        targetMonthlyPayment: String(totalMonthlyCost),
+      })
+
+      fetch(`/api/rent-vs-buy/search?${params}`, { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error('Search failed')
+          return res.json() as Promise<RentVsBuySearchResponse>
+        })
+        .then(data => {
+          setSearchResult(data)
+          setSearchLoading(false)
+        })
+        .catch(err => {
+          if (err.name === 'AbortError') return
+          setSearchError(true)
+          setSearchLoading(false)
+        })
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => clearTimeout(timer)
+  }, [city, maxDistanceKm, totalMonthlyCost])
 
   const handleAddCostItem = () => setOtherCosts(items => [...items, { id: makeCostItemId(), label: '', amountMonthly: 0 }])
   const handleRemoveCostItem = (id: string) => setOtherCosts(items => items.filter(item => item.id !== id))
@@ -93,7 +130,7 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
                 ? `Homes Near ${searchResult.matchedCityName} in Your Budget`
                 : 'Homes In Your Budget'}
             </h3>
-            <ListingResultsGrid searchResult={searchResult} />
+            <ListingResultsGrid searchResult={searchResult} loading={searchLoading} error={searchError} />
           </div>
         </div>
 

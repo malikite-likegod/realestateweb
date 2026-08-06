@@ -18,5 +18,5 @@ export const RENT_VS_BUY_ASSUMPTIONS = {
   amortizationYears: 25,
 } as const
 
-export const MIN_SEARCH_RESULTS = 3
+/** Cap on how many matching listings the search returns — this is a teaser, not a full results page. */
 export const MAX_SEARCH_RESULTS = 6
