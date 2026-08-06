@@ -18,17 +18,25 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
     const res  = await fetch(url)
     const json = await res.json() as {
       status: string
+      error_message?: string
       results: Array<{ geometry: { location: { lat: number; lng: number } } }>
     }
-    if (json.status !== 'OK' || json.results.length === 0) return null
+    if (json.status !== 'OK' || json.results.length === 0) {
+      console.warn(`[geocode] "${address}" -> ${json.status}${json.error_message ? `: ${json.error_message}` : ''}`)
+      return null
+    }
     return json.results[0].geometry.location
-  } catch {
+  } catch (err) {
+    console.error(`[geocode] Fetch failed for "${address}":`, err)
     return null
   }
 }
 
 export async function geocodeMissingProperties(): Promise<void> {
-  if (!API_KEY) return
+  if (!API_KEY) {
+    console.warn('[geocode] Skipped — no GOOGLE_MAPS_SERVER_KEY or NEXT_PUBLIC_GOOGLE_MAPS_KEY configured')
+    return
+  }
 
   const listings = (await prisma.resoProperty.findMany({
     where: { latitude: null },
@@ -46,6 +54,9 @@ export async function geocodeMissingProperties(): Promise<void> {
 
   if (listings.length === 0) return
 
+  let succeeded = 0
+  let failed    = 0
+
   await Promise.all(
     listings.map(async listing => {
       const parts = [
@@ -60,12 +71,17 @@ export async function geocodeMissingProperties(): Promise<void> {
 
       const address = parts.join(' ')
       const coords  = await geocodeAddress(address)
-      if (!coords) return
+      if (!coords) { failed++; return }
 
       await prisma.resoProperty.update({
         where: { id: listing.id },
         data:  { latitude: coords.lat, longitude: coords.lng },
-      }).catch(() => null)
+      }).then(() => { succeeded++ }).catch(err => {
+        failed++
+        console.error(`[geocode] DB update failed for ${listing.id}:`, err)
+      })
     })
   )
+
+  console.log(`[geocode] Batch complete — ${succeeded} geocoded, ${failed} failed (of ${listings.length} attempted)`)
 }
