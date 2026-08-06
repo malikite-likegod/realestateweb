@@ -37,7 +37,8 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       // Fetch / XHR: self + Google Maps tile API. Vector map style/legend assets are
       // fetched from various *.gstatic.com subdomains (e.g. www.gstatic.com), not just maps.gstatic.com.
-      "connect-src 'self' https://maps.googleapis.com https://*.gstatic.com",
+      // data: is required too — the vector map's label worker fetches inline data: image URIs.
+      "connect-src 'self' data: https://maps.googleapis.com https://*.gstatic.com",
       // Google Maps tiles/vector rendering run in <canvas> / workers loaded via blob URLs
       "worker-src blob:",
       "child-src blob:",
