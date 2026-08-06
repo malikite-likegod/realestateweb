@@ -3,7 +3,10 @@ import path from 'path'
 
 // ── Security headers ────────────────────────────────────────────────────────
 // Applied to every response. CSP is built to match the app's actual needs:
-//   - Google Maps JS API (maps.googleapis.com, maps.gstatic.com)
+//   - Google Maps JS API via @vis.gl/react-google-maps (maps.googleapis.com, maps.gstatic.com)
+//     Vector maps / AdvancedMarker (mapId-based rendering) load their rendering
+//     libraries with new Function(), so script-src needs 'unsafe-eval' or the
+//     map silently fails to paint (CSP EvalError, no console-visible crash in UI).
 //   - Uploaded images served from /uploads (same origin)
 //   - Inline styles used by Tailwind and third-party components
 // HSTS is set for production; browsers will enforce HTTPS for 2 years.
@@ -23,17 +26,18 @@ const securityHeaders = [
     value: [
       // Only load resources from self by default
       "default-src 'self'",
-      // Scripts: self + Google Maps (loaded by @googlemaps/js-api-loader)
-      "script-src 'self' 'unsafe-inline' https://maps.googleapis.com",
-      // Styles: self + inline (Tailwind generates inline styles)
-      "style-src 'self' 'unsafe-inline'",
-      // Images: self, data URIs (base64 thumbnails), blob (canvas), and https for MLS/listing images
+      // Scripts: self + Google Maps. 'unsafe-eval' is required by the Maps JS
+      // vector renderer (AdvancedMarker/mapId) — without it the map canvas stays blank.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com",
+      // Styles: self + inline (Tailwind generates inline styles) + Maps' injected font stylesheet
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // Images: self, data URIs (base64 thumbnails), blob (canvas), and https for MLS/listing images + map tiles
       "img-src 'self' data: blob: https:",
-      // Fonts: self only (no external font CDN)
-      "font-src 'self'",
+      // Fonts: self + Maps' info window / control fonts
+      "font-src 'self' https://fonts.gstatic.com",
       // Fetch / XHR: self + Google Maps tile API
       "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com",
-      // Google Maps tiles rendered in <canvas> / workers
+      // Google Maps tiles/vector rendering run in <canvas> / workers loaded via blob URLs
       "worker-src blob:",
       "child-src blob:",
       // Map tile images from Google
