@@ -36,7 +36,7 @@ function ListingsContent() {
   const [areaOptions, setAreaOptions] = useState<string[]>([])
 
   const [filters, setFilters] = useState({
-    keyword:       '',
+    keyword:       searchParams.get('keyword') ?? '',
     city:          searchParams.get('city') ?? '',
     postalCode:    searchParams.get('postalCode') ?? '',
     minPrice:      searchParams.get('minPrice') ?? '',
