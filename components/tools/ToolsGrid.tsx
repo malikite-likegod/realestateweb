@@ -19,9 +19,9 @@ const TOOLS = [
   {
     icon: Home,
     title: 'Rent vs. Buy Comparison',
-    description: 'Model the long-term cost of renting versus buying based on your local market.',
+    description: 'Compare your current rent against the estimated cost of buying a home nearby at a similar monthly payment.',
     href: '/tools/rent-vs-buy',
-    status: 'comingSoon' as const,
+    status: 'available' as const,
   },
 ]
 
