@@ -204,8 +204,11 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
             inclusions:            null, // not available in PropTx IDX
             exclusions:            null, // not available in PropTx IDX
           }
-          // Don't overwrite media on update — it's fetched separately by syncIdxMedia
-          const { media: _media, ...updateData } = data
+          // Don't overwrite media on update — it's fetched separately by syncIdxMedia.
+          // Don't overwrite latitude/longitude on update — they're filled in once by the
+          // background geocoder; re-syncing an already-geocoded listing would otherwise
+          // reset them back to null every time MLS pushes any change to that listing.
+          const { media: _media, latitude: _latitude, longitude: _longitude, ...updateData } = data
           return prisma.resoProperty.upsert({
             where:  { listingKey: r.ListingKey },
             update: updateData,
@@ -923,9 +926,11 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       exclusions:            null, // not available in PropTx IDX
     }
 
+    // Don't overwrite latitude/longitude on update — see syncIdxProperty for why.
+    const { latitude: _latitude, longitude: _longitude, ...updateData } = data
     await prisma.resoProperty.upsert({
       where:  { listingKey },
-      update: data,
+      update: updateData,
       create: { ...data, listingKey },
     })
     return true
