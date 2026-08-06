@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { PropertyService } from '@/lib/property-service'
 import { getGateSettings, getMortgageRate } from '@/lib/site-settings'
 import { Container } from '@/components/layout'
-import { PropertyGallery } from '@/components/real-estate'
+import { PropertyGallery, ListingMap } from '@/components/real-estate'
 import { PropertyInquiryForm } from '@/components/forms'
 import { MortgagePaymentEstimateWidget } from '@/components/tools'
 import { ListingGateModal } from '@/components/public/ListingGateModal'
@@ -79,6 +79,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const returnUrl  = `/listings/${id}`
   const isForSale  = !(property.transactionType ?? '').toLowerCase().includes('lease')
   const mortgageRate = isForSale ? await getMortgageRate() : null
+  const hasMap     = property.latitude != null && property.longitude != null
 
   return (
     <div className="pt-20">
@@ -133,6 +134,17 @@ export default async function ListingDetailPage({ params }: Props) {
                 <div className="mb-8">
                   <h2 className="font-serif text-2xl font-bold text-charcoal-900 mb-3">About This Property</h2>
                   <p className="text-charcoal-600 leading-relaxed whitespace-pre-wrap">{property.publicRemarks}</p>
+                </div>
+              )}
+
+              {hasMap && (
+                <div className="mb-8">
+                  <h2 className="font-serif text-2xl font-bold text-charcoal-900 mb-3">Location</h2>
+                  <ListingMap
+                    markers={[{ lat: property.latitude!, lng: property.longitude!, title: address, price: property.listPrice ?? undefined }]}
+                    zoom={15}
+                    height="360px"
+                  />
                 </div>
               )}
             </div>
