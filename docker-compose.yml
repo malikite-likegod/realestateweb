@@ -64,6 +64,10 @@ services:
       RESO_SYNC_SECRET:     ${RESO_SYNC_SECRET:-}
       NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_KEY:-}
       NEXT_PUBLIC_GOOGLE_MAPS_ID:  ${NEXT_PUBLIC_GOOGLE_MAPS_ID:-}
+      # Server-side key for the Geocoding API (services/reso/geocode.ts). Must NOT have
+      # HTTP referrer restrictions — Google rejects referrer-restricted keys for server-side
+      # APIs. Restrict by API (Geocoding API only) and/or server IP instead.
+      GOOGLE_MAPS_SERVER_KEY:      ${GOOGLE_MAPS_SERVER_KEY:-}
       AMPRE_IDX_TOKEN:        ${AMPRE_IDX_TOKEN:-}
       AMPRE_DLA_TOKEN:        ${AMPRE_DLA_TOKEN:-}
       AMPRE_VOX_TOKEN:        ${AMPRE_VOX_TOKEN:-}
