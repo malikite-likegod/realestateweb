@@ -84,7 +84,12 @@ export async function searchRentVsBuyListings(params: RentVsBuySearchParams): Pr
       return { p, estimatedMonthlyPayment, distanceKm }
     })
     .filter(({ estimatedMonthlyPayment }) => Math.abs(estimatedMonthlyPayment - targetMonthlyPayment) <= toleranceDollars + 1)
-    .filter(({ distanceKm }) => !distanceAvailable || (distanceKm != null && distanceKm <= maxDistanceKm))
+    // Only exclude a listing when its distance is actually known to exceed the max —
+    // most listings don't have their own lat/lng yet (board-wide sync is geocoded
+    // gradually in the background), so requiring a known distance here would silently
+    // drop nearly every result. Unknown-distance listings stay in, sorted last below,
+    // same as when the city itself can't be geocoded at all.
+    .filter(({ distanceKm }) => distanceKm == null || distanceKm <= maxDistanceKm)
 
   matched.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
 
