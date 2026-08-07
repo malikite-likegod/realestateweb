@@ -5,13 +5,17 @@ import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/gate-email'
 import { isSecureContext } from '@/lib/auth'
 import { verifyCsrfOrigin } from '@/lib/csrf'
+import { isSafeRelativePath } from '@/lib/safe-redirect'
 
 const schema = z.object({
   firstName: z.string().min(1),
   lastName:  z.string().min(1),
   email:     z.string().email(),
   phone:     z.string().min(1),
-  returnUrl: z.string().optional(),
+  // Must be a relative path on this site — the verify endpoint redirects here
+  // after a visitor clicks the emailed link, so an absolute/external URL
+  // would let this become an open redirect off a trusted domain.
+  returnUrl: z.string().refine(isSafeRelativePath, 'returnUrl must be a relative path').optional(),
 })
 
 export async function POST(request: Request) {

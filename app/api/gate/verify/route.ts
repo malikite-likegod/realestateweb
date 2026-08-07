@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isSecureContext } from '@/lib/auth'
 import { signVerifiedContactCookie } from '@/lib/jwt'
+import { isSafeRelativePath } from '@/lib/safe-redirect'
 
 async function hashToken(token: string): Promise<string> {
   const data   = new TextEncoder().encode(token)
@@ -44,7 +45,9 @@ export async function GET(request: NextRequest) {
     },
   })
 
-  const returnUrl = record.returnUrl ?? '/listings'
+  // Defense in depth: submit-time already validates returnUrl is a relative
+  // path, but re-check here too in case an older row predates that check.
+  const returnUrl = record.returnUrl && isSafeRelativePath(record.returnUrl) ? record.returnUrl : '/listings'
   const response  = NextResponse.redirect(new URL(returnUrl, request.url))
 
   // Set signed verified cookie — value is a JWT, not a raw DB id
