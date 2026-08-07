@@ -122,17 +122,25 @@ export const PropertyService = {
     // If still not found, attempt on-demand fetch from AMPRE so listings
     // outside the brokerage sync are available when linked directly.
     return withCache(`property:${key}`, 60, async () => {
-      const byListingKey = await prisma.resoProperty.findUnique({ where: { listingKey: key } })
-      if (byListingKey) return byListingKey
+      let property = await prisma.resoProperty.findUnique({ where: { listingKey: key } })
+      if (!property) property = await prisma.resoProperty.findUnique({ where: { id: key } })
 
-      const byId = await prisma.resoProperty.findUnique({ where: { id: key } })
-      if (byId) return byId
+      if (!property) {
+        // On-demand: treat `key` as a listingKey and fetch from AMPRE
+        const fetched = await fetchPropertyOnDemand(key)
+        if (fetched) property = await prisma.resoProperty.findUnique({ where: { listingKey: key } })
+      }
 
-      // On-demand: treat `key` as a listingKey and fetch from AMPRE
-      const fetched = await fetchPropertyOnDemand(key)
-      if (fetched) return prisma.resoProperty.findUnique({ where: { listingKey: key } })
+      // The board-wide sync table is far too large (300k+ listings) to
+      // geocode proactively in the background — only geocode the specific
+      // listing a visitor is actually looking at, right now, on first view.
+      if (property && property.latitude == null) {
+        const { geocodePropertyOnDemand } = await import('@/services/reso/geocode')
+        const coords = await geocodePropertyOnDemand(property)
+        if (coords) property = { ...property, latitude: coords.lat, longitude: coords.lng }
+      }
 
-      return null
+      return property
     })
   },
 }
