@@ -4,8 +4,10 @@ import { Badge } from '@/components/ui'
 import { formatPrice } from '@/lib/utils'
 import { BedDouble, Bath, Ruler, MapPin } from 'lucide-react'
 import type { RentVsBuyListing } from '@/lib/rent-vs-buy'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 export function ListingCard({ listing }: { listing: RentVsBuyListing }) {
+  const displayCity = getDisplayCity(listing.city)
   return (
     <Link href={`/listings/${listing.listingKey}`} className="block h-full">
       <Card padding="lg" hover className="h-full flex flex-col">
@@ -13,7 +15,7 @@ export function ListingCard({ listing }: { listing: RentVsBuyListing }) {
           <div>
             <h4 className="font-serif text-lg font-bold text-charcoal-900">{listing.address}</h4>
             <p className="text-sm text-charcoal-500">
-              {listing.neighbourhood ? `${listing.neighbourhood}, ${listing.city}` : listing.city}
+              {listing.neighbourhood ? `${listing.neighbourhood}, ${displayCity}` : displayCity}
             </p>
           </div>
           {listing.distanceKm != null && (

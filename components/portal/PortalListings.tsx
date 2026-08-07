@@ -5,6 +5,7 @@ import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Bookmark, Bookmar
 import { ResoListingCard, type ResoProperty } from './ResoListingCard'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput'
+import { getDisplayCity, resolveDistrictSearchTerm } from '@/lib/trreb-districts'
 
 interface Filters {
   city:         string
@@ -219,7 +220,12 @@ export function PortalListings({ firstName, agentEmail }: Props) {
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[160px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">Area</label>
-            <AutocompleteInput options={cityOptions} value={filters.city} onChange={v => update('city', v)} placeholder="e.g. Toronto" />
+            <AutocompleteInput
+              options={cityOptions.map(getDisplayCity).sort((a, b) => a.localeCompare(b))}
+              value={getDisplayCity(filters.city)}
+              onChange={v => { const d = resolveDistrictSearchTerm(v); update('city', d ? d.cityValue : v) }}
+              placeholder="e.g. Toronto"
+            />
           </div>
           <div className="w-44">
             <label className="block text-xs font-medium text-gray-500 mb-1">Property Type</label>

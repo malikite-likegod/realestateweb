@@ -12,6 +12,7 @@ import { PackageViewTracker } from '@/components/portal/PackageViewTracker'
 import { PhotoGallery } from '@/components/real-estate/PhotoGallery'
 import { ListingMap } from '@/components/real-estate/ListingMap'
 import { PropertyDetailTabs, type DetailRow } from '@/components/real-estate/PropertyDetailTabs'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 function getAddress(p: {
   streetNumber: string | null; streetDirPrefix: string | null; streetName: string | null;
@@ -144,7 +145,7 @@ export default async function PropertyDetailPage({
     row('Community',          property.community),
     row('Municipality',       property.municipality),
     row('Cross Street',       property.crossStreet),
-    row('City',               property.city),
+    row('City',               getDisplayCity(property.city)),
     row('Province',           property.stateOrProvince),
     row('Postal Code',        property.postalCode),
     row('Amenities',          property.amenities),
@@ -187,7 +188,7 @@ export default async function PropertyDetailPage({
               <h1 className="text-2xl font-bold text-charcoal-900">{address}</h1>
               <p className="text-sm text-charcoal-500 flex items-center gap-1 mt-1">
                 <MapPin size={13} />
-                {[property.city, property.stateOrProvince, property.postalCode].filter(Boolean).join(', ')}
+                {[getDisplayCity(property.city), property.stateOrProvince, property.postalCode].filter(Boolean).join(', ')}
               </p>
               <p className="text-3xl font-bold text-charcoal-900 mt-3">
                 {property.listPrice

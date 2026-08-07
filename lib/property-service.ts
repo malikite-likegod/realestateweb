@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { withCache } from '@/lib/cache'
 import type { ResoProperty } from '@prisma/client'
 import { fetchPropertyOnDemand } from '@/services/reso/sync'
+import { resolveDistrictSearchTerm } from '@/lib/trreb-districts'
 
 export interface PropertyFilters {
   city?:          string
@@ -43,9 +44,15 @@ function buildWhere(filters: PropertyFilters) {
     standardStatus: filters.status ?? 'Active',
   }
   if (filters.city) {
+    // Accepts a raw TRREB city value ("Toronto C01"), a consumer-friendly label
+    // ("Downtown West (Toronto)"), or a bare code/segment ("C01", "Mimico") —
+    // resolves to the canonical value before querying. Non-Toronto cities and
+    // unresolved input pass through unchanged (existing contains-match behavior).
+    const district = resolveDistrictSearchTerm(filters.city)
+    const cityTerm = district ? district.cityValue : filters.city
     where.city = isRelationalDB
-      ? { contains: filters.city, mode: 'insensitive' }
-      : { contains: filters.city }
+      ? { contains: cityTerm, mode: 'insensitive' }
+      : { contains: cityTerm }
   }
   if (filters.minPrice != null || filters.maxPrice != null) {
     where.listPrice = {

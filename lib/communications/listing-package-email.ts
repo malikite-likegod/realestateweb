@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 interface SendPackageEmailInput {
   pkg: {
@@ -53,7 +54,7 @@ function buildListingCard(
   const photo   = p ? getFirstPhoto(p.media) : ''
   const addressParts = [p?.streetNumber, p?.streetName, p?.streetSuffix, p?.streetDirPrefix, p?.streetDirSuffix, p?.unitNumber ? `#${p.unitNumber}` : null].filter(Boolean)
   const address = addressParts.length > 0 ? addressParts.join(' ') : 'Address unavailable'
-  const city    = p?.city ?? ''
+  const city    = p?.city ? getDisplayCity(p.city) : ''
   const price   = formatPrice(p?.listPrice ?? null)
   const beds    = p?.bedroomsTotal ?? '—'
   const baths   = p?.bathroomsTotalInteger ?? '—'

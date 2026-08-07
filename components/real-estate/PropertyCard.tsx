@@ -8,6 +8,7 @@ import { cn, formatPrice } from '@/lib/utils'
 import { Badge } from '@/components/ui'
 import type { PropertySummary } from '@/types'
 import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 interface PropertyCardProps {
   property: PropertySummary
@@ -62,7 +63,7 @@ export function PropertyCard({ property, featured = false, className }: Property
           <p className="text-xl font-bold text-charcoal-900 font-serif">{formatPrice(property.price)}</p>
           <h3 className="mt-1 text-sm font-medium text-charcoal-700 line-clamp-1">{property.title}</h3>
           <p className="mt-1 flex items-center gap-1 text-xs text-charcoal-400">
-            <MapPin size={11} /> {property.address}, {property.city}
+            <MapPin size={11} /> {property.address}, {getDisplayCity(property.city)}
           </p>
 
           {/* Stats */}

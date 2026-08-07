@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { parseJsonSafe } from '@/lib/utils'
 import { buildPropertyWhere, buildOrderBy } from './filters'
 import { getBrokerageFilter } from '@/lib/site-settings'
+import { resolveDistrictSearchTerm } from '@/lib/trreb-districts'
 import type { SearchFilters, SearchResult, SearchResponse } from './types'
 
 export async function searchProperties(filters: SearchFilters, sessionId?: string, contactId?: string): Promise<SearchResponse> {
@@ -87,11 +88,20 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       const kw = filters.keyword.trim()
       const containsOpt = isRelationalDB ? { contains: kw, mode: 'insensitive' as const } : { contains: kw }
 
+      // 0. Try as a TRREB district label/code/alias (e.g. "Downtown West", "Mimico", "C01")
+      //    before the generic substring check below, since a friendly label is never a
+      //    substring of the raw "Toronto C01"-style value stored in the database.
+      const district = resolveDistrictSearchTerm(kw)
+
       // 1. Try as city
-      const cityCount = await prisma.resoProperty.count({
+      const cityCount = district ? 0 : await prisma.resoProperty.count({
         where: { standardStatus: 'Active', city: containsOpt },
       })
-      if (cityCount > 0) {
+
+      if (district) {
+        resolvedCity = district.cityValue
+        resolved = { field: 'city', value: district.cityValue }
+      } else if (cityCount > 0) {
         resolvedCity = kw
         resolved = { field: 'city', value: kw }
       } else {

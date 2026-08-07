@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { setPackageSessionCookie } from '@/lib/pkg-session'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 interface Props { params: Promise<{ token: string }> }
 
@@ -96,7 +97,7 @@ export default async function PackagePage({ params }: Props) {
                 <div className="p-5 flex flex-col justify-between flex-1">
                   <div>
                     <p className="font-semibold text-charcoal-900">
-                      {formatAddress(p)}{p?.city ? `, ${p.city}` : ''}
+                      {formatAddress(p)}{p?.city ? `, ${getDisplayCity(p.city)}` : ''}
                     </p>
                     <p className="text-xl font-bold text-gold-600 mt-1">{formatPrice(p?.listPrice ?? null)}</p>
                     <p className="text-sm text-charcoal-500 mt-1">

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AutocompleteInput, Input } from '@/components/ui'
 import { Plus, X } from 'lucide-react'
 import type { LeaseCostItem } from '@/lib/rent-vs-buy'
+import { getDisplayCity, resolveDistrictSearchTerm } from '@/lib/trreb-districts'
 
 interface RentCostFieldsProps {
   monthlyRent: number
@@ -42,9 +43,9 @@ export function RentCostFields(props: RentCostFieldsProps) {
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-charcoal-700">City or Town</label>
           <AutocompleteInput
-            options={cityOptions}
-            value={props.city}
-            onChange={props.onCityChange}
+            options={cityOptions.map(getDisplayCity).sort((a, b) => a.localeCompare(b))}
+            value={getDisplayCity(props.city)}
+            onChange={v => { const d = resolveDistrictSearchTerm(v); props.onCityChange(d ? d.cityValue : v) }}
             placeholder="e.g. Mississauga"
           />
           <p className="text-xs text-charcoal-500">Where you currently live — we&apos;ll look for homes nearby.</p>

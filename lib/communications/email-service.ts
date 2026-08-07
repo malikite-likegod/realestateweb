@@ -13,6 +13,7 @@
 import crypto from 'crypto'
 import { prisma }              from '@/lib/prisma'
 import { getBrokerageFilter } from '@/lib/site-settings'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 // ─── Nodemailer transport ────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ export async function resolveListingTags(text: string): Promise<string> {
       p.streetDirSuffix,
     ].filter(Boolean).join(' ')
     const unitPart  = p.unitNumber ? `Unit ${p.unitNumber}` : null
-    const address   = [streetLine, unitPart, p.city, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
+    const address   = [streetLine, unitPart, p.city ? getDisplayCity(p.city) : null, p.stateOrProvince, p.postalCode].filter(Boolean).join(', ')
     let image = ''
     try {
       const media = JSON.parse(p.media ?? '[]') as Array<{ url?: string; Order?: number }>

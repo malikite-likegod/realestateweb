@@ -14,6 +14,7 @@ import type { Metadata } from 'next'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { BrokerageAttribution } from '@/components/mls/BrokerageAttribution'
 import { BackButton } from '@/components/public/BackButton'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const property = await PropertyService.getProperty(id)
   if (!property) return {}
-  const address = [property.streetNumber, property.streetName, property.streetSuffix, property.streetDirPrefix, property.streetDirSuffix, property.city].filter(Boolean).join(' ')
+  const address = [property.streetNumber, property.streetName, property.streetSuffix, property.streetDirPrefix, property.streetDirSuffix, getDisplayCity(property.city)].filter(Boolean).join(' ')
   return {
     title: address || property.listingKey,
     description: property.publicRemarks ?? undefined,
@@ -106,7 +107,7 @@ export default async function ListingDetailPage({ params }: Props) {
                   </p>
                   <h1 className="text-xl font-semibold text-charcoal-700 mt-1">{address}</h1>
                   <p className="flex items-center gap-1.5 text-charcoal-500 mt-1">
-                    <MapPin size={15} /> {property.city}, {property.stateOrProvince} {property.postalCode}
+                    <MapPin size={15} /> {getDisplayCity(property.city)}, {property.stateOrProvince} {property.postalCode}
                   </p>
                   <BrokerageAttribution
                     listAgentFullName={property.listAgentFullName}

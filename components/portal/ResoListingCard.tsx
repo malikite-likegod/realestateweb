@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Bed, Bath, Car, Ruler } from 'lucide-react'
 import { PortalSaveButton } from './PortalSaveButton'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 export interface ResoProperty {
   id:                   string
@@ -67,7 +68,7 @@ export function ResoListingCard({ property }: { property: ResoProperty }) {
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">{address}</p>
-            <p className="text-xs text-gray-500 truncate">{[property.city, property.stateOrProvince, property.postalCode].filter(Boolean).join(', ')}</p>
+            <p className="text-xs text-gray-500 truncate">{[getDisplayCity(property.city), property.stateOrProvince, property.postalCode].filter(Boolean).join(', ')}</p>
           </div>
           <PortalSaveButton propertyId={property.id} initialSaved={property.isSaved} />
         </div>

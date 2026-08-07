@@ -12,6 +12,7 @@ import type { SearchResult } from '@/services/search/types'
 import { SaveSearchButton } from '@/components/public/SaveSearchButton'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { useBehaviorTracker } from '@/hooks/useBehaviorTracker'
+import { getDisplayCity, resolveDistrictSearchTerm } from '@/lib/trreb-districts'
 
 const PAGE_SIZE            = 12
 
@@ -132,9 +133,9 @@ function ListingsContent() {
         <Container>
           <div className="flex flex-wrap gap-3 items-end">
             <AutocompleteInput
-              options={areaOptions}
-              value={filters.city}
-              onChange={v => setFilters(f => ({ ...f, city: v }))}
+              options={areaOptions.map(getDisplayCity).sort((a, b) => a.localeCompare(b))}
+              value={getDisplayCity(filters.city)}
+              onChange={v => { const d = resolveDistrictSearchTerm(v); setFilters(f => ({ ...f, city: d ? d.cityValue : v })) }}
               placeholder="Area / City"
               className="w-44"
             />
