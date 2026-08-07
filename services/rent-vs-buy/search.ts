@@ -66,6 +66,7 @@ export async function searchRentVsBuyListings(params: RentVsBuySearchParams): Pr
       minPrice,
       maxPrice,
       listingType: 'sale',
+      propertyClass: 'Residential',
       pageSize: 50,
     }),
     geocodeLocation(trimmedCity),
