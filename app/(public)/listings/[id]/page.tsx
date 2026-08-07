@@ -79,7 +79,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const address    = [property.streetNumber, property.streetName, property.streetSuffix, property.streetDirPrefix, property.streetDirSuffix, property.unitNumber ? `#${property.unitNumber}` : null].filter(Boolean).join(' ')
   const returnUrl  = `/listings/${id}`
   const isForSale  = !(property.transactionType ?? '').toLowerCase().includes('lease')
-  const isResidential = (property.propertyType ?? '').toLowerCase() === 'residential'
+  const isResidential = (property.propertyType ?? '').toLowerCase().includes('residential')
   const mortgageRate = isForSale && isResidential ? await getMortgageRate() : null
   const hasMap     = property.latitude != null && property.longitude != null
 
