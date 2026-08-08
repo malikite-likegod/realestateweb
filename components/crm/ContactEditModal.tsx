@@ -262,6 +262,9 @@ export function ContactEditModal({ contact }: Props) {
                   <option value="idx">IDX</option>
                   <option value="manual">Manual</option>
                   <option value="social">Social</option>
+                  <option value="open_house">Open House</option>
+                  <option value="advertising">Advertising</option>
+                  <option value="door_knocking">Door Knocking</option>
                 </select>
               </div>
             </div>
