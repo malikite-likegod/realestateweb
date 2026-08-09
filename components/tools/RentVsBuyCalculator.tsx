@@ -117,8 +117,6 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
         <ListingGateModal
           initialState="gate"
           returnUrl="/tools/rent-vs-buy"
-          dismissible
-          onDismiss={() => setShowSignupModal(false)}
           title="Want to see more homes like these?"
           subtitle="Sign up and I'll send you a fuller, curated list of properties matched to your budget — not just a teaser."
           ctaLabel="Get the Full List"

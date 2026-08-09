@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
 
 type State = 'gate' | 'pending' | 'error'
 
@@ -11,8 +10,6 @@ interface Props {
   title?:       string
   subtitle?:    string
   ctaLabel?:    string
-  dismissible?: boolean
-  onDismiss?:   () => void
 }
 
 export function ListingGateModal({
@@ -21,8 +18,6 @@ export function ListingGateModal({
   title    = 'Unlock Full Access',
   subtitle = "Enter your details to continue browsing listings without limits.",
   ctaLabel = 'Get Full Access',
-  dismissible = false,
-  onDismiss,
 }: Props) {
   const [state,     setState]     = useState<State>(initialState)
   const [firstName, setFirstName] = useState('')
@@ -69,16 +64,6 @@ export function ListingGateModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl p-8">
-        {dismissible && onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label="Dismiss"
-            className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-700 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        )}
         {state === 'gate' && (
           <>
             <h2 className="font-serif text-2xl font-bold text-charcoal-900 mb-2">
