@@ -161,9 +161,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── Gate cookie logic (public listing pages only) ──────────────────────────
+  // ── Gate cookie logic (public listing pages + Rent vs Buy tool) ─────────────
   const listingMatch = pathname.match(LISTING_PATH_RE)
-  if (listingMatch) {
+  // Rent vs Buy also needs a stable session id, to count tool uses server-side
+  // (see ToolUsageEvent) for the signup-prompt nudge.
+  const isToolsSessionPath = pathname === '/tools/rent-vs-buy'
+  if (listingMatch || isToolsSessionPath) {
     // Ensure the visitor has an httpOnly session cookie.
     // View counts are now stored server-side in the GateView table keyed by
     // this session ID — the client can no longer tamper with the counter by

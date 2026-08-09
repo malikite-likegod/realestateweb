@@ -1,15 +1,29 @@
 'use client'
 
 import { useState } from 'react'
+import { X } from 'lucide-react'
 
 type State = 'gate' | 'pending' | 'error'
 
 interface Props {
   initialState: State
   returnUrl:    string
+  title?:       string
+  subtitle?:    string
+  ctaLabel?:    string
+  dismissible?: boolean
+  onDismiss?:   () => void
 }
 
-export function ListingGateModal({ initialState, returnUrl }: Props) {
+export function ListingGateModal({
+  initialState,
+  returnUrl,
+  title    = 'Unlock Full Access',
+  subtitle = "Enter your details to continue browsing listings without limits.",
+  ctaLabel = 'Get Full Access',
+  dismissible = false,
+  onDismiss,
+}: Props) {
   const [state,     setState]     = useState<State>(initialState)
   const [firstName, setFirstName] = useState('')
   const [lastName,  setLastName]  = useState('')
@@ -54,14 +68,24 @@ export function ListingGateModal({ initialState, returnUrl }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl p-8">
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl p-8">
+        {dismissible && onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            className="absolute top-4 right-4 text-charcoal-400 hover:text-charcoal-700 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        )}
         {state === 'gate' && (
           <>
             <h2 className="font-serif text-2xl font-bold text-charcoal-900 mb-2">
-              Unlock Full Access
+              {title}
             </h2>
             <p className="text-charcoal-500 text-sm mb-6">
-              Enter your details to continue browsing listings without limits.
+              {subtitle}
             </p>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-3">
@@ -111,7 +135,7 @@ export function ListingGateModal({ initialState, returnUrl }: Props) {
                 disabled={loading}
                 className="w-full rounded-lg bg-gold-500 hover:bg-gold-600 text-white font-semibold py-2.5 transition-colors disabled:opacity-60"
               >
-                {loading ? 'Sending…' : 'Get Full Access'}
+                {loading ? 'Sending…' : ctaLabel}
               </button>
               <p className="text-center text-xs text-charcoal-400">
                 We&apos;ll send you a quick verification link — then you can browse freely.

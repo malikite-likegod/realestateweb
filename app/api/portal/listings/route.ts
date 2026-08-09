@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getContactSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getMortgageRate } from '@/lib/site-settings'
+import { priceRangeForTargetPayment, RENT_VS_BUY_ASSUMPTIONS, PAYMENT_MATCH_TOLERANCE_DOLLARS } from '@/lib/rent-vs-buy'
 
 export async function GET(request: Request) {
   const contact = await getContactSession()
@@ -13,6 +15,7 @@ export async function GET(request: Request) {
   const listingType  = searchParams.get('listingType')  ?? ''
   const minPrice     = searchParams.get('minPrice')
   const maxPrice     = searchParams.get('maxPrice')
+  const targetMonthlyPayment = searchParams.get('targetMonthlyPayment')
   const minBeds      = searchParams.get('minBeds')
   const minBaths     = searchParams.get('minBaths')
   const minGarage    = searchParams.get('minGarage')
@@ -53,8 +56,21 @@ export async function GET(request: Request) {
     where.NOT = { transactionType: iContains('lease') }
   }
 
-  // Price
-  if (minPrice || maxPrice) {
+  // Price — either an explicit range, or a target monthly payment converted to a price band
+  // using the same estimate assumptions as the Rent vs Buy tool (see lib/rent-vs-buy).
+  if (targetMonthlyPayment && Number(targetMonthlyPayment) > 0) {
+    const contractRate = await getMortgageRate()
+    const { minPrice: bandMin, maxPrice: bandMax } = priceRangeForTargetPayment(
+      Number(targetMonthlyPayment),
+      PAYMENT_MATCH_TOLERANCE_DOLLARS,
+      {
+        downPaymentPercent: RENT_VS_BUY_ASSUMPTIONS.downPaymentPercent,
+        amortizationYears: RENT_VS_BUY_ASSUMPTIONS.amortizationYears,
+        contractRate,
+      }
+    )
+    where.listPrice = { gte: bandMin, lte: bandMax }
+  } else if (minPrice || maxPrice) {
     where.listPrice = {
       ...(minPrice ? { gte: Number(minPrice) } : {}),
       ...(maxPrice ? { lte: Number(maxPrice) } : {}),

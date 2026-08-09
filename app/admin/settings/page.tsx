@@ -19,13 +19,14 @@ import type { AgentProfileSettings } from '@/components/admin/AgentProfileCard'
 import { BrandLogoCard }      from '@/components/admin/BrandLogoCard'
 import { TopAgentsSettingsCard } from '@/components/admin/TopAgentsSettingsCard'
 import { MortgageRateSettingsCard } from '@/components/admin/MortgageRateSettingsCard'
+import { RentVsBuySignupSettingsCard } from '@/components/admin/RentVsBuySignupSettingsCard'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/mortgage'
 
 export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, topAgentsRows, propertySubTypeGroups, mortgageRateRow] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, topAgentsRows, propertySubTypeGroups, mortgageRateRow, rentVsBuySignupRows] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property' }, orderBy: { syncedAt: 'desc' } }),
@@ -54,6 +55,7 @@ export default async function SettingsPage() {
       where:  { propertySubType: { not: null } },
     }),
     prisma.siteSettings.findUnique({ where: { key: 'mortgage_current_rate_percent' } }),
+    prisma.siteSettings.findMany({ where: { key: { in: ['rent_vs_buy_signup_prompt_enabled', 'rent_vs_buy_signup_prompt_uses'] } } }),
   ])
   const [idxSync, dlaSync, voxMemberSync, voxOfficeSync] = syncLogs
 
@@ -95,6 +97,11 @@ export default async function SettingsPage() {
   const gateEnabled = (gateSettingsMap['listing_gate_enabled'] ?? 'true') === 'true'
 
   const mlsSyncInterval = parseInt(mlsSyncIntervalRow?.value ?? '60', 10)
+
+  const rentVsBuySignupMap: Record<string, string> = {}
+  for (const r of rentVsBuySignupRows) rentVsBuySignupMap[r.key] = r.value
+  const rentVsBuySignupEnabled = (rentVsBuySignupMap['rent_vs_buy_signup_prompt_enabled'] ?? 'true') === 'true'
+  const rentVsBuySignupUses    = parseInt(rentVsBuySignupMap['rent_vs_buy_signup_prompt_uses'] ?? '3', 10)
 
   const hotAlertMap: Record<string, string> = {}
   for (const r of hotAlertRows) hotAlertMap[r.key] = r.value
@@ -169,6 +176,11 @@ export default async function SettingsPage() {
 
         <MortgageRateSettingsCard
           initialRatePercent={mortgageRateRow?.value ?? (DEFAULT_ASSUMPTIONS.contractRate * 100).toFixed(2)}
+        />
+
+        <RentVsBuySignupSettingsCard
+          initialEnabled={rentVsBuySignupEnabled}
+          initialUses={rentVsBuySignupUses}
         />
 
         <TopAgentsSettingsCard

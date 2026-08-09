@@ -6,6 +6,7 @@ import { ResoListingCard, type ResoProperty } from './ResoListingCard'
 import { MlsDisclaimer } from '@/components/mls/MlsDisclaimer'
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput'
 import { getDisplayCity, resolveDistrictSearchTerm } from '@/lib/trreb-districts'
+import { RentVsBuyDisclaimer } from '@/components/tools/RentVsBuyDisclaimer'
 
 interface Filters {
   city:         string
@@ -14,6 +15,7 @@ interface Filters {
   listingType:  string
   minPrice:     string
   maxPrice:     string
+  targetMonthlyPayment: string
   minBeds:      string
   minBaths:     string
   minGarage:    string
@@ -23,7 +25,7 @@ interface Filters {
 
 const EMPTY: Filters = {
   city: '', community: '', propertyType: '', listingType: '',
-  minPrice: '', maxPrice: '', minBeds: '', minBaths: '',
+  minPrice: '', maxPrice: '', targetMonthlyPayment: '', minBeds: '', minBaths: '',
   minGarage: '', minSqft: '', maxSqft: '',
 }
 
@@ -51,6 +53,7 @@ function friendlyLabel(f: Filters): string {
     const hi = f.maxPrice ? `$${Number(f.maxPrice).toLocaleString()}` : ''
     parts.push(lo && hi ? `${lo}–${hi}` : lo ? `${lo}+` : `up to ${hi}`)
   }
+  if (f.targetMonthlyPayment) parts.push(`~$${Number(f.targetMonthlyPayment).toLocaleString()}/mo`)
   if (f.minBeds)   parts.push(`${f.minBeds}+ bed`)
   if (f.minBaths)  parts.push(`${f.minBaths}+ bath`)
   if (f.minGarage) parts.push(`${f.minGarage}+ garage`)
@@ -67,6 +70,7 @@ interface Props { firstName: string | null; agentEmail: string }
 export function PortalListings({ firstName, agentEmail }: Props) {
   const [filters,     setFilters]     = useState<Filters>(EMPTY)
   const [applied,     setApplied]     = useState<Filters>(EMPTY)
+  const [searchMode,  setSearchMode]  = useState<'price' | 'payment'>('price')
   const [properties,  setProperties]  = useState<ResoProperty[]>([])
   const [total,       setTotal]       = useState(0)
   const [totalPages,  setTotalPages]  = useState(1)
@@ -242,14 +246,40 @@ export function PortalListings({ firstName, agentEmail }: Props) {
               <option value="lease">For Lease</option>
             </select>
           </div>
-          <div className="w-32">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Min Price</label>
-            <input type="number" value={filters.minPrice} onChange={e => update('minPrice', e.target.value)} placeholder="$0" className={inputCls} />
+          <div className="flex items-end gap-1 mb-0.5">
+            <button
+              type="button"
+              onClick={() => { setSearchMode('price'); update('targetMonthlyPayment', '') }}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === 'price' ? 'bg-amber-600 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+            >
+              Price
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSearchMode('payment'); update('minPrice', ''); update('maxPrice', '') }}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === 'payment' ? 'bg-amber-600 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+            >
+              Monthly Payment
+            </button>
           </div>
-          <div className="w-32">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Max Price</label>
-            <input type="number" value={filters.maxPrice} onChange={e => update('maxPrice', e.target.value)} placeholder="Any" className={inputCls} />
-          </div>
+
+          {searchMode === 'price' ? (
+            <>
+              <div className="w-32">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Min Price</label>
+                <input type="number" value={filters.minPrice} onChange={e => update('minPrice', e.target.value)} placeholder="$0" className={inputCls} />
+              </div>
+              <div className="w-32">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Max Price</label>
+                <input type="number" value={filters.maxPrice} onChange={e => update('maxPrice', e.target.value)} placeholder="Any" className={inputCls} />
+              </div>
+            </>
+          ) : (
+            <div className="w-44">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Est. Monthly Payment</label>
+              <input type="number" value={filters.targetMonthlyPayment} onChange={e => update('targetMonthlyPayment', e.target.value)} placeholder="$2,500" className={inputCls} />
+            </div>
+          )}
 
           <button
             onClick={() => setShowMore(v => !v)}
@@ -270,6 +300,8 @@ export function PortalListings({ firstName, agentEmail }: Props) {
             )}
           </div>
         </div>
+
+        {searchMode === 'payment' && <RentVsBuyDisclaimer className="mt-3" />}
 
         {/* More filters */}
         {showMore && (

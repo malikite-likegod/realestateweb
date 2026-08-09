@@ -1324,6 +1324,21 @@ model GateView {
   @@map("gate_views")
 }
 
+// ─── Tool Usage Tracking ───────────────────────────────────────────────────
+// One row per completed use of a public tool (e.g. Rent vs Buy), keyed by the
+// same httpOnly re_session cookie as GateView. Drives the signup-prompt nudge
+// once a session's usage count crosses the admin-configured threshold.
+
+model ToolUsageEvent {
+  id        String   @id @default(cuid())
+  sessionId String
+  tool      String
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, tool])
+  @@map("tool_usage_events")
+}
+
 // ─── Budget & Expense Tracker ─────────────────────────────────────────────────
 
 model BudgetGroup {

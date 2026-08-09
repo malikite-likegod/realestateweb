@@ -15,6 +15,7 @@ import { RentCostFields } from './rent-vs-buy/RentCostFields'
 import { CostSummaryPanel } from './rent-vs-buy/CostSummaryPanel'
 import { ListingResultsGrid } from './rent-vs-buy/ListingResultsGrid'
 import { RentVsBuyDisclaimer } from './RentVsBuyDisclaimer'
+import { ListingGateModal } from '@/components/public/ListingGateModal'
 
 interface RentVsBuyCalculatorProps {
   /** Current rate (decimal, e.g. 0.0499), sourced from Settings → Mortgage Calculator. Falls back to a static default if unset. */
@@ -40,6 +41,9 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
   const [searchResult, setSearchResult] = useState<RentVsBuySearchResponse | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState(false)
+
+  const [showSignupModal, setShowSignupModal] = useState(false)
+  const hasPromptedRef = useRef(false)
 
   const contractRate = initialRate ?? DEFAULT_ASSUMPTIONS.contractRate
 
@@ -87,6 +91,10 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
         .then(data => {
           setSearchResult(data)
           setSearchLoading(false)
+          if (data.promptSignup && !hasPromptedRef.current) {
+            hasPromptedRef.current = true
+            setShowSignupModal(true)
+          }
         })
         .catch(err => {
           if (err.name === 'AbortError') return
@@ -105,6 +113,18 @@ export function RentVsBuyCalculator({ initialRate }: RentVsBuyCalculatorProps) {
 
   return (
     <div className="space-y-8">
+      {showSignupModal && (
+        <ListingGateModal
+          initialState="gate"
+          returnUrl="/tools/rent-vs-buy"
+          dismissible
+          onDismiss={() => setShowSignupModal(false)}
+          title="Want to see more homes like these?"
+          subtitle="Sign up and I'll send you a fuller, curated list of properties matched to your budget — not just a teaser."
+          ctaLabel="Get the Full List"
+        />
+      )}
+
       <RentVsBuyDisclaimer />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

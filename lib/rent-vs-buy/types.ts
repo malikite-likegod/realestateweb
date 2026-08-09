@@ -31,4 +31,6 @@ export interface RentVsBuySearchResponse {
   matchedCityName: string
   /** False when the searched city couldn't be geocoded — results are city-matched only, not distance-filtered. */
   distanceAvailable: boolean
+  /** True once this session has used the tool enough times to trigger the signup-prompt nudge. */
+  promptSignup?: boolean
 }

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { searchRentVsBuyListings } from '@/services/rent-vs-buy/search'
 import { DEFAULT_MAX_DISTANCE_KM, PAYMENT_MATCH_TOLERANCE_DOLLARS } from '@/lib/rent-vs-buy'
+import { getRentVsBuySignupPromptSettings } from '@/lib/site-settings'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -8,13 +11,29 @@ export async function GET(request: Request) {
   const city = searchParams.get('city') ?? ''
   const maxDistanceKmParam = Number(searchParams.get('maxDistanceKm'))
   const targetMonthlyPaymentParam = Number(searchParams.get('targetMonthlyPayment'))
+  const targetMonthlyPayment = Number.isFinite(targetMonthlyPaymentParam) ? targetMonthlyPaymentParam : 0
 
   const result = await searchRentVsBuyListings({
     city,
     maxDistanceKm: Number.isFinite(maxDistanceKmParam) && maxDistanceKmParam > 0 ? maxDistanceKmParam : DEFAULT_MAX_DISTANCE_KM,
-    targetMonthlyPayment: Number.isFinite(targetMonthlyPaymentParam) ? targetMonthlyPaymentParam : 0,
+    targetMonthlyPayment,
     toleranceDollars: PAYMENT_MATCH_TOLERANCE_DOLLARS,
   })
 
-  return NextResponse.json(result)
+  // Track tool usage per session to drive the signup-prompt nudge — only counts real
+  // searches, matching the same guard searchRentVsBuyListings uses internally.
+  let promptSignup = false
+  if (city.trim() && targetMonthlyPayment > 0) {
+    const sessionId = (await cookies()).get('re_session')?.value
+    if (sessionId) {
+      await prisma.toolUsageEvent.create({ data: { sessionId, tool: 'rent_vs_buy' } })
+      const [{ enabled, uses }, count] = await Promise.all([
+        getRentVsBuySignupPromptSettings(),
+        prisma.toolUsageEvent.count({ where: { sessionId, tool: 'rent_vs_buy' } }),
+      ])
+      promptSignup = enabled && count >= uses
+    }
+  }
+
+  return NextResponse.json({ ...result, promptSignup })
 }

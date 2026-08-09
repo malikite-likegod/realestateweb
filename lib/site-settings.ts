@@ -27,6 +27,22 @@ export const getGateSettings = unstable_cache(
   { revalidate: 60 }
 )
 
+export const getRentVsBuySignupPromptSettings = unstable_cache(
+  async () => {
+    const rows = await prisma.siteSettings.findMany({
+      where: { key: { in: ['rent_vs_buy_signup_prompt_enabled', 'rent_vs_buy_signup_prompt_uses'] } },
+    })
+    const map: Record<string, string> = {}
+    for (const r of rows) map[r.key] = r.value
+    return {
+      enabled: (map['rent_vs_buy_signup_prompt_enabled'] ?? 'true') === 'true',
+      uses:    parseInt(map['rent_vs_buy_signup_prompt_uses'] ?? '3', 10),
+    }
+  },
+  ['rent-vs-buy-signup-prompt-settings'],
+  { revalidate: 60 }
+)
+
 export const getMlsSyncInterval = unstable_cache(
   async () => {
     const row = await prisma.siteSettings.findUnique({ where: { key: 'mls_sync_interval_minutes' } })
