@@ -287,6 +287,12 @@ export async function sendEmail(input: SendEmailInput) {
   const agentMap: Record<string, string> = {}
   for (const r of agentRows) agentMap[r.key] = r.value
 
+  // Uploaded images (agent photo, brand logo) are stored as relative /uploads/…
+  // paths, which resolve fine in-app but have no origin to resolve against
+  // inside an emailed HTML document — make them absolute.
+  const appUrlForAssets = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const toAbsoluteUrl = (url: string) => url.startsWith('/') ? `${appUrlForAssets}${url}` : url
+
   const mergeVars: Record<string, string> = {
     firstName:        contact?.firstName ?? '',
     lastName:         contact?.lastName  ?? '',
@@ -300,8 +306,8 @@ export async function sendEmail(input: SendEmailInput) {
     agentBio:         agentMap['agent_bio']         ?? '',
     agentBrokerage:   agentMap['agent_brokerage']   ?? '',
     officeAddress:    agentMap['office_address']    ?? '',
-    agentImage:       agentMap['agent_image']       ?? '',
-    brandLogo:        agentMap['brand_logo']        ?? '',
+    agentImage:       toAbsoluteUrl(agentMap['agent_image'] ?? ''),
+    brandLogo:        toAbsoluteUrl(agentMap['brand_logo']  ?? ''),
     MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
     YEAR:             String(new Date().getFullYear()),
   }
