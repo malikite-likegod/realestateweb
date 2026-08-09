@@ -22,17 +22,21 @@ export async function GET(request: Request) {
 
   // Track tool usage per session to drive the signup-prompt nudge — only counts real
   // searches, matching the same guard searchRentVsBuyListings uses internally.
+  // Non-critical: never let a tracking failure break the actual search response
+  // (mirrors the PropertySearchLog handling in services/search/engine.ts).
   let promptSignup = false
   if (city.trim() && targetMonthlyPayment > 0) {
-    const sessionId = (await cookies()).get('re_session')?.value
-    if (sessionId) {
-      await prisma.toolUsageEvent.create({ data: { sessionId, tool: 'rent_vs_buy' } })
-      const [{ enabled, uses }, count] = await Promise.all([
-        getRentVsBuySignupPromptSettings(),
-        prisma.toolUsageEvent.count({ where: { sessionId, tool: 'rent_vs_buy' } }),
-      ])
-      promptSignup = enabled && count >= uses
-    }
+    try {
+      const sessionId = (await cookies()).get('re_session')?.value
+      if (sessionId) {
+        await prisma.toolUsageEvent.create({ data: { sessionId, tool: 'rent_vs_buy' } })
+        const [{ enabled, uses }, count] = await Promise.all([
+          getRentVsBuySignupPromptSettings(),
+          prisma.toolUsageEvent.count({ where: { sessionId, tool: 'rent_vs_buy' } }),
+        ])
+        promptSignup = enabled && count >= uses
+      }
+    } catch { /* non-critical */ }
   }
 
   return NextResponse.json({ ...result, promptSignup })
