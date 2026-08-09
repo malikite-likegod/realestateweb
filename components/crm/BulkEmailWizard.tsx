@@ -14,6 +14,7 @@ import { useRouter }                   from 'next/navigation'
 import { ChevronRight, ChevronLeft, Mail, Search, Check, Clock } from 'lucide-react'
 import { Button, useToast }            from '@/components/ui'
 import { MergeTagPicker }              from './MergeTagPicker'
+import { UNTAGGED_TAG_ID }             from '@/lib/constants'
 import type { ContactWithTags, Tag }   from '@/types'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -43,12 +44,17 @@ function computeRecipients(
   selectedTagIds:  string[],
   selectedIds:     string[],
 ): ContactWithTags[] {
-  const tagSet  = new Set(selectedTagIds)
-  const idSet   = new Set(selectedIds)
-  const result  = new Map<string, ContactWithTags>()
+  const tagSet     = new Set(selectedTagIds)
+  const idSet      = new Set(selectedIds)
+  const wantUntagged = tagSet.has(UNTAGGED_TAG_ID)
+  const result     = new Map<string, ContactWithTags>()
 
   for (const c of contacts) {
-    if (idSet.has(c.id) || c.tags.some(t => tagSet.has(t.tag.id))) {
+    if (
+      idSet.has(c.id) ||
+      c.tags.some(t => tagSet.has(t.tag.id)) ||
+      (wantUntagged && c.tags.length === 0)
+    ) {
       result.set(c.id, c)
     }
   }
@@ -243,6 +249,25 @@ export function BulkEmailWizard({ contacts, tags, preSelectedIds = [] }: Props) 
               {tags.length === 0 && (
                 <p className="text-sm text-charcoal-400">No tags found. Add tags to contacts first.</p>
               )}
+              {(() => {
+                const untaggedCount = contacts.filter(c => c.tags.length === 0).length
+                if (untaggedCount === 0) return null
+                const active = selectedTagIds.includes(UNTAGGED_TAG_ID)
+                return (
+                  <button
+                    onClick={() => toggleTag(UNTAGGED_TAG_ID)}
+                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg border text-sm transition-colors ${
+                      active ? 'border-indigo-400 bg-indigo-50 text-indigo-800' : 'border-charcoal-200 bg-white text-charcoal-700 hover:bg-charcoal-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full border border-charcoal-300 bg-charcoal-100" />
+                      <span className="font-medium">Untagged</span>
+                    </div>
+                    <span className="text-xs text-charcoal-400">{untaggedCount} contact{untaggedCount !== 1 ? 's' : ''}</span>
+                  </button>
+                )
+              })()}
               {tags.map(tag => {
                 const count = contacts.filter(c => c.tags.some(t => t.tag.id === tag.id)).length
                 const active = selectedTagIds.includes(tag.id)

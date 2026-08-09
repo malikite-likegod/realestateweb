@@ -1,7 +1,8 @@
-import { NextResponse }  from 'next/server'
-import { z }             from 'zod'
-import { prisma }        from '@/lib/prisma'
-import { getSession }    from '@/lib/auth'
+import { NextResponse }     from 'next/server'
+import { z }                from 'zod'
+import { prisma }           from '@/lib/prisma'
+import { getSession }       from '@/lib/auth'
+import { UNTAGGED_TAG_ID }  from '@/lib/constants'
 
 const MAX_RECIPIENTS = 2000
 
@@ -35,10 +36,21 @@ export async function POST(request: Request) {
   const { tagIds, contactIds, subject, body: emailBody, templateId, scheduledAt } = parsed
 
   try {
+    const includeUntagged = tagIds.includes(UNTAGGED_TAG_ID)
+    const realTagIds      = tagIds.filter(id => id !== UNTAGGED_TAG_ID)
+
     // Fetch contacts by tag(s)
-    const tagContacts = tagIds.length > 0
+    const tagContacts = realTagIds.length > 0
       ? await prisma.contact.findMany({
-          where:  { tags: { some: { tagId: { in: tagIds } } } },
+          where:  { tags: { some: { tagId: { in: realTagIds } } } },
+          select: { id: true, email: true },
+        })
+      : []
+
+    // Fetch contacts with no tags at all
+    const untaggedContacts = includeUntagged
+      ? await prisma.contact.findMany({
+          where:  { tags: { none: {} } },
           select: { id: true, email: true },
         })
       : []
@@ -53,7 +65,7 @@ export async function POST(request: Request) {
 
     // Deduplicate by contact ID
     const contactMap = new Map<string, { id: string; email: string | null }>()
-    for (const c of [...tagContacts, ...indivContacts]) contactMap.set(c.id, c)
+    for (const c of [...tagContacts, ...untaggedContacts, ...indivContacts]) contactMap.set(c.id, c)
     const allContacts = Array.from(contactMap.values())
 
     // Enforce recipient cap

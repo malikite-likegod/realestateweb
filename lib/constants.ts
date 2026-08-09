@@ -51,6 +51,9 @@ export const DEAL_STAGES_DEFAULT = [
   { name: 'Closed', order: 6, color: '#059669' },
 ]
 
+// Sentinel "tag id" for filtering/selecting contacts that have no tags at all
+export const UNTAGGED_TAG_ID = '__untagged__'
+
 export const NAV_LINKS = [
   { label: 'Buy', href: '/buying' },
   { label: 'Sell', href: '/selling' },
