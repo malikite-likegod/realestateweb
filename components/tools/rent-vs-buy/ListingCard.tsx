@@ -22,8 +22,8 @@ export function ListingCard({ listing }: { listing: RentVsBuyListing }) {
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-charcoal-800 to-charcoal-950" />
         )}
-        {/* Grey gradient scrim — darkest at the bottom, where the most text sits */}
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/95 via-charcoal-950/60 to-charcoal-950/10" />
+        {/* Grey gradient scrim — dark across the whole photo, darkest at the bottom */}
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/95 via-charcoal-950/80 to-charcoal-950/45" />
 
         <div className="relative z-10 flex flex-1 flex-col p-5 text-white">
           <div className="flex items-start justify-between gap-2">
@@ -48,12 +48,12 @@ export function ListingCard({ listing }: { listing: RentVsBuyListing }) {
             {listing.sqft != null && <span className="inline-flex items-center gap-1"><Ruler size={15} /> {listing.sqft.toLocaleString()} sqft</span>}
           </div>
 
-          {/* Solid panel (not just the scrim) so this number stays readable over any photo */}
-          <div className="mt-4 flex-1 rounded-xl bg-white/95 backdrop-blur-sm p-3">
-            <p className="text-xs uppercase tracking-wide text-charcoal-500">Est. Monthly Mortgage Payment</p>
-            <p className="text-lg font-bold text-charcoal-900">
+          {/* Transparent — sits directly on the darkened photo, set off by a top divider */}
+          <div className="mt-4 flex-1 border-t border-white/20 pt-3">
+            <p className="text-xs uppercase tracking-wide text-white/70">Est. Monthly Mortgage Payment</p>
+            <p className="text-lg font-bold text-white drop-shadow-sm">
               {formatPrice(listing.estimatedMonthlyPayment)}
-              <span className="text-xs font-normal text-charcoal-500"> /mo (estimate)</span>
+              <span className="text-xs font-normal text-white/70"> /mo (estimate)</span>
             </p>
           </div>
 
