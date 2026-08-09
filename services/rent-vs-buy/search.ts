@@ -32,6 +32,15 @@ function formatAddress(property: {
   return parts.length > 0 ? parts.join(' ') : property.listingKey
 }
 
+function getFirstImage(media: string | null): string | null {
+  try {
+    const items = JSON.parse(media ?? '[]') as { url: string; order?: number }[]
+    return items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0]?.url ?? null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Searches live for-sale MLS listings (ResoProperty, via PropertyService — no brokerage-only
  * filter, matching the site's own convention of showing all IDX-tier listings once a user has
@@ -106,6 +115,7 @@ export async function searchRentVsBuyListings(params: RentVsBuySearchParams): Pr
     baths: p.bathroomsTotalInteger,
     sqft: p.livingArea != null ? Math.round(p.livingArea) : null,
     estimatedMonthlyPayment,
+    imageUrl: getFirstImage(p.media),
   }))
 
   return { listings, matchedCityName: trimmedCity, distanceAvailable }

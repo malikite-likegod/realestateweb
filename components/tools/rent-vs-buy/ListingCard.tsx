@@ -10,40 +10,57 @@ export function ListingCard({ listing }: { listing: RentVsBuyListing }) {
   const displayCity = getDisplayCity(listing.city)
   return (
     <Link href={`/listings/${listing.listingKey}`} className="block h-full">
-      <Card padding="lg" hover className="h-full flex flex-col">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h4 className="font-serif text-lg font-bold text-charcoal-900">{listing.address}</h4>
-            <p className="text-sm text-charcoal-500">
-              {listing.neighbourhood ? `${listing.neighbourhood}, ${displayCity}` : displayCity}
+      <Card padding="none" hover className="relative h-full min-h-[380px] flex flex-col overflow-hidden">
+        {/* Photo background, or a branded fallback when no MLS media is synced yet */}
+        {listing.imageUrl ? (
+          <img
+            src={listing.imageUrl}
+            alt={listing.address}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-charcoal-800 to-charcoal-950" />
+        )}
+        {/* Grey gradient scrim — darkest at the bottom, where the most text sits */}
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/95 via-charcoal-950/60 to-charcoal-950/10" />
+
+        <div className="relative z-10 flex flex-1 flex-col p-5 text-white">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h4 className="font-serif text-lg font-bold drop-shadow-sm">{listing.address}</h4>
+              <p className="text-sm text-white/80">
+                {listing.neighbourhood ? `${listing.neighbourhood}, ${displayCity}` : displayCity}
+              </p>
+            </div>
+            {listing.distanceKm != null && (
+              <Badge variant="gold">
+                <span className="inline-flex items-center gap-1"><MapPin size={11} /> {listing.distanceKm} km</span>
+              </Badge>
+            )}
+          </div>
+
+          <p className="font-serif text-2xl font-bold mt-3 drop-shadow-sm">{formatPrice(listing.price)}</p>
+
+          <div className="mt-3 flex items-center gap-4 text-sm text-white/90">
+            {listing.beds != null && <span className="inline-flex items-center gap-1"><BedDouble size={15} /> {listing.beds} bd</span>}
+            {listing.baths != null && <span className="inline-flex items-center gap-1"><Bath size={15} /> {listing.baths} ba</span>}
+            {listing.sqft != null && <span className="inline-flex items-center gap-1"><Ruler size={15} /> {listing.sqft.toLocaleString()} sqft</span>}
+          </div>
+
+          {/* Solid panel (not just the scrim) so this number stays readable over any photo */}
+          <div className="mt-4 flex-1 rounded-xl bg-white/95 backdrop-blur-sm p-3">
+            <p className="text-xs uppercase tracking-wide text-charcoal-500">Est. Monthly Mortgage Payment</p>
+            <p className="text-lg font-bold text-charcoal-900">
+              {formatPrice(listing.estimatedMonthlyPayment)}
+              <span className="text-xs font-normal text-charcoal-500"> /mo (estimate)</span>
             </p>
           </div>
-          {listing.distanceKm != null && (
-            <Badge variant="gold">
-              <span className="inline-flex items-center gap-1"><MapPin size={11} /> {listing.distanceKm} km</span>
-            </Badge>
-          )}
+
+          <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold">
+            View listing →
+          </span>
         </div>
-
-        <p className="font-serif text-2xl font-bold text-charcoal-900 mt-3">{formatPrice(listing.price)}</p>
-
-        <div className="mt-3 flex items-center gap-4 text-sm text-charcoal-600">
-          {listing.beds != null && <span className="inline-flex items-center gap-1"><BedDouble size={15} /> {listing.beds} bd</span>}
-          {listing.baths != null && <span className="inline-flex items-center gap-1"><Bath size={15} /> {listing.baths} ba</span>}
-          {listing.sqft != null && <span className="inline-flex items-center gap-1"><Ruler size={15} /> {listing.sqft.toLocaleString()} sqft</span>}
-        </div>
-
-        <div className="mt-4 flex-1 rounded-xl bg-charcoal-50 p-3">
-          <p className="text-xs uppercase tracking-wide text-charcoal-500">Est. Monthly Mortgage Payment</p>
-          <p className="text-lg font-bold text-charcoal-900">
-            {formatPrice(listing.estimatedMonthlyPayment)}
-            <span className="text-xs font-normal text-charcoal-500"> /mo (estimate)</span>
-          </p>
-        </div>
-
-        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-charcoal-900">
-          View listing →
-        </span>
       </Card>
     </Link>
   )

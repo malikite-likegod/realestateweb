@@ -24,6 +24,8 @@ export interface RentVsBuyListing {
   baths: number | null
   sqft: number | null
   estimatedMonthlyPayment: number
+  /** First MLS photo URL, if the listing has media synced. */
+  imageUrl: string | null
 }
 
 export interface RentVsBuySearchResponse {
