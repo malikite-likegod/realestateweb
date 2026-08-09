@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 type Step =
   | { name: 'email' }
@@ -14,6 +15,7 @@ function LoginFlow() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const redirectTo   = searchParams.get('redirect') ?? '/portal'
+  const resetSuccess = searchParams.get('reset') === '1'
 
   const [step,     setStep]     = useState<Step>({ name: 'email' })
   const [email,    setEmail]    = useState('')
@@ -126,6 +128,12 @@ function LoginFlow() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
 
+        {resetSuccess && (
+          <p className="mb-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-3 py-2">
+            Your password has been reset. Please sign in.
+          </p>
+        )}
+
         {/* ── Email step ── */}
         {step.name === 'email' && (
           <>
@@ -155,7 +163,12 @@ function LoginFlow() {
             <p className="text-sm text-gray-500 mb-6">{email}</p>
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  <Link href="/portal/forgot-password" className="text-xs text-amber-600 hover:text-amber-700">
+                    Forgot password?
+                  </Link>
+                </div>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} required autoFocus
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
               </div>

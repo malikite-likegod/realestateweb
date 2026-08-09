@@ -52,6 +52,8 @@ export async function middleware(request: NextRequest) {
     '/admin/login',
     '/api/auth/', // all auth routes (login, 2FA send/verify, etc.) — must be reachable even when blocked
     '/api/portal/login',
+    '/api/portal/forgot-password',
+    '/api/portal/reset-password',
     // Note: /api/internal/* is excluded by the middleware matcher config — no need to list here
   ]
   const isBlockSkipped = skipBlockPaths.some(p => pathname.startsWith(p))
@@ -121,7 +123,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password') {
+  if (
+    pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password' ||
+    pathname === '/api/portal/forgot-password' || pathname === '/api/portal/reset-password' ||
+    pathname === '/api/portal/reset-password/validate'
+  ) {
     const { allowed, retryAfterMs } = await forgotPassLimit.check(ip)
     if (!allowed) {
       return NextResponse.json(

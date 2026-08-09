@@ -100,6 +100,8 @@ model Contact {
   accountStatus         String?   // null | 'invited' | 'active'
   invitationTokenHash   String?
   invitationExpiresAt   DateTime?
+  resetTokenHash        String?
+  resetTokenExpiry      DateTime?
   notes        String?
   address      String?
   city         String?
