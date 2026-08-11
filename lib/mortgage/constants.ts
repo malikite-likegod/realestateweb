@@ -58,7 +58,7 @@ export const DEFAULT_ASSUMPTIONS = {
    * source of truth — this value is not a live feed and should not be relied on alone.
    */
   contractRate: 0.0499,
-  amortizationYears: 25,
+  amortizationYears: 30,
   creditTier: 'good' as CreditTier,
 }
 

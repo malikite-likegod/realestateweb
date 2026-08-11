@@ -15,7 +15,7 @@ export const DEFAULT_MAX_DISTANCE_KM = 25
  */
 export const RENT_VS_BUY_ASSUMPTIONS = {
   downPaymentPercent: 0.05,
-  amortizationYears: 25,
+  amortizationYears: 30,
 } as const
 
 /** Cap on how many matching listings the search returns — this is a teaser, not a full results page. */
