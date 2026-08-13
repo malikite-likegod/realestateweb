@@ -57,6 +57,7 @@ export const UNTAGGED_TAG_ID = '__untagged__'
 export const NAV_LINKS = [
   { label: 'Buy', href: '/buying' },
   { label: 'Sell', href: '/selling' },
+  { label: 'Free Home Evaluation', href: '/home-evaluation' },
   { label: 'Listings', href: '/listings' },
   { label: 'Tools', href: '/tools' },
   { label: 'Communities', href: '/communities' },

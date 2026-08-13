@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { Button, Input, Select } from '@/components/ui'
 
-export function HomeValuationForm() {
+interface HomeValuationFormProps {
+  source?: string
+}
+
+export function HomeValuationForm({ source = 'home_valuation' }: HomeValuationFormProps) {
   const [form, setForm] = useState({ address: '', city: '', propertyType: '', bedrooms: '', email: '', name: '', phone: '' })
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
@@ -14,7 +18,7 @@ export function HomeValuationForm() {
     await fetch('/api/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, source: 'home_valuation', interest: 'sell' }),
+      body: JSON.stringify({ ...form, source, interest: 'sell' }),
     })
     setSent(true)
     setLoading(false)
