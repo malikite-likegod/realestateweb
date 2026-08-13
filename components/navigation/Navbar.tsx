@@ -39,9 +39,9 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-20 items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
               <span className={cn(
-                'font-serif text-2xl font-bold tracking-tight transition-colors',
+                'whitespace-nowrap font-serif text-2xl font-bold tracking-tight transition-colors',
                 solid ? 'text-charcoal-900' : 'text-white',
               )}>
                 {APP_NAME}
@@ -49,13 +49,13 @@ export function Navbar() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden lg:flex items-center gap-8">
+            <nav className="hidden xl:flex items-center gap-5">
               {NAV_LINKS.map(link => (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    'text-sm font-medium tracking-wide transition-colors hover:text-gold-500',
+                    'whitespace-nowrap text-sm font-medium tracking-wide transition-colors hover:text-gold-500',
                     solid ? 'text-charcoal-700' : 'text-white/90',
                   )}
                 >
@@ -65,11 +65,11 @@ export function Navbar() {
             </nav>
 
             {/* CTA */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden xl:flex items-center gap-3">
               <a
                 href="tel:+14168888352"
                 className={cn(
-                  'flex items-center gap-1.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-1.5 whitespace-nowrap text-sm font-medium transition-colors',
                   solid ? 'text-charcoal-700' : 'text-white/90',
                 )}
               >
@@ -77,14 +77,14 @@ export function Navbar() {
                 (416) 888-8352
               </a>
               <Button variant="gold" size="sm" asChild>
-                <Link href="/contact">Get in Touch</Link>
+                <Link href="/contact" className="whitespace-nowrap">Get in Touch</Link>
               </Button>
             </div>
 
             {/* Mobile toggle */}
             <button
               onClick={() => setMobileOpen(true)}
-              className={cn('lg:hidden p-2', solid ? 'text-charcoal-900' : 'text-white')}
+              className={cn('xl:hidden p-2', solid ? 'text-charcoal-900' : 'text-white')}
             >
               <Menu size={24} />
             </button>
