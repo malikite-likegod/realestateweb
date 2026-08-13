@@ -31,6 +31,7 @@ services:
         NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_KEY:-}
         NEXT_PUBLIC_GOOGLE_MAPS_ID:  ${NEXT_PUBLIC_GOOGLE_MAPS_ID:-}
         NEXT_PUBLIC_APP_URL:         ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -65,6 +66,7 @@ services:
       RESO_SYNC_SECRET:     ${RESO_SYNC_SECRET:-}
       NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_KEY:-}
       NEXT_PUBLIC_GOOGLE_MAPS_ID:  ${NEXT_PUBLIC_GOOGLE_MAPS_ID:-}
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
       # Server-side key for the Geocoding API (services/reso/geocode.ts). Must NOT have
       # HTTP referrer restrictions — Google rejects referrer-restricted keys for server-side
       # APIs. Restrict by API (Geocoding API only) and/or server IP instead.

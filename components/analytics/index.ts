@@ -1,3 +1,4 @@
+export { GoogleAnalytics } from './GoogleAnalytics'
 export { StatsCard } from './StatsCard'
 export { AnalyticsChart } from './AnalyticsChart'
 export { TrafficChart } from './TrafficChart'
