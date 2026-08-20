@@ -14,7 +14,7 @@
  *  - Category filter pills at the top
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Plus, Pencil, Trash2, Eye, FileCode2, Upload,
   Mail, LayoutTemplate, Clock,
@@ -65,41 +65,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   custom:     'bg-purple-100 text-purple-700',
 }
 
-/** Sample values substituted during preview rendering */
-const PREVIEW_VARS: Record<string, string> = {
-  firstName:        'Jane',
-  lastName:         'Smith',
-  fullName:         'Jane Smith',
-  email:            'jane@example.com',
-  phone:            '(416) 555-0100',
-  agentName:        'Michael Taylor',
-  agentEmail:       'michael@michaeltaylor.ca',
-  agentPhone:       '(416) 555-0199',
-  agentDesignation: 'REALTOR®',
-  agentBrokerage:   'LuxeRealty Inc., Brokerage',
-  officeAddress:    '123 King St W, Toronto, ON M5H 1A1',
-  agentBio:         'Michael Taylor is a top-producing REALTOR® with over 15 years of experience in the GTA luxury market.',
-  agentImage:       '',
-  brandLogo:        '',
-  MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
-  YEAR:             String(new Date().getFullYear()),
-}
-
-function applyPreview(text: string) {
-  // Resolve standard {{variable}} tags
-  let out = text.replace(/\{\{(\w+)\}\}/g, (_, k) => PREVIEW_VARS[k] ?? `{{${k}}}`)
-  // Render listing tags as inline placeholders so the preview is readable
-  out = out.replace(
-    /\{\{listing:([^:}]+):(\w+)\}\}/g,
-    (_, mls: string, field: string) => `[Listing ${mls} — ${field}]`,
-  )
-  // Render random listing tags as inline placeholders
-  out = out.replace(
-    /\{\{randomListing_(\d+):(\w+)\}\}/g,
-    (_, slot: string, field: string) => `[Random Listing ${slot} — ${field}]`,
-  )
-  return out
-}
+type PreviewResult = { subject: string; body: string; signatureApplied: boolean }
 
 function emptyForm() {
   return { name: '', subject: '', body: '', category: '' }
@@ -119,6 +85,8 @@ export function EmailTemplateManager({ initialTemplates }: Props) {
   const [form, setForm]           = useState(emptyForm())
   const [saving, setSaving]       = useState(false)
   const [activeTab, setTab]       = useState<'edit' | 'preview'>('edit')
+  const [preview, setPreview]           = useState<PreviewResult | null>(null)
+  const [previewLoading, setPvLoading]  = useState(false)
 
   // Delete confirmation
   const [deleteId, setDeleteId]   = useState<string | null>(null)
@@ -127,6 +95,24 @@ export function EmailTemplateManager({ initialTemplates }: Props) {
   // Refs for MergeTagPicker cursor insertion
   const subjectRef = useRef<HTMLInputElement>(null)
   const bodyRef    = useRef<HTMLTextAreaElement>(null)
+
+  // Fetch a fully-resolved preview (real listing data + sender signature) whenever
+  // the Preview tab is open and the draft changes.
+  useEffect(() => {
+    if (!modalOpen || activeTab !== 'preview') return
+    let cancelled = false
+    setPvLoading(true)
+    fetch('/api/emails/preview', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ subject: form.subject, body: form.body }),
+    })
+      .then(r => r.json())
+      .then(json => { if (!cancelled) setPreview(json.data ?? null) })
+      .catch(() => { if (!cancelled) setPreview(null) })
+      .finally(() => { if (!cancelled) setPvLoading(false) })
+    return () => { cancelled = true }
+  }, [modalOpen, activeTab, form.subject, form.body])
 
   // ── Computed ────────────────────────────────────────────────────────────
 
@@ -394,24 +380,34 @@ export function EmailTemplateManager({ initialTemplates }: Props) {
         {/* ── Preview tab ───────────────────────────────────────────── */}
         {activeTab === 'preview' && (
           <div>
+            <p className="mb-3 text-xs text-charcoal-400">
+              Rendered with sample contact data and real listing/signature content — this is how it will look when actually delivered.
+            </p>
             <div className="mb-3 rounded-lg bg-charcoal-50 px-4 py-2.5 text-sm text-charcoal-700">
               <span className="font-semibold text-charcoal-500">Subject: </span>
-              {applyPreview(form.subject) || <em className="text-charcoal-400">No subject set</em>}
+              {preview?.subject || <em className="text-charcoal-400">No subject set</em>}
             </div>
             {form.body ? (
               <div className="overflow-hidden rounded-xl border border-charcoal-200" style={{ height: 520 }}>
-                <iframe
-                  srcDoc={applyPreview(form.body)}
-                  title="Email preview"
-                  className="h-full w-full"
-                  sandbox="allow-same-origin"
-                />
+                {previewLoading && !preview ? (
+                  <div className="flex h-full items-center justify-center text-sm text-charcoal-400">Rendering preview…</div>
+                ) : (
+                  <iframe
+                    srcDoc={preview?.body ?? ''}
+                    title="Email preview"
+                    className="h-full w-full"
+                    sandbox="allow-same-origin"
+                  />
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-charcoal-200 py-20 text-charcoal-400">
                 <FileCode2 size={32} className="mb-3" />
                 <p className="text-sm">Add an HTML body on the Edit tab to see the preview</p>
               </div>
+            )}
+            {preview && !preview.signatureApplied && (
+              <p className="mt-2 text-xs text-charcoal-400">No signature is configured for the sending account, so none is shown here.</p>
             )}
             <div className="mt-4 flex justify-end gap-3 border-t border-charcoal-100 pt-4">
               <Button variant="ghost" onClick={() => setTab('edit')}>

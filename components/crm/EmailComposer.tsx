@@ -14,6 +14,7 @@ import { sanitizeContent } from '@/lib/sanitize'
 import { Button, useToast } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
 import { FilePicker, type PickedFile } from '@/components/admin/FilePicker'
+import { EmailPreviewModal } from './EmailPreviewModal'
 
 type EmailTemplate = {
   id:      string
@@ -67,6 +68,7 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
   const [templateId, setTemplateId]       = useState('')
   const [attachments, setAttachments]     = useState<PickedFile[]>([])
   const [showPicker,  setShowPicker]      = useState(false)
+  const [showPreview, setShowPreview]     = useState(false)
   const [expanded,    setExpanded]        = useState<string | null>(null)
   const [sending,     setSending]         = useState(false)
   const [sentEmails,  setSentEmails]      = useState<EmailEntry[]>(emails)
@@ -126,15 +128,13 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
     if (!subject.trim() || !body.trim() || !contactEmail) return
     setSending(true)
     try {
-      const finalBody = signature.trim()
-        ? `${body.trim()}\n\n<hr style="border:none;border-top:1px solid #e5e5e5;margin:16px 0"/>\n${signature.trim()}`
-        : body.trim()
-
       const formData = new FormData()
       formData.append('contactId', contactId)
       formData.append('subject',   subject.trim())
-      formData.append('body',      finalBody)
+      formData.append('body',      body.trim())
       formData.append('toEmail',   contactEmail)
+      // Always explicit: an empty string here means the user removed the signature for this send.
+      formData.append('signatureOverride', signature.trim())
       if (templateId) formData.append('templateId', templateId)
       // Send existing-file references by URL — API reads them from disk
       attachments.forEach((a, i) => {
@@ -241,7 +241,26 @@ export function EmailComposer({ emails, contactId, contactEmail, emailOptOut = f
               rows={5}
               className="w-full rounded-lg border border-charcoal-200 bg-white px-3 py-2 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900 resize-none font-mono"
             />
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className="self-start flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
+            >
+              <Eye size={13} />
+              Preview email
+            </button>
           </div>
+
+          {showPreview && (
+            <EmailPreviewModal
+              open={showPreview}
+              onClose={() => setShowPreview(false)}
+              subject={subject}
+              body={body}
+              contactId={contactId}
+              signatureOverride={signature.trim()}
+            />
+          )}
 
           {/* Signature */}
           {signature.trim() && (

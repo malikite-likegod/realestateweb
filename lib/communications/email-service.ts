@@ -232,36 +232,167 @@ export async function resolveListingTags(text: string): Promise<string> {
   return result
 }
 
+// ─── Shared rendering (merge tags + signature) ───────────────────────────────
+
+type MergeContact = { firstName: string | null; lastName: string | null; email: string | null; phone: string | null } | null
+
+/** Sample stand-in used when rendering a preview with no specific contact selected. */
+const SAMPLE_CONTACT = { firstName: 'Jordan', lastName: 'Sample', email: 'jordan.sample@example.com', phone: '(555) 123-4567' }
+
+async function buildMergeVars(contact: MergeContact): Promise<Record<string, string>> {
+  // Load agent profile from siteSettings (falls back to env vars)
+  const agentSettingKeys = ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image','brand_logo']
+  const agentRows = await prisma.siteSettings.findMany({ where: { key: { in: agentSettingKeys } } })
+  const agentMap: Record<string, string> = {}
+  for (const r of agentRows) agentMap[r.key] = r.value
+
+  // Uploaded images (agent photo, brand logo) are stored as relative /uploads/…
+  // paths, which resolve fine in-app but have no origin to resolve against
+  // inside an emailed HTML document — make them absolute.
+  const appUrlForAssets = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const toAbsoluteUrl = (url: string) => url.startsWith('/') ? `${appUrlForAssets}${url}` : url
+
+  return {
+    firstName:        contact?.firstName ?? '',
+    lastName:         contact?.lastName  ?? '',
+    fullName:         contact ? [contact.firstName, contact.lastName].filter(Boolean).join(' ') : '',
+    email:            contact?.email     ?? '',
+    phone:            contact?.phone     ?? '',
+    agentName:        agentMap['agent_name']        ?? process.env.AGENT_NAME  ?? '',
+    agentEmail:       agentMap['agent_email']       ?? process.env.AGENT_EMAIL ?? process.env.SMTP_USER ?? '',
+    agentPhone:       agentMap['agent_phone']       ?? process.env.AGENT_PHONE ?? '',
+    agentDesignation: agentMap['agent_designation'] ?? '',
+    agentBio:         agentMap['agent_bio']         ?? '',
+    agentBrokerage:   agentMap['agent_brokerage']   ?? '',
+    officeAddress:    agentMap['office_address']    ?? '',
+    agentImage:       toAbsoluteUrl(agentMap['agent_image'] ?? ''),
+    brandLogo:        toAbsoluteUrl(agentMap['brand_logo']  ?? ''),
+    MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
+    YEAR:             String(new Date().getFullYear()),
+  }
+}
+
+/**
+ * Resolve which signature HTML (if any) to append.
+ *   - `override` explicitly provided (including '') always wins — lets a composer
+ *     UI show an edited or intentionally-removed signature.
+ *   - otherwise falls back to the sending user's stored `User.emailSignature`.
+ *   - otherwise falls back to the site's primary admin user's signature, since
+ *     automated sends (campaign steps) have no specific sending user.
+ */
+async function resolveSignatureHtml(override: string | undefined, sentById: string | undefined): Promise<string | null> {
+  if (override !== undefined) return override.trim() || null
+
+  if (sentById) {
+    const user = await prisma.user.findUnique({ where: { id: sentById }, select: { emailSignature: true } })
+    if (user?.emailSignature?.trim()) return user.emailSignature
+  }
+
+  const fallback = await prisma.user.findFirst({
+    where:   { role: 'admin', emailSignature: { not: null } },
+    orderBy: { createdAt: 'asc' },
+    select:  { emailSignature: true },
+  })
+  return fallback?.emailSignature?.trim() || null
+}
+
+function appendSignature(body: string, signature: string): string {
+  const block = `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e5e5">${signature}</div>`
+  return body.includes('</body>') ? body.replace('</body>', `${block}</body>`) : `${body}${block}`
+}
+
+async function resolveEmailContent(opts: {
+  subject:            string
+  body:                string
+  contact:             MergeContact
+  signatureOverride?:  string
+  sentById?:           string
+}): Promise<{ subject: string; body: string; signatureApplied: boolean }> {
+  const mergeVars = await buildMergeVars(opts.contact)
+  const resolvedSubject = await resolveListingTags(renderTemplate(opts.subject, mergeVars))
+  let   resolvedBody    = await resolveListingTags(renderTemplate(opts.body,    mergeVars))
+
+  const signature = await resolveSignatureHtml(opts.signatureOverride, opts.sentById)
+  if (signature) resolvedBody = appendSignature(resolvedBody, signature)
+
+  return { subject: resolvedSubject, body: resolvedBody, signatureApplied: !!signature }
+}
+
+// ─── Preview (no send, no DB write) ──────────────────────────────────────────
+
+export type EmailPreviewInput = {
+  subject:            string
+  body:                string
+  contactId?:          string
+  signatureOverride?:  string
+  sentById?:           string
+}
+
+/**
+ * Render exactly what a send_email would produce — merge tags, listing tags,
+ * and signature resolved — without sending anything or touching EmailMessage.
+ * Used by the "Preview" modal available anywhere email content is composed.
+ */
+export async function renderEmailPreview(input: EmailPreviewInput) {
+  const contact = input.contactId
+    ? await prisma.contact.findUnique({
+        where:  { id: input.contactId },
+        select: { firstName: true, lastName: true, email: true, phone: true },
+      })
+    : null
+
+  // Unlike a real send, a preview always shows *something* in place of merge tags —
+  // fall back to sample data so an unlinked preview isn't just blank fields.
+  const resolved = await resolveEmailContent({
+    subject:           input.subject,
+    body:              input.body,
+    contact:           contact ?? SAMPLE_CONTACT,
+    signatureOverride: input.signatureOverride,
+    sentById:          input.sentById,
+  })
+
+  return {
+    ...resolved,
+    isSample: !contact,
+    toName:   contact ? [contact.firstName, contact.lastName].filter(Boolean).join(' ') : null,
+    toEmail:  contact?.email ?? null,
+  }
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export type SendEmailInput = {
-  contactId:    string
-  subject:      string
-  body:         string        // HTML
-  toEmail:      string
-  fromEmail?:   string
-  ccEmails?:    string[]
-  templateId?:  string
-  campaignId?:  string
-  sentById?:    string
-  attachments?: Array<{ filename: string; content: Buffer }>
+  /** Omit for a send with no matching CRM contact (e.g. inbox "New Email" to an arbitrary address) — mirrors how unmatched inbound mail is stored with contactId: null. */
+  contactId?:         string
+  subject:            string
+  body:                string        // HTML
+  toEmail:            string
+  fromEmail?:          string
+  ccEmails?:           string[]
+  templateId?:         string
+  campaignId?:         string
+  sentById?:           string
+  signatureOverride?:  string
+  attachments?:        Array<{ filename: string; content: Buffer }>
 }
 
 export async function sendEmail(input: SendEmailInput) {
   const fromEmail  = input.fromEmail ?? process.env.SMTP_FROM ?? 'noreply@example.com'
   const trackingId = globalThis.crypto.randomUUID()
 
-  // Resolve merge-tag variables from the contact record
-  const contact = await prisma.contact.findUnique({
-    where:  { id: input.contactId },
-    select: { firstName: true, lastName: true, email: true, phone: true, emailOptOut: true },
-  })
+  // Resolve merge-tag variables from the contact record, if this send is linked to one
+  const contact = input.contactId
+    ? await prisma.contact.findUnique({
+        where:  { id: input.contactId },
+        select: { firstName: true, lastName: true, email: true, phone: true, emailOptOut: true },
+      })
+    : null
 
   // Block delivery for opted-out contacts — record the attempt without sending
   if (contact?.emailOptOut) {
     return prisma.emailMessage.create({
       data: {
-        contactId:  input.contactId,
+        contactId:  input.contactId ?? null,
         direction:  'outbound',
         status:     'opted_out',
         subject:    input.subject,
@@ -281,38 +412,13 @@ export async function sendEmail(input: SendEmailInput) {
     })
   }
 
-  // Load agent profile from siteSettings (falls back to env vars)
-  const agentSettingKeys = ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image','brand_logo']
-  const agentRows = await prisma.siteSettings.findMany({ where: { key: { in: agentSettingKeys } } })
-  const agentMap: Record<string, string> = {}
-  for (const r of agentRows) agentMap[r.key] = r.value
-
-  // Uploaded images (agent photo, brand logo) are stored as relative /uploads/…
-  // paths, which resolve fine in-app but have no origin to resolve against
-  // inside an emailed HTML document — make them absolute.
-  const appUrlForAssets = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const toAbsoluteUrl = (url: string) => url.startsWith('/') ? `${appUrlForAssets}${url}` : url
-
-  const mergeVars: Record<string, string> = {
-    firstName:        contact?.firstName ?? '',
-    lastName:         contact?.lastName  ?? '',
-    fullName:         [contact?.firstName, contact?.lastName].filter(Boolean).join(' '),
-    email:            contact?.email     ?? '',
-    phone:            contact?.phone     ?? '',
-    agentName:        agentMap['agent_name']        ?? process.env.AGENT_NAME  ?? '',
-    agentEmail:       agentMap['agent_email']       ?? process.env.AGENT_EMAIL ?? process.env.SMTP_USER ?? '',
-    agentPhone:       agentMap['agent_phone']       ?? process.env.AGENT_PHONE ?? '',
-    agentDesignation: agentMap['agent_designation'] ?? '',
-    agentBio:         agentMap['agent_bio']         ?? '',
-    agentBrokerage:   agentMap['agent_brokerage']   ?? '',
-    officeAddress:    agentMap['office_address']    ?? '',
-    agentImage:       toAbsoluteUrl(agentMap['agent_image'] ?? ''),
-    brandLogo:        toAbsoluteUrl(agentMap['brand_logo']  ?? ''),
-    MONTH:            new Date().toLocaleString('en-CA', { month: 'long' }),
-    YEAR:             String(new Date().getFullYear()),
-  }
-  const resolvedSubject = await resolveListingTags(renderTemplate(input.subject, mergeVars))
-  const resolvedBody    = await resolveListingTags(renderTemplate(input.body,    mergeVars))
+  const { subject: resolvedSubject, body: resolvedBody } = await resolveEmailContent({
+    subject:           input.subject,
+    body:              input.body,
+    contact,
+    signatureOverride: input.signatureOverride,
+    sentById:          input.sentById,
+  })
 
   // Inject a 1×1 tracking pixel into the HTML body before the closing </body>
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? ''
@@ -343,7 +449,7 @@ export async function sendEmail(input: SendEmailInput) {
 
   return prisma.emailMessage.create({
     data: {
-      contactId:  input.contactId,
+      contactId:  input.contactId ?? null,
       direction:  'outbound',
       status,
       subject:    resolvedSubject,

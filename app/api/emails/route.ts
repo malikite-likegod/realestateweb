@@ -9,13 +9,14 @@ import { getSession } from '@/lib/auth'
 import { sendEmail, getEmailThread } from '@/lib/communications/email-service'
 
 const sendSchema = z.object({
-  contactId:  z.string(),
-  subject:    z.string().min(1),
-  body:       z.string().min(1), // HTML
-  toEmail:    z.string().email(),
-  fromEmail:  z.string().email().optional(),
-  ccEmails:   z.array(z.string().email()).optional(),
-  templateId: z.string().optional(),
+  contactId:          z.string().optional(),
+  subject:            z.string().min(1),
+  body:               z.string().min(1), // HTML
+  toEmail:            z.string().email(),
+  fromEmail:          z.string().email().optional(),
+  ccEmails:           z.array(z.string().email()).optional(),
+  templateId:         z.string().optional(),
+  signatureOverride:  z.string().optional(),
 })
 
 export async function GET(request: Request) {

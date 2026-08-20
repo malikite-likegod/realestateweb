@@ -8,10 +8,11 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Save, Paperclip, X, Eye } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { MergeTagPicker } from './MergeTagPicker'
 import { FilePicker } from '@/components/admin/FilePicker'
+import { EmailPreviewModal } from './EmailPreviewModal'
 
 type StepType    = 'send_email' | 'send_sms' | 'create_task' | 'wait' | 'update_lead_score' | 'transfer_campaign' | 'send_portal_invite'
 type TriggerType = 'new_lead' | 'deal_stage_change' | 'showing_scheduled' | 'manual'
@@ -434,6 +435,7 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
   templates?:         EmailTemplateOption[]
 }) {
   const [showPicker, setShowPicker] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
 
@@ -486,6 +488,24 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
           <textarea ref={bodyRef} placeholder="Email body (HTML allowed)" rows={10} value={config.body as string}
             onChange={e => onChange('body', e.target.value)}
             className={`${inputCls} resize-none font-mono`} />
+
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            className="self-start flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
+          >
+            <Eye size={13} />
+            Preview email
+          </button>
+
+          {showPreview && (
+            <EmailPreviewModal
+              open={showPreview}
+              onClose={() => setShowPreview(false)}
+              subject={(config.subject as string) ?? ''}
+              body={(config.body as string) ?? ''}
+            />
+          )}
 
           {/* Attachment */}
           {config.attachmentName ? (

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Send, Loader2 } from 'lucide-react'
+import { X, Send, Loader2, Eye } from 'lucide-react'
+import { EmailPreviewModal } from '@/components/crm/EmailPreviewModal'
 
 interface ComposeEmailModalProps {
   onClose:   () => void
@@ -20,6 +21,7 @@ export function ComposeEmailModal({ onClose, defaults }: ComposeEmailModalProps)
   const [sending,  setSending]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
   const [sent,     setSent]     = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   async function handleSend() {
     if (!to.trim() || !subject.trim() || !body.trim()) {
@@ -94,11 +96,28 @@ export function ComposeEmailModal({ onClose, defaults }: ComposeEmailModalProps)
               placeholder="Write your message…"
               className="w-full rounded-lg border border-charcoal-200 px-3 py-2 text-sm text-charcoal-900 focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none font-mono"
             />
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className="mt-2 flex items-center gap-1.5 text-xs text-charcoal-500 hover:text-charcoal-800 transition-colors"
+            >
+              <Eye size={13} />
+              Preview email
+            </button>
           </div>
 
           {error && <p className="text-xs text-red-600">{error}</p>}
           {sent  && <p className="text-xs text-green-600 font-medium">Email sent!</p>}
         </div>
+
+        {showPreview && (
+          <EmailPreviewModal
+            open={showPreview}
+            onClose={() => setShowPreview(false)}
+            subject={subject}
+            body={body}
+          />
+        )}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-charcoal-100 flex justify-end gap-3">
