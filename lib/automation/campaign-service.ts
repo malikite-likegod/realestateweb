@@ -208,17 +208,19 @@ export async function executeNextStep(enrollmentId: string): Promise<void> {
     let transferred = false
 
     switch (step.type) {
-      case 'send_email':
+      case 'send_email': {
+        const { subject, body } = await resolveEmailContent(config)
         await enqueueJob('send_email_job', {
           contactId:      enrollment.contactId,
-          subject:        config.subject        as string,
-          body:           config.body           as string,
+          subject,
+          body,
           templateId:     config.templateId     as string | undefined,
           toEmail:        enrollment.contact.email ?? undefined,
           attachmentUrl:  config.attachmentUrl  as string | undefined,
           attachmentName: config.attachmentName as string | undefined,
         })
         break
+      }
 
       case 'send_sms':
         if (enrollment.contact.phone) {
@@ -471,6 +473,25 @@ async function resolveTaskTypeId(raw: string | undefined | null): Promise<string
 
 function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60_000)
+}
+
+/**
+ * Resolve a send_email step's subject/body. Steps built by reference
+ * (config = { templateId }, no inline copy) fall back to the EmailTemplate —
+ * without this, such steps would send with an undefined subject/body.
+ */
+async function resolveEmailContent(config: Record<string, unknown>): Promise<{ subject: string; body: string }> {
+  const inlineSubject = config.subject as string | undefined
+  const inlineBody    = config.body    as string | undefined
+  if (inlineSubject && inlineBody) return { subject: inlineSubject, body: inlineBody }
+
+  const templateId = config.templateId as string | undefined
+  if (templateId) {
+    const template = await prisma.emailTemplate.findUnique({ where: { id: templateId } })
+    if (template) return { subject: inlineSubject ?? template.subject, body: inlineBody ?? template.body }
+  }
+
+  return { subject: inlineSubject ?? '', body: inlineBody ?? '' }
 }
 
 /**

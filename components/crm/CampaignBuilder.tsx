@@ -437,6 +437,20 @@ function StepConfig({ type, config, onChange, allCampaigns, currentCampaignId, t
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const inputCls = 'w-full rounded-lg border border-charcoal-200 bg-white px-2 py-1 text-sm text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-charcoal-900'
 
+  // Steps created by reference (config = { templateId }, no inline copy — e.g. by an
+  // agent/API caller) show as blank here otherwise, since the fields below are bound
+  // directly to config.subject/config.body. Hydrate them from the template on open.
+  useEffect(() => {
+    if (type !== 'send_email') return
+    if (config.subject || config.body) return
+    const templateId = config.templateId as string | undefined
+    if (!templateId) return
+    const tpl = (templates ?? []).find(t => t.id === templateId)
+    if (!tpl) return
+    onChange('subject', tpl.subject)
+    onChange('body', tpl.body)
+  }, [type, config.templateId, config.subject, config.body, templates, onChange])
+
   function clearAttachment() {
     onChange('attachmentUrl',  '')
     onChange('attachmentName', '')
