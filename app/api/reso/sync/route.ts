@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { verifySecret } from '@/lib/cron-auth'
-import { syncIdxProperty, syncIdxMedia, syncDlaProperty, syncClosedProperty, syncVoxMember, syncVoxOffice } from '@/services/reso/sync'
+import { syncIdxProperty, syncIdxMedia, syncDlaProperty, syncClosedProperty, syncOffMarketProperty, syncVoxMember, syncVoxOffice } from '@/services/reso/sync'
 import { prisma } from '@/lib/prisma'
 import { getMlsSyncInterval } from '@/lib/site-settings'
 
-type SyncType = 'idx_property' | 'dla_property' | 'closed_property' | 'vox_member' | 'vox_office'
+type SyncType = 'idx_property' | 'dla_property' | 'closed_property' | 'offmarket_property' | 'vox_member' | 'vox_office'
 
 // Run sync in background — returns immediately so Nginx doesn't time out on
 // the initial full-sync which can take several minutes.
@@ -64,6 +64,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: 'Closed listings sync started in background' })
   }
 
+  if (type === 'offmarket') {
+    runInBackground(syncOffMarketProperty)
+    return NextResponse.json({ success: true, message: 'Off-market listings sync started in background' })
+  }
+
   if (type === 'vox') {
     runInBackground(() => Promise.all([syncVoxMember(), syncVoxOffice()]))
     return NextResponse.json({ success: true, message: 'VOX sync started in background' })
@@ -75,8 +80,8 @@ export async function POST(request: Request) {
       await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
       // DLA enriches property rows — run after IDX to avoid row conflicts
       // Media fetches photos for listings that don't have them yet
-      // Closed sync writes its own rows and doesn't touch IDX-owned fields — safe alongside DLA/media
-      await Promise.all([syncDlaProperty(), syncIdxMedia(), syncClosedProperty()])
+      // Closed/off-market syncs write their own rows and don't touch IDX-owned fields — safe alongside DLA/media
+      await Promise.all([syncDlaProperty(), syncIdxMedia(), syncClosedProperty(), syncOffMarketProperty()])
     })
     return NextResponse.json({ success: true, message: 'Full sync started in background' })
   }
@@ -90,7 +95,7 @@ export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const syncTypes: SyncType[] = ['idx_property', 'dla_property', 'closed_property', 'vox_member', 'vox_office']
+  const syncTypes: SyncType[] = ['idx_property', 'dla_property', 'closed_property', 'offmarket_property', 'vox_member', 'vox_office']
 
   const [logs, activeCount] = await Promise.all([
     Promise.all(

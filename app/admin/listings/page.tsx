@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader } from '@/components/layout'
 import { Badge, Button } from '@/components/ui'
 import { formatPrice, parseJsonSafe } from '@/lib/utils'
-import { Plus, Edit, Search } from 'lucide-react'
+import { Plus, Edit, Search, BarChart2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -29,6 +29,9 @@ export default async function ListingsManagerPage() {
           <div className="flex gap-2">
             <Button variant="outline" leftIcon={<Search size={16} />} asChild>
               <Link href="/admin/listings/browse">Browse MLS</Link>
+            </Button>
+            <Button variant="outline" leftIcon={<BarChart2 size={16} />} asChild>
+              <Link href="/admin/listings/results">Results</Link>
             </Button>
             <Button variant="primary" leftIcon={<Plus size={16} />} asChild>
               <Link href="/admin/listings/new">Add Listing</Link>

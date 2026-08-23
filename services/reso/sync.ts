@@ -42,6 +42,10 @@ function closedFilter(): string {
   return `StandardStatus eq 'Closed'`
 }
 
+function offMarketFilter(): string {
+  return `StandardStatus ne 'Active' and StandardStatus ne 'Closed'`
+}
+
 function combineFilters(...filters: (string | null)[]): string {
   return filters.filter(Boolean).map(f => `(${f})`).join(' and ')
 }
@@ -245,7 +249,12 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
       }
     }
 
-    // Mark active listings absent from this full run as Closed.
+    // Mark active listings absent from this full run as Removed.
+    // syncOffMarketProperty is the primary path for detecting a listing's real
+    // off-market status (Closed/Expired/Withdrawn/Terminated/etc.) — this is only a
+    // last-resort fallback for listings that vanish from every PropTx feed entirely
+    // (no longer returned by either the active or off-market queries), which is rare
+    // and distinct from a normal status change, so it must not be mislabeled 'Closed'.
     // Uses syncStartedAt (not now-60s) so records processed early in a long
     // run are not incorrectly classified as stale.
     // Only fires on full completion — not on interrupted/rate-limited runs.
@@ -261,7 +270,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
           const keys = stale.slice(i, i + CHUNK).map(p => p.listingKey)
           await prisma.resoProperty.updateMany({
             where: { listingKey: { in: keys } },
-            data:  { standardStatus: 'Closed' },
+            data:  { standardStatus: 'Removed' },
           })
         }
         result.removed = stale.length
@@ -458,6 +467,116 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
       deleted:    result.removed,
       errors:     result.errors.length,
       notes:      [tierNote, ...result.errors].join('\n'),
+      durationMs: result.durationMs,
+    },
+  })
+
+  return result
+}
+
+// ─── Off-Market Property Sync ──────────────────────────────────────────────
+// Catches every listing status other than Active/Closed — Expired, Withdrawn,
+// Terminated, Cancelled, Suspended, etc. Whatever string PropTx sends is stored
+// verbatim in standardStatus; the exact vocabulary isn't hardcoded here since it's
+// not confirmed against production data. This is what lets syncIdxProperty's
+// stale-cleanup stay a rare last-resort fallback instead of mislabeling every
+// off-market listing as 'Closed'.
+
+const OFFMARKET_SELECT = CLOSED_BASE_SELECT.join(',')
+
+export async function syncOffMarketProperty(): Promise<ResoSyncResult> {
+  const start  = Date.now()
+  const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
+  const syncType = 'offmarket_property'
+
+  let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
+
+  console.log(`[offmarket_property] Starting sync from ${toODataTs(lastTimestamp)}`)
+
+  try {
+    while (true) {
+      const batch = await ampreGet<ResoPropertyRaw>('idx', 'Property', {
+        $filter:  combineFilters(cursorFilter('ModificationTimestamp', 'ListingKey', lastTimestamp, lastKey), offMarketFilter()),
+        $orderby: 'ModificationTimestamp asc',
+        $top:     BATCH_SIZE,
+        $select:  OFFMARKET_SELECT,
+      })
+
+      const records = batch.value.filter(r => !!r.ModificationTimestamp)
+
+      if (records.length > 0) {
+        const now = new Date()
+        const ops = records.map(r => prisma.resoProperty.upsert({
+          where: { listingKey: r.ListingKey },
+          update: {
+            standardStatus:        r.StandardStatus,
+            propertyType:          r.PropertyType    || undefined,
+            propertySubType:       r.PropertySubType || undefined,
+            listPrice:             toFloat(r.ListPrice) ?? undefined,
+            listOfficeKey:         r.ListOfficeKey   || undefined,
+            listOfficeName:        r.ListOfficeName  || undefined,
+            modificationTimestamp: new Date(r.ModificationTimestamp!),
+            lastSyncedAt:          now,
+          },
+          create: {
+            listingKey:            r.ListingKey,
+            city:                  r.City            ?? '',
+            stateOrProvince:       r.StateOrProvince ?? '',
+            standardStatus:        r.StandardStatus,
+            propertyType:          r.PropertyType    ?? null,
+            propertySubType:       r.PropertySubType ?? null,
+            listPrice:             toFloat(r.ListPrice),
+            listOfficeKey:         r.ListOfficeKey   ?? null,
+            listOfficeName:        r.ListOfficeName  ?? null,
+            // Only set on create — see syncClosedProperty for why an already-synced
+            // listing's original listingContractDate must not be overwritten here.
+            listingContractDate:   r.OriginalEntryTimestamp ? new Date(r.OriginalEntryTimestamp) : null,
+            modificationTimestamp: new Date(r.ModificationTimestamp!),
+            lastSyncedAt:          now,
+          },
+          select: { createdAt: true, updatedAt: true },
+        }))
+
+        try {
+          const upserted = await prisma.$transaction(ops)
+          for (const res of upserted) {
+            if (res.createdAt.getTime() === res.updatedAt.getTime()) {
+              result.added++
+            } else {
+              result.updated++
+            }
+          }
+        } catch (e) {
+          const msg = `Batch: ${e instanceof Error ? e.message : String(e)}`
+          console.error(`[offmarket_property] ${msg}`)
+          result.errors.push(msg)
+        }
+
+        const last = records[records.length - 1]
+        lastTimestamp = new Date(last.ModificationTimestamp!)
+        lastKey       = last.ListingKey
+        await saveCheckpoint(syncType, lastTimestamp, lastKey)
+      }
+
+      if (batch.value.length < BATCH_SIZE) break
+    }
+  } catch (e) {
+    const msg = `Sync failed: ${e instanceof Error ? e.message : String(e)}`
+    console.error(`[offmarket_property] ${msg}`)
+    result.errors.push(msg)
+  }
+
+  result.durationMs = Date.now() - start
+  console.log(`[offmarket_property] Done — added=${result.added} updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms`)
+
+  await prisma.resoSyncLog.create({
+    data: {
+      syncType,
+      added:      result.added,
+      updated:    result.updated,
+      deleted:    result.removed,
+      errors:     result.errors.length,
+      notes:      result.errors.length ? result.errors.join('\n') : null,
       durationMs: result.durationMs,
     },
   })
