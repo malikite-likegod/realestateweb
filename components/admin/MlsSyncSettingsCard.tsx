@@ -11,6 +11,8 @@ interface Props {
   activeListings:         number
   idxSync:                SyncInfo
   dlaSync:                SyncInfo
+  closedSync:             SyncInfo
+  offMarketSync:          SyncInfo
   voxMemberSync:          SyncInfo
   voxOfficeSync:          SyncInfo
 }
@@ -34,7 +36,7 @@ function matchPreset(minutes: number) {
   return PRESETS.find(p => p.value === minutes) ? minutes : -1
 }
 
-export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, dlaSync, voxMemberSync, voxOfficeSync }: Props) {
+export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, dlaSync, closedSync, offMarketSync, voxMemberSync, voxOfficeSync }: Props) {
   const [selected,   setSelected]   = useState<number>(() => matchPreset(initialIntervalMinutes))
   const [custom,     setCustom]     = useState<string>(String(initialIntervalMinutes))
   const [saving,     setSaving]     = useState(false)
@@ -96,10 +98,12 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
           <span className="font-medium text-charcoal-900">{activeListings.toLocaleString()}</span>
         </div>
         {([
-          { label: 'IDX last sync',    sync: idxSync       },
-          { label: 'DLA last sync',    sync: dlaSync       },
-          { label: 'VOX members',      sync: voxMemberSync },
-          { label: 'VOX offices',      sync: voxOfficeSync },
+          { label: 'IDX last sync',        sync: idxSync       },
+          { label: 'DLA last sync',        sync: dlaSync       },
+          { label: 'Closed (sold) sync',   sync: closedSync    },
+          { label: 'Off-market sync',      sync: offMarketSync },
+          { label: 'VOX members',          sync: voxMemberSync },
+          { label: 'VOX offices',          sync: voxOfficeSync },
         ] as const).map(({ label, sync }) => (
           <div key={label} className="flex flex-col">
             <div className="flex justify-between">
@@ -111,7 +115,7 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
               </span>
             </div>
             {sync?.notes && (
-              <pre className="text-xs text-red-600 whitespace-pre-wrap mt-1 mb-1">{sync.notes}</pre>
+              <pre className={`text-xs whitespace-pre-wrap mt-1 mb-1 ${sync.errors > 0 ? 'text-red-600' : 'text-charcoal-400'}`}>{sync.notes}</pre>
             )}
           </div>
         ))}

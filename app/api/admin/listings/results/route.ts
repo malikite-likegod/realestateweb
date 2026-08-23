@@ -62,7 +62,11 @@ export async function GET(request: Request) {
     prisma.resoProperty.count({ where }),
     prisma.resoProperty.findMany({
       where,
-      orderBy: [{ closeDate: 'desc' }, { modificationTimestamp: 'desc' }],
+      // Postgres puts NULLs first on a plain `desc` sort, which would bury every closed/priced
+      // listing under the (usually far more numerous) expired/withdrawn ones on page 1 — sort by
+      // modificationTimestamp instead so the most recently changed listings show up first regardless
+      // of status, and the presence/absence of a close price is never a sort-order artifact.
+      orderBy: { modificationTimestamp: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
