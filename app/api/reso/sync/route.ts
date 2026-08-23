@@ -13,6 +13,18 @@ function runInBackground(fn: () => Promise<unknown>) {
   setImmediate(() => fn().catch(err => console.error('[reso/sync] background error:', err)))
 }
 
+// Clears the saved cursor for the given sync type(s) so the next run rescans
+// from scratch (PropTx epoch) instead of only records changed since the last
+// cursor position. Needed to backfill fields that were missed on a listing's
+// last visit — e.g. ClosePrice dropped by a since-resolved PropTx tier
+// restriction — since a normal incremental run never revisits an
+// already-passed listing unless PropTx changes it again.
+async function resetCheckpoints(...syncTypes: string[]) {
+  if (syncTypes.length > 0) {
+    await prisma.ampreSyncCheckpoint.deleteMany({ where: { syncType: { in: syncTypes } } })
+  }
+}
+
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   const cronSecret = request.headers.get('x-cron-secret')
@@ -47,7 +59,9 @@ export async function POST(request: Request) {
     }
   }
 
-  const type = searchParams.get('type') ?? 'idx'
+  const type  = searchParams.get('type') ?? 'idx'
+  const reset = searchParams.get('reset') === 'true'
+  const resetSuffix = reset ? ' (full re-sync)' : ''
 
   if (type === 'media') {
     runInBackground(syncIdxMedia)
@@ -55,18 +69,21 @@ export async function POST(request: Request) {
   }
 
   if (type === 'dla') {
+    if (reset) await resetCheckpoints('dla_property')
     runInBackground(syncDlaProperty)
-    return NextResponse.json({ success: true, message: 'DLA sync started in background' })
+    return NextResponse.json({ success: true, message: `DLA sync started in background${resetSuffix}` })
   }
 
   if (type === 'closed') {
+    if (reset) await resetCheckpoints('closed_property')
     runInBackground(syncClosedProperty)
-    return NextResponse.json({ success: true, message: 'Closed listings sync started in background' })
+    return NextResponse.json({ success: true, message: `Closed listings sync started in background${resetSuffix}` })
   }
 
   if (type === 'offmarket') {
+    if (reset) await resetCheckpoints('offmarket_property')
     runInBackground(syncOffMarketProperty)
-    return NextResponse.json({ success: true, message: 'Off-market listings sync started in background' })
+    return NextResponse.json({ success: true, message: `Off-market listings sync started in background${resetSuffix}` })
   }
 
   if (type === 'vox') {
@@ -75,6 +92,7 @@ export async function POST(request: Request) {
   }
 
   if (type === 'all') {
+    if (reset) await resetCheckpoints('idx_property', 'dla_property', 'closed_property', 'offmarket_property')
     runInBackground(async () => {
       // IDX properties, VOX members, and VOX offices write to different tables — run in parallel
       await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
@@ -83,12 +101,13 @@ export async function POST(request: Request) {
       // Closed/off-market syncs write their own rows and don't touch IDX-owned fields — safe alongside DLA/media
       await Promise.all([syncDlaProperty(), syncIdxMedia(), syncClosedProperty(), syncOffMarketProperty()])
     })
-    return NextResponse.json({ success: true, message: 'Full sync started in background' })
+    return NextResponse.json({ success: true, message: `Full sync started in background${resetSuffix}` })
   }
 
   // Default: idx
+  if (reset) await resetCheckpoints('idx_property')
   runInBackground(syncIdxProperty)
-  return NextResponse.json({ success: true, message: 'IDX sync started in background' })
+  return NextResponse.json({ success: true, message: `IDX sync started in background${resetSuffix}` })
 }
 
 export async function GET() {

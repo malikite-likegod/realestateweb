@@ -43,6 +43,8 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
   const [saved,      setSaved]      = useState(false)
   const [syncing,    setSyncing]    = useState(false)
   const [syncMsg,    setSyncMsg]    = useState<string | null>(null)
+  const [resettingType, setResettingType] = useState<string | null>(null)
+  const [resetMsg,      setResetMsg]      = useState<string | null>(null)
 
   const effectiveMinutes = selected === -1 ? parseInt(custom, 10) || 0 : selected
 
@@ -84,11 +86,29 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
     }
   }
 
+  async function handleForceResync(apiType: string, label: string) {
+    setResettingType(apiType)
+    setResetMsg(null)
+    try {
+      const res  = await fetch(`/api/reso/sync?type=${apiType}&reset=true`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Sync failed')
+      setResetMsg(`${label}: full re-sync started — this rescans PropTx's entire history for this feed, so it can take a while.`)
+    } catch (e) {
+      setResetMsg(`${label}: failed to start — ${e instanceof Error ? e.message : 'check server logs'}`)
+    } finally {
+      setResettingType(null)
+    }
+  }
+
   return (
     <Card>
       <h3 className="font-semibold text-charcoal-900 mb-1">RESO / MLS Sync</h3>
       <p className="text-sm text-charcoal-400 mb-4">
         Configure how often the MLS data syncs via cron. &ldquo;Sync Now&rdquo; always runs immediately regardless of interval.
+        &ldquo;Full re-sync&rdquo; on a row below clears its saved position and rescans that feed&rsquo;s entire history —
+        use it if a field (like Close Price) was missed on a listing that hasn&rsquo;t changed since, e.g. after a PropTx
+        access-tier issue is resolved. Normal incremental syncs never revisit a listing unless PropTx changes it again.
       </p>
 
       {/* Status row */}
@@ -98,27 +118,40 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
           <span className="font-medium text-charcoal-900">{activeListings.toLocaleString()}</span>
         </div>
         {([
-          { label: 'IDX last sync',        sync: idxSync       },
-          { label: 'DLA last sync',        sync: dlaSync       },
-          { label: 'Closed (sold) sync',   sync: closedSync    },
-          { label: 'Off-market sync',      sync: offMarketSync },
-          { label: 'VOX members',          sync: voxMemberSync },
-          { label: 'VOX offices',          sync: voxOfficeSync },
-        ] as const).map(({ label, sync }) => (
+          { label: 'IDX last sync',        sync: idxSync,       resetType: 'idx'       },
+          { label: 'DLA last sync',        sync: dlaSync,       resetType: 'dla'       },
+          { label: 'Closed (sold) sync',   sync: closedSync,    resetType: 'closed'    },
+          { label: 'Off-market sync',      sync: offMarketSync, resetType: 'offmarket' },
+          { label: 'VOX members',          sync: voxMemberSync, resetType: null        },
+          { label: 'VOX offices',          sync: voxOfficeSync, resetType: null        },
+        ] as const).map(({ label, sync, resetType }) => (
           <div key={label} className="flex flex-col">
-            <div className="flex justify-between">
-              <span className="text-charcoal-500">{label}</span>
-              <span className={`font-medium ${sync && sync.errors > 0 ? 'text-red-600' : 'text-charcoal-900'}`}>
-                {sync
-                  ? `${new Date(sync.syncedAt).toLocaleString()} — ${sync.added} added, ${sync.updated} updated${sync.errors > 0 ? `, ${sync.errors} error(s)` : ''}`
-                  : 'Never'}
-              </span>
+            <div className="flex justify-between items-center gap-3">
+              <span className="text-charcoal-500 shrink-0">{label}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`font-medium truncate ${sync && sync.errors > 0 ? 'text-red-600' : 'text-charcoal-900'}`}>
+                  {sync
+                    ? `${new Date(sync.syncedAt).toLocaleString()} — ${sync.added} added, ${sync.updated} updated${sync.errors > 0 ? `, ${sync.errors} error(s)` : ''}`
+                    : 'Never'}
+                </span>
+                {resetType && (
+                  <button
+                    type="button"
+                    onClick={() => handleForceResync(resetType, label)}
+                    disabled={resettingType === resetType}
+                    className="text-xs text-charcoal-400 hover:text-charcoal-900 underline underline-offset-2 disabled:opacity-50 shrink-0"
+                  >
+                    {resettingType === resetType ? 'Starting…' : 'Full re-sync'}
+                  </button>
+                )}
+              </div>
             </div>
             {sync?.notes && (
               <pre className={`text-xs whitespace-pre-wrap mt-1 mb-1 ${sync.errors > 0 ? 'text-red-600' : 'text-charcoal-400'}`}>{sync.notes}</pre>
             )}
           </div>
         ))}
+        {resetMsg && <p className="text-xs text-charcoal-500 mt-1">{resetMsg}</p>}
       </div>
 
       {/* Interval selector */}
