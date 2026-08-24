@@ -355,6 +355,12 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
 
   let { lastTimestamp, lastKey } = await loadCheckpoint(syncType)
   let tier = 0 // start optimistic each run; drops down if the API rejects a select, resets to 0 next run
+  // Diagnostic: the API can accept ClosePrice in $select without error yet still return it as
+  // null on every record (sold-price disclosure is often a separate license from base MLS access).
+  // Track how many closed records this run actually got a price for, distinct from whether the
+  // field was merely accepted, so that's answerable without needing direct DB/API access.
+  let totalProcessed = 0
+  let withPrice       = 0
 
   console.log(`[closed_property] Starting sync from ${toODataTs(lastTimestamp)}`)
 
@@ -369,6 +375,9 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
       const records = batch.value.filter(r => !!r.ModificationTimestamp)
 
       if (records.length > 0) {
+        totalProcessed += records.length
+        withPrice       += records.filter(r => toFloat(r.ClosePrice) != null).length
+
         const now = new Date()
         const ops = records.map(r => {
           const closePrice = toFloat(r.ClosePrice)
@@ -456,8 +465,9 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
   }
 
   result.durationMs = Date.now() - start
-  const tierNote = `Fields used: ${CLOSED_TIER_LABELS[tier]}`
-  console.log(`[closed_property] Done — added=${result.added} updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms — ${tierNote}`)
+  const tierNote  = `Fields used: ${CLOSED_TIER_LABELS[tier]}`
+  const priceNote = `ClosePrice present on ${withPrice}/${totalProcessed} closed record(s) processed this run`
+  console.log(`[closed_property] Done — added=${result.added} updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms — ${tierNote} — ${priceNote}`)
 
   await prisma.resoSyncLog.create({
     data: {
@@ -466,7 +476,7 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
       updated:    result.updated,
       deleted:    result.removed,
       errors:     result.errors.length,
-      notes:      [tierNote, ...result.errors].join('\n'),
+      notes:      [tierNote, priceNote, ...result.errors].join('\n'),
       durationMs: result.durationMs,
     },
   })
