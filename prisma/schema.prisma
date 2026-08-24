@@ -447,6 +447,7 @@ model ResoProperty {
   mediaChangeTimestamp          DateTime?
   listAgentFullName             String?
   majorChangeTimestamp          DateTime?
+  mediaSyncedAt                 DateTime? // last time media was actually fetched from the Media feed (vs. lastSyncedAt, which any sync type bumps)
   lastSyncedAt                  DateTime  @default(now())
   onDemand              Boolean   @default(false)
   createdAt             DateTime  @default(now())

@@ -860,14 +860,28 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
 
   try {
-    // Only fetch media for listings that don't have it yet
-    const localProps = await prisma.resoProperty.findMany({
-      where:  { media: null },
-      select: { listingKey: true },
-    })
-    const allKeys = localProps.map(p => p.listingKey)
+    // Fetch media for listings that don't have it yet, plus listings whose
+    // MediaChangeTimestamp (written by DLA sync) has advanced since we last
+    // actually fetched media for them — otherwise a photo change on the feed
+    // is never picked up once a listing has been synced once. Prisma can't
+    // compare two columns on the same row in a `where` without preview
+    // features, so the staleness check is done in JS after a narrow fetch.
+    const [needsInitialFetch, mediaTrackedProps] = await Promise.all([
+      prisma.resoProperty.findMany({
+        where:  { media: null },
+        select: { listingKey: true },
+      }),
+      prisma.resoProperty.findMany({
+        where:  { media: { not: null }, mediaChangeTimestamp: { not: null } },
+        select: { listingKey: true, mediaSyncedAt: true, mediaChangeTimestamp: true },
+      }),
+    ])
+    const staleKeys = mediaTrackedProps
+      .filter(p => !p.mediaSyncedAt || p.mediaSyncedAt < p.mediaChangeTimestamp!)
+      .map(p => p.listingKey)
+    const allKeys = [...needsInitialFetch.map(p => p.listingKey), ...staleKeys]
 
-    console.log(`[idx_media] Fetching media for ${allKeys.length} listings`)
+    console.log(`[idx_media] Fetching media for ${allKeys.length} listings (${needsInitialFetch.length} new, ${staleKeys.length} stale)`)
 
     for (let i = 0; i < allKeys.length; i += MEDIA_KEY_BATCH) {
       const keysBatch = allKeys.slice(i, i + MEDIA_KEY_BATCH)
@@ -911,13 +925,15 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
         continue
       }
 
+      const fetchedAt = new Date()
+
       // Write media for listings that had results
       for (const [listingKey, items] of mediaMap) {
         try {
           const sorted = items.sort((a, b) => a.order - b.order)
           await prisma.resoProperty.updateMany({
             where: { listingKey },
-            data:  { media: JSON.stringify(sorted) },
+            data:  { media: JSON.stringify(sorted), mediaSyncedAt: fetchedAt },
           })
           result.updated++
         } catch (e) {
@@ -926,12 +942,13 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
       }
 
       // Mark listings with no photos as '[]' so they aren't re-fetched every run
+      // (until their MediaChangeTimestamp advances again)
       const withPhotos = new Set(mediaMap.keys())
       const noPhotoKeys = keysBatch.filter(k => !withPhotos.has(k))
       if (noPhotoKeys.length > 0) {
         await prisma.resoProperty.updateMany({
           where: { listingKey: { in: noPhotoKeys } },
-          data:  { media: '[]' },
+          data:  { media: '[]', mediaSyncedAt: fetchedAt },
         })
       }
     }
@@ -1055,8 +1072,9 @@ export async function fetchPropertyOnDemand(listingKey: string): Promise<boolean
       exclusions:            null, // not available in PropTx IDX
     }
 
-    // Don't overwrite latitude/longitude on update — see syncIdxProperty for why.
-    const { latitude: _latitude, longitude: _longitude, ...updateData } = data
+    // Don't overwrite latitude/longitude, or clobber media already fetched by
+    // the bulk media sync, on update — see syncIdxProperty for the lat/lng why.
+    const { latitude: _latitude, longitude: _longitude, media: _media, ...updateData } = data
     await prisma.resoProperty.upsert({
       where:  { listingKey },
       update: updateData,
