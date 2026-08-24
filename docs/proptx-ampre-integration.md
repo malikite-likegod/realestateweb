@@ -591,6 +591,7 @@ Mark `onDemand: true` so the stale-cleanup job does not delete it (it won't appe
 | Single-quote escaping | Key values in OData filters must escape `'` as `''` |
 | `$select` is strict | Any single invalid field name in `$select` causes a 400 for the entire request |
 | Media batch size | Fetching media for more than ~10 listings per request causes timeouts |
+| No client-side request timeout (fixed) | `fetchOData()` in `services/reso/client.ts` had no `AbortSignal` — when AMPRE hangs instead of returning a clean error (see row above), `fetch()` waited forever with no error and no log entry. Inside a `Promise.all` (the scheduled full-sync pipeline), that made ONE sync function look like it silently "doesn't run" while its siblings completed and logged normally. Fixed with a 30s `AbortSignal.timeout()` on every AMPRE request. |
 
 ---
 
