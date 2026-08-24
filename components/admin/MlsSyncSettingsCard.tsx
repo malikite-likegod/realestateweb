@@ -10,6 +10,7 @@ interface Props {
   initialIntervalMinutes: number
   activeListings:         number
   idxSync:                SyncInfo
+  mediaSync:              SyncInfo
   dlaSync:                SyncInfo
   closedSync:             SyncInfo
   offMarketSync:          SyncInfo
@@ -36,7 +37,7 @@ function matchPreset(minutes: number) {
   return PRESETS.find(p => p.value === minutes) ? minutes : -1
 }
 
-export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, dlaSync, closedSync, offMarketSync, voxMemberSync, voxOfficeSync }: Props) {
+export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, mediaSync, dlaSync, closedSync, offMarketSync, voxMemberSync, voxOfficeSync }: Props) {
   const [selected,   setSelected]   = useState<number>(() => matchPreset(initialIntervalMinutes))
   const [custom,     setCustom]     = useState<string>(String(initialIntervalMinutes))
   const [saving,     setSaving]     = useState(false)
@@ -119,6 +120,7 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
         </div>
         {([
           { label: 'IDX last sync',        sync: idxSync,       resetType: 'idx'       },
+          { label: 'Media (photos) sync',  sync: mediaSync,     resetType: null        },
           { label: 'DLA last sync',        sync: dlaSync,       resetType: 'dla'       },
           { label: 'Closed (sold) sync',   sync: closedSync,    resetType: 'closed'    },
           { label: 'Off-market sync',      sync: offMarketSync, resetType: 'offmarket' },

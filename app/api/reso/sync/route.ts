@@ -5,7 +5,7 @@ import { syncIdxProperty, syncIdxMedia, syncDlaProperty, syncClosedProperty, syn
 import { prisma } from '@/lib/prisma'
 import { getMlsSyncInterval } from '@/lib/site-settings'
 
-type SyncType = 'idx_property' | 'dla_property' | 'closed_property' | 'offmarket_property' | 'vox_member' | 'vox_office'
+type SyncType = 'idx_property' | 'idx_media' | 'dla_property' | 'closed_property' | 'offmarket_property' | 'vox_member' | 'vox_office'
 
 // Run sync in background — returns immediately so Nginx doesn't time out on
 // the initial full-sync which can take several minutes.
@@ -114,7 +114,7 @@ export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const syncTypes: SyncType[] = ['idx_property', 'dla_property', 'closed_property', 'offmarket_property', 'vox_member', 'vox_office']
+  const syncTypes: SyncType[] = ['idx_property', 'idx_media', 'dla_property', 'closed_property', 'offmarket_property', 'vox_member', 'vox_office']
 
   const [logs, activeCount] = await Promise.all([
     Promise.all(
