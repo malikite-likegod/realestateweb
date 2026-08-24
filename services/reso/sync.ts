@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { invalidateCache } from '@/lib/cache'
 import { ampreGet } from './client'
 import type { ResoPropertyRaw, ResoMediaRaw, ResoMemberRaw, ResoOfficeRaw, ResoSyncResult, AmpreODataResponse } from './types'
 
@@ -284,6 +285,7 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
 
   result.durationMs = Date.now() - start
   console.log(`[idx_property] Done — added=${result.added} updated=${result.updated} removed=${result.removed} errors=${result.errors.length} duration=${result.durationMs}ms`)
+  if (result.added > 0 || result.updated > 0 || result.removed > 0) invalidateCache('property')
 
   await prisma.resoSyncLog.create({
     data: {
@@ -468,6 +470,7 @@ export async function syncClosedProperty(): Promise<ResoSyncResult> {
   const tierNote  = `Fields used: ${CLOSED_TIER_LABELS[tier]}`
   const priceNote = `ClosePrice present on ${withPrice}/${totalProcessed} closed record(s) processed this run`
   console.log(`[closed_property] Done — added=${result.added} updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms — ${tierNote} — ${priceNote}`)
+  if (result.added > 0 || result.updated > 0) invalidateCache('property')
 
   await prisma.resoSyncLog.create({
     data: {
@@ -578,6 +581,7 @@ export async function syncOffMarketProperty(): Promise<ResoSyncResult> {
 
   result.durationMs = Date.now() - start
   console.log(`[offmarket_property] Done — added=${result.added} updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms`)
+  if (result.added > 0 || result.updated > 0) invalidateCache('property')
 
   await prisma.resoSyncLog.create({
     data: {
@@ -680,6 +684,9 @@ export async function syncDlaProperty(): Promise<ResoSyncResult> {
   }
 
   result.durationMs = Date.now() - start
+  console.log(`[dla_property] Done — updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms`)
+  if (result.updated > 0) invalidateCache('property')
+
   await prisma.resoSyncLog.create({
     data: {
       syncType,
@@ -992,6 +999,9 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
   }
 
   result.durationMs = Date.now() - start
+  console.log(`[idx_media] Done — updated=${result.updated} errors=${result.errors.length} duration=${result.durationMs}ms`)
+  if (result.updated > 0) invalidateCache('property')
+
   await prisma.resoSyncLog.create({
     data: {
       syncType:   'idx_media',
