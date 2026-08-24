@@ -386,26 +386,35 @@ const SIZE_RANK = { Thumbnail: 0, Small: 1, Medium: 2, Large: 3, Largest: 4 }
 
 **Re-fetch on change, not just once:** fetching only `media IS NULL` means a listing's
 photos are pulled exactly once and never revisited — a seller swapping photos on an
-already-synced listing would never show up. Instead, also re-fetch listings where a
-change signal is newer than `mediaSyncedAt` (stamped on every listing — including the
-no-photos `'[]'` case — each time media is actually fetched for it, separate from
-`lastSyncedAt` which every sync type bumps). Two signals feed this, because
-`mediaChangeTimestamp` alone isn't enough — it's only populated by DLA sync, and PropTx
-scopes the DLA feed to **this brokerage's own listings only** (see the DLA section
-above), so it stays null forever for every other brokerage's listings on the site:
+already-synced listing would never show up. Three signals feed the re-fetch decision,
+layered because none of them is trustworthy alone:
+
+1. `mediaChangeTimestamp` (from DLA sync) — precise, but only populated for **this
+   brokerage's own listings** (PropTx scopes the DLA feed that way, see the DLA section
+   above), and even for those, DLA's own incremental cursor can skip a listing entirely
+   if PropTx doesn't advance *its* `ModificationTimestamp` for a photos-only edit.
+2. `modificationTimestamp` (from IDX sync) — populated market-wide for every listing, so
+   it's the fallback outside the brokerage's own inventory. Same caveat: depends on
+   PropTx bumping it for a photos-only edit, which the RESO spec doesn't guarantee.
+3. **TTL** — a listing whose media hasn't been re-checked in `MEDIA_TTL_MS` (24h) is
+   re-fetched regardless of whether either timestamp above moved. This is the actual
+   correctness guarantee: photos converge within one TTL window even if PropTx never
+   advances any field we can see change-detection off of. Signals 1–2 exist purely to
+   catch changes *faster* than the TTL would; TTL is the backstop that makes this work
+   even if both of them turn out to never fire for a given listing.
 
 ```typescript
 // candidates = media IS NULL
 //   OR mediaSyncedAt IS NULL
-//   OR mediaSyncedAt < max(mediaChangeTimestamp, modificationTimestamp)
+//   OR mediaSyncedAt < max(mediaChangeTimestamp, modificationTimestamp)   // fast path
+//   OR now - mediaSyncedAt > MEDIA_TTL_MS                                // guarantee
 ```
 
-`modificationTimestamp` (from IDX sync, populated market-wide for every listing) is the
-fallback that makes this work outside the brokerage's own inventory — coarser, since it
-bumps on any field change and not just photos, but that's a safe direction to be wrong
-in. Comparing two columns on the same row isn't supported by Prisma's `where` without
-preview features, so this is done as two queries plus a JS filter — see `syncIdxMedia`
-in `services/reso/sync.ts`.
+TTL-driven re-fetches are capped per run (`MEDIA_TTL_BATCH_CAP`, oldest-`mediaSyncedAt`
+first) so a large backlog can't blow out a single sync cycle; change-flagged listings are
+never capped. Comparing two columns on the same row isn't supported by Prisma's `where`
+without preview features, so this is done as two queries plus a JS filter — see
+`syncIdxMedia` in `services/reso/sync.ts`.
 
 ---
 

@@ -852,24 +852,34 @@ export async function syncVoxOffice(): Promise<ResoSyncResult> {
 // Fetches photo URLs only for listing keys already in the local DB, using
 // ResourceRecordKey in (...) so we never scan the full Media feed.
 
-const MEDIA_KEY_BATCH = 10   // small batches to avoid AMPRE server timeout
-const MEDIA_SELECT    = 'MediaKey,ResourceRecordKey,MediaURL,Order,MediaStatus,ImageSizeDescription'
+const MEDIA_KEY_BATCH   = 10   // small batches to avoid AMPRE server timeout
+const MEDIA_SELECT      = 'MediaKey,ResourceRecordKey,MediaURL,Order,MediaStatus,ImageSizeDescription'
+const MEDIA_TTL_MS        = 24 * 60 * 60 * 1000 // re-check every listing's photos at least this often
+const MEDIA_TTL_BATCH_CAP = 500                 // cap TTL-driven re-fetches per run
 
 export async function syncIdxMedia(): Promise<ResoSyncResult> {
   const start  = Date.now()
   const result: ResoSyncResult = { added: 0, updated: 0, removed: 0, errors: [], durationMs: 0 }
 
   try {
-    // Fetch media for listings that don't have it yet, plus listings whose
-    // photos may have changed since we last actually fetched media for them
-    // — otherwise a photo change on the feed is never picked up once a
-    // listing has been synced once. Two change signals feed this:
+    // Fetch media for listings that don't have it yet, plus listings that may
+    // have new photos since we last actually fetched media for them —
+    // otherwise a photo change on the feed is never picked up once a listing
+    // has been synced once. Three signals feed this, from most to least
+    // precise, because none of them is trustworthy alone:
     //   - mediaChangeTimestamp: precise, but only populated by DLA sync,
-    //     which PropTx scopes to this brokerage's own listings only.
+    //     which PropTx scopes to this brokerage's own listings only — and
+    //     even for those, DLA's own incremental cursor can skip a listing
+    //     entirely if PropTx doesn't advance ITS ModificationTimestamp for a
+    //     photos-only edit, so this field can silently never update.
     //   - modificationTimestamp: populated by IDX sync for every listing
-    //     market-wide, so it's the only signal available for listings that
-    //     aren't ours. It's coarser (bumps on any field change, not just
-    //     photos) but that's a safe direction to be wrong in here.
+    //     market-wide, so it's the fallback for listings that aren't ours.
+    //     Same caveat — depends on PropTx bumping it for a photos-only edit,
+    //     which isn't guaranteed by the RESO spec.
+    //   - TTL: a listing whose media hasn't been re-checked in MEDIA_TTL_MS
+    //     is re-fetched regardless of whether either timestamp above moved.
+    //     This is the actual guarantee: photos converge within one TTL
+    //     window even if PropTx never advances a queryable field we can see.
     // Prisma can't compare two columns on the same row in a `where` without
     // preview features, so the staleness check is done in JS after a fetch.
     const [needsInitialFetch, mediaTrackedProps] = await Promise.all([
@@ -882,17 +892,31 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
         select: { listingKey: true, mediaSyncedAt: true, mediaChangeTimestamp: true, modificationTimestamp: true },
       }),
     ])
-    const staleKeys = mediaTrackedProps
-      .filter(p => {
-        const latestChange = [p.mediaChangeTimestamp, p.modificationTimestamp]
-          .filter((d): d is Date => d != null)
-          .sort((a, b) => b.getTime() - a.getTime())[0]
-        return latestChange != null && (!p.mediaSyncedAt || p.mediaSyncedAt < latestChange)
-      })
-      .map(p => p.listingKey)
-    const allKeys = [...needsInitialFetch.map(p => p.listingKey), ...staleKeys]
 
-    console.log(`[idx_media] Fetching media for ${allKeys.length} listings (${needsInitialFetch.length} new, ${staleKeys.length} stale)`)
+    const changedKeys: string[] = []
+    const ttlCandidates: { key: string; syncedAtMs: number }[] = []
+    const now = Date.now()
+    for (const p of mediaTrackedProps) {
+      const latestChange = [p.mediaChangeTimestamp, p.modificationTimestamp]
+        .filter((d): d is Date => d != null)
+        .sort((a, b) => b.getTime() - a.getTime())[0]
+      if (latestChange != null && (!p.mediaSyncedAt || p.mediaSyncedAt < latestChange)) {
+        changedKeys.push(p.listingKey)
+        continue
+      }
+      const syncedAtMs = p.mediaSyncedAt?.getTime() ?? 0
+      if (now - syncedAtMs > MEDIA_TTL_MS) {
+        ttlCandidates.push({ key: p.listingKey, syncedAtMs })
+      }
+    }
+    // Change-flagged listings are always included in full; TTL sweeps the
+    // longest-overdue listings first, capped per run so a large backlog
+    // (e.g. right after this TTL was introduced) can't blow out one sync.
+    ttlCandidates.sort((a, b) => a.syncedAtMs - b.syncedAtMs)
+    const ttlKeys = ttlCandidates.slice(0, MEDIA_TTL_BATCH_CAP).map(c => c.key)
+    const allKeys = [...needsInitialFetch.map(p => p.listingKey), ...changedKeys, ...ttlKeys]
+
+    console.log(`[idx_media] Fetching media for ${allKeys.length} listings (${needsInitialFetch.length} new, ${changedKeys.length} changed, ${ttlKeys.length}/${ttlCandidates.length} TTL-expired)`)
 
     for (let i = 0; i < allKeys.length; i += MEDIA_KEY_BATCH) {
       const keysBatch = allKeys.slice(i, i + MEDIA_KEY_BATCH)
