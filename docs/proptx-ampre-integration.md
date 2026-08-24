@@ -386,17 +386,24 @@ const SIZE_RANK = { Thumbnail: 0, Small: 1, Medium: 2, Large: 3, Largest: 4 }
 
 **Re-fetch on change, not just once:** fetching only `media IS NULL` means a listing's
 photos are pulled exactly once and never revisited — a seller swapping photos on an
-already-synced listing would never show up. Instead, also re-fetch listings where
-`mediaChangeTimestamp` (written by DLA sync, see above) is newer than `mediaSyncedAt`
-(stamped on every listing — including the no-photos `'[]'` case — each time media is
-actually fetched for it, separate from `lastSyncedAt` which every sync type bumps):
+already-synced listing would never show up. Instead, also re-fetch listings where a
+change signal is newer than `mediaSyncedAt` (stamped on every listing — including the
+no-photos `'[]'` case — each time media is actually fetched for it, separate from
+`lastSyncedAt` which every sync type bumps). Two signals feed this, because
+`mediaChangeTimestamp` alone isn't enough — it's only populated by DLA sync, and PropTx
+scopes the DLA feed to **this brokerage's own listings only** (see the DLA section
+above), so it stays null forever for every other brokerage's listings on the site:
 
 ```typescript
 // candidates = media IS NULL
-//   OR (mediaChangeTimestamp IS NOT NULL AND (mediaSyncedAt IS NULL OR mediaSyncedAt < mediaChangeTimestamp))
+//   OR mediaSyncedAt IS NULL
+//   OR mediaSyncedAt < max(mediaChangeTimestamp, modificationTimestamp)
 ```
 
-Comparing two columns on the same row isn't supported by Prisma's `where` without
+`modificationTimestamp` (from IDX sync, populated market-wide for every listing) is the
+fallback that makes this work outside the brokerage's own inventory — coarser, since it
+bumps on any field change and not just photos, but that's a safe direction to be wrong
+in. Comparing two columns on the same row isn't supported by Prisma's `where` without
 preview features, so this is done as two queries plus a JS filter — see `syncIdxMedia`
 in `services/reso/sync.ts`.
 

@@ -861,23 +861,34 @@ export async function syncIdxMedia(): Promise<ResoSyncResult> {
 
   try {
     // Fetch media for listings that don't have it yet, plus listings whose
-    // MediaChangeTimestamp (written by DLA sync) has advanced since we last
-    // actually fetched media for them — otherwise a photo change on the feed
-    // is never picked up once a listing has been synced once. Prisma can't
-    // compare two columns on the same row in a `where` without preview
-    // features, so the staleness check is done in JS after a narrow fetch.
+    // photos may have changed since we last actually fetched media for them
+    // — otherwise a photo change on the feed is never picked up once a
+    // listing has been synced once. Two change signals feed this:
+    //   - mediaChangeTimestamp: precise, but only populated by DLA sync,
+    //     which PropTx scopes to this brokerage's own listings only.
+    //   - modificationTimestamp: populated by IDX sync for every listing
+    //     market-wide, so it's the only signal available for listings that
+    //     aren't ours. It's coarser (bumps on any field change, not just
+    //     photos) but that's a safe direction to be wrong in here.
+    // Prisma can't compare two columns on the same row in a `where` without
+    // preview features, so the staleness check is done in JS after a fetch.
     const [needsInitialFetch, mediaTrackedProps] = await Promise.all([
       prisma.resoProperty.findMany({
         where:  { media: null },
         select: { listingKey: true },
       }),
       prisma.resoProperty.findMany({
-        where:  { media: { not: null }, mediaChangeTimestamp: { not: null } },
-        select: { listingKey: true, mediaSyncedAt: true, mediaChangeTimestamp: true },
+        where:  { media: { not: null } },
+        select: { listingKey: true, mediaSyncedAt: true, mediaChangeTimestamp: true, modificationTimestamp: true },
       }),
     ])
     const staleKeys = mediaTrackedProps
-      .filter(p => !p.mediaSyncedAt || p.mediaSyncedAt < p.mediaChangeTimestamp!)
+      .filter(p => {
+        const latestChange = [p.mediaChangeTimestamp, p.modificationTimestamp]
+          .filter((d): d is Date => d != null)
+          .sort((a, b) => b.getTime() - a.getTime())[0]
+        return latestChange != null && (!p.mediaSyncedAt || p.mediaSyncedAt < latestChange)
+      })
       .map(p => p.listingKey)
     const allKeys = [...needsInitialFetch.map(p => p.listingKey), ...staleKeys]
 
