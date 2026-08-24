@@ -10,6 +10,7 @@ export type ODataParams = {
 }
 
 const BASE_URL = process.env.AMPRE_API_BASE_URL ?? 'https://query.ampre.ca/odata'
+const REQUEST_TIMEOUT_MS = 30_000 // AMPRE can hang instead of erroring on an oversized/slow request (see MEDIA_KEY_BATCH) — without this, fetch() waits forever and the whole sync silently never completes or logs
 
 function getToken(tokenType: TokenType): string {
   switch (tokenType) {
@@ -42,6 +43,7 @@ async function fetchOData<T>(
   return fetch(url, {
     headers: { Authorization: `Bearer ${getToken(tokenType)}` },
     next:    { revalidate: 0 },
+    signal:  AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   })
 }
 
