@@ -17,7 +17,10 @@ export async function GET(request: Request) {
     : { contains: val }
 
   const officeOnly = searchParams.get('officeOnly') === 'true'
-  const baseWhere: Record<string, unknown> = { standardStatus: { notIn: ['Active'] } }
+  // 'Closed' is excluded too — confirmed this PropTx account's IDX feed never returns
+  // StandardStatus='Closed' records (0/0 on a full-history rescan), so any row currently
+  // carrying that status predates the fix and is a mislabeled non-sale, not a real sale.
+  const baseWhere: Record<string, unknown> = { standardStatus: { notIn: ['Active', 'Closed'] } }
   if (officeOnly) {
     const { officeKey, officeName } = await getBrokerageFilter()
     if (officeKey)       baseWhere.listOfficeKey  = officeKey
@@ -52,20 +55,16 @@ export async function GET(request: Request) {
   if (area)   where.city = iContains(area)
 
   if (from || to) {
-    where.OR = [
-      { closeDate: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } },
-      { AND: [{ closeDate: null }, { modificationTimestamp: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } }] },
-    ]
+    where.modificationTimestamp = {
+      ...(from ? { gte: new Date(from) } : {}),
+      ...(to   ? { lte: new Date(to)   } : {}),
+    }
   }
 
   const [total, properties] = await Promise.all([
     prisma.resoProperty.count({ where }),
     prisma.resoProperty.findMany({
       where,
-      // Postgres puts NULLs first on a plain `desc` sort, which would bury every closed/priced
-      // listing under the (usually far more numerous) expired/withdrawn ones on page 1 — sort by
-      // modificationTimestamp instead so the most recently changed listings show up first regardless
-      // of status, and the presence/absence of a close price is never a sort-order artifact.
       orderBy: { modificationTimestamp: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -81,8 +80,6 @@ export async function GET(request: Request) {
         city:                  true,
         standardStatus:        true,
         listPrice:             true,
-        closePrice:            true,
-        closeDate:             true,
         listingContractDate:   true,
         modificationTimestamp: true,
         listOfficeName:        true,

@@ -302,12 +302,16 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
   return result
 }
 
-// ─── Closed Property Sync ──────────────────────────────────────────────────
-// Pulls sold/closed listings for the "top agents" leaderboard. Closed data was
-// never fetched before this job existed, so we don't know in advance which of
-// the close-price/date and buyer-side fields this account's PropTx tier will
-// actually return. We probe tiers from richest to leanest and stick with the
-// first one that succeeds for the rest of the run.
+// ─── Closed Property Sync (currently dormant) ──────────────────────────────
+// Pulls sold/closed listings for the "top agents" leaderboard and a sale-price
+// results view. NOT called by the 'all' pipeline or the scheduled runner —
+// confirmed via a full-history rescan that this PropTx account's IDX feed
+// returns zero StandardStatus='Closed' records (0/0 processed), so this sync
+// currently has nothing to find no matter which field tier succeeds. Kept
+// intact and reachable via POST /api/reso/sync?type=closed in case PropTx
+// access changes later (e.g. a VOW/sold-data license). We probe tiers from
+// richest to leanest and stick with the first one that succeeds for the rest
+// of the run.
 
 const CLOSED_BASE_SELECT = [
   'ListingKey', 'StandardStatus', 'ModificationTimestamp', 'OriginalEntryTimestamp',

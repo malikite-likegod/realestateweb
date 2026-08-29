@@ -5,7 +5,7 @@ import { syncIdxProperty, syncIdxMedia, syncDlaProperty, syncClosedProperty, syn
 import { prisma } from '@/lib/prisma'
 import { getMlsSyncInterval } from '@/lib/site-settings'
 
-type SyncType = 'idx_property' | 'idx_media' | 'dla_property' | 'closed_property' | 'offmarket_property' | 'vox_member' | 'vox_office'
+type SyncType = 'idx_property' | 'idx_media' | 'dla_property' | 'offmarket_property' | 'vox_member' | 'vox_office'
 
 // Run sync in background — returns immediately so Nginx doesn't time out on
 // the initial full-sync which can take several minutes.
@@ -92,14 +92,15 @@ export async function POST(request: Request) {
   }
 
   if (type === 'all') {
-    if (reset) await resetCheckpoints('idx_property', 'dla_property', 'closed_property', 'offmarket_property')
+    if (reset) await resetCheckpoints('idx_property', 'dla_property', 'offmarket_property')
     runInBackground(async () => {
       // IDX properties, VOX members, and VOX offices write to different tables — run in parallel
       await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
       // DLA enriches property rows — run after IDX to avoid row conflicts
       // Media fetches photos for listings that don't have them yet
-      // Closed/off-market syncs write their own rows and don't touch IDX-owned fields — safe alongside DLA/media
-      await Promise.all([syncDlaProperty(), syncIdxMedia(), syncClosedProperty(), syncOffMarketProperty()])
+      // Off-market sync writes its own rows and doesn't touch IDX-owned fields — safe alongside DLA/media
+      // syncClosedProperty is intentionally excluded — see services/reso/sync.ts
+      await Promise.all([syncDlaProperty(), syncIdxMedia(), syncOffMarketProperty()])
     })
     return NextResponse.json({ success: true, message: `Full sync started in background${resetSuffix}` })
   }
@@ -114,7 +115,7 @@ export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const syncTypes: SyncType[] = ['idx_property', 'idx_media', 'dla_property', 'closed_property', 'offmarket_property', 'vox_member', 'vox_office']
+  const syncTypes: SyncType[] = ['idx_property', 'idx_media', 'dla_property', 'offmarket_property', 'vox_member', 'vox_office']
 
   const [logs, activeCount] = await Promise.all([
     Promise.all(

@@ -12,7 +12,6 @@ interface Props {
   idxSync:                SyncInfo
   mediaSync:              SyncInfo
   dlaSync:                SyncInfo
-  closedSync:             SyncInfo
   offMarketSync:          SyncInfo
   voxMemberSync:          SyncInfo
   voxOfficeSync:          SyncInfo
@@ -37,7 +36,7 @@ function matchPreset(minutes: number) {
   return PRESETS.find(p => p.value === minutes) ? minutes : -1
 }
 
-export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, mediaSync, dlaSync, closedSync, offMarketSync, voxMemberSync, voxOfficeSync }: Props) {
+export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, idxSync, mediaSync, dlaSync, offMarketSync, voxMemberSync, voxOfficeSync }: Props) {
   const [selected,   setSelected]   = useState<number>(() => matchPreset(initialIntervalMinutes))
   const [custom,     setCustom]     = useState<string>(String(initialIntervalMinutes))
   const [saving,     setSaving]     = useState(false)
@@ -108,8 +107,8 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
       <p className="text-sm text-charcoal-400 mb-4">
         Configure how often the MLS data syncs via cron. &ldquo;Sync Now&rdquo; always runs immediately regardless of interval.
         &ldquo;Full re-sync&rdquo; on a row below clears its saved position and rescans that feed&rsquo;s entire history —
-        use it if a field (like Close Price) was missed on a listing that hasn&rsquo;t changed since, e.g. after a PropTx
-        access-tier issue is resolved. Normal incremental syncs never revisit a listing unless PropTx changes it again.
+        use it if a field was missed on a listing that hasn&rsquo;t changed since, e.g. after a PropTx access-tier issue
+        is resolved. Normal incremental syncs never revisit a listing unless PropTx changes it again.
       </p>
 
       {/* Status row */}
@@ -122,7 +121,6 @@ export function MlsSyncSettingsCard({ initialIntervalMinutes, activeListings, id
           { label: 'IDX last sync',        sync: idxSync,       resetType: 'idx'       },
           { label: 'Media (photos) sync',  sync: mediaSync,     resetType: null        },
           { label: 'DLA last sync',        sync: dlaSync,       resetType: 'dla'       },
-          { label: 'Closed (sold) sync',   sync: closedSync,    resetType: 'closed'    },
           { label: 'Off-market sync',      sync: offMarketSync, resetType: 'offmarket' },
           { label: 'VOX members',          sync: voxMemberSync, resetType: null        },
           { label: 'VOX offices',          sync: voxOfficeSync, resetType: null        },

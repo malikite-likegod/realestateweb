@@ -31,7 +31,6 @@ export default async function SettingsPage() {
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property'       }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_media'          }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'dla_property'       }, orderBy: { syncedAt: 'desc' } }),
-      prisma.resoSyncLog.findFirst({ where: { syncType: 'closed_property'    }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'offmarket_property' }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'vox_member'         }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'vox_office'         }, orderBy: { syncedAt: 'desc' } }),
@@ -60,7 +59,7 @@ export default async function SettingsPage() {
     prisma.siteSettings.findUnique({ where: { key: 'mortgage_current_rate_percent' } }),
     prisma.siteSettings.findMany({ where: { key: { in: ['rent_vs_buy_signup_prompt_enabled', 'rent_vs_buy_signup_prompt_uses'] } } }),
   ])
-  const [idxSync, mediaSync, dlaSync, closedSync, offMarketSync, voxMemberSync, voxOfficeSync] = syncLogs
+  const [idxSync, mediaSync, dlaSync, offMarketSync, voxMemberSync, voxOfficeSync] = syncLogs
 
   const agentProfileMap: Record<string, string> = {}
   for (const r of agentProfileRows) agentProfileMap[r.key] = r.value
@@ -174,7 +173,6 @@ export default async function SettingsPage() {
           idxSync={toSyncInfo(idxSync)}
           mediaSync={toSyncInfo(mediaSync)}
           dlaSync={toSyncInfo(dlaSync)}
-          closedSync={toSyncInfo(closedSync)}
           offMarketSync={toSyncInfo(offMarketSync)}
           voxMemberSync={toSyncInfo(voxMemberSync)}
           voxOfficeSync={toSyncInfo(voxOfficeSync)}

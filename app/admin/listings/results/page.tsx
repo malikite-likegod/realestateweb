@@ -17,8 +17,6 @@ type ResultListing = {
   city:                  string
   standardStatus:        string
   listPrice:             number | null
-  closePrice:            number | null
-  closeDate:             string | null
   listingContractDate:   string | null
   modificationTimestamp: string | null
   listOfficeName:        string | null
@@ -31,23 +29,20 @@ function formatAddress(l: ResultListing): string {
   return [l.streetNumber, l.streetName, l.streetSuffix, l.streetDirPrefix, l.streetDirSuffix, l.unitNumber].filter(Boolean).join(' ') || 'Address TBD'
 }
 
-function statusBadgeVariant(status: string): 'success' | 'warning' | 'default' {
-  const s = status.toLowerCase()
-  if (s === 'closed') return 'success'
-  if (s.includes('expired')) return 'warning'
-  return 'default'
+// PropTx doesn't return real sold/closed data to this account (confirmed via a full-history
+// rescan finding zero Closed records), so 'Closed' never appears here — statuses shown are all
+// off-market reasons (Expired, Active Under Contract, etc.), plus 'Removed' for listings that
+// vanished from every feed with no reason PropTx will give.
+function statusBadgeVariant(status: string): 'warning' | 'default' {
+  return status.toLowerCase().includes('expired') ? 'warning' : 'default'
 }
 
+// "Days on market" here means days between the original listing date and whenever PropTx last
+// changed this record — there's no real close/end date available for these statuses.
 function daysOnMarket(l: ResultListing): number | null {
-  if (!l.listingContractDate) return null
-  const end = l.closeDate ?? l.modificationTimestamp
-  if (!end) return null
-  const days = Math.round((new Date(end).getTime() - new Date(l.listingContractDate).getTime()) / 86_400_000)
+  if (!l.listingContractDate || !l.modificationTimestamp) return null
+  const days = Math.round((new Date(l.modificationTimestamp).getTime() - new Date(l.listingContractDate).getTime()) / 86_400_000)
   return days >= 0 ? days : null
-}
-
-function fmtDate(d: string | null): string {
-  return d ? new Date(d).toLocaleDateString() : '—'
 }
 
 export default function ListingResultsPage() {
@@ -111,9 +106,6 @@ export default function ListingResultsPage() {
     fetchListings(status, area, v, 1)
   }
 
-  const soldCount = statusCounts.find(s => s.status === 'Closed')?.count ?? 0
-  const otherCounts = statusCounts.filter(s => s.status !== 'Closed')
-
   return (
     <div className="flex flex-col h-screen">
       <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
@@ -125,18 +117,16 @@ export default function ListingResultsPage() {
       </div>
 
       <div className="px-6 py-4 border-b bg-white">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <div className="rounded-lg bg-emerald-50 p-3 text-center">
-            <p className="text-lg font-semibold text-emerald-700">{soldCount.toLocaleString()}</p>
-            <p className="text-xs text-charcoal-400 mt-0.5">Sold</p>
+        {statusCounts.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            {statusCounts.map(s => (
+              <div key={s.status} className="rounded-lg bg-charcoal-50 p-3 text-center">
+                <p className="text-lg font-semibold text-charcoal-700">{s.count.toLocaleString()}</p>
+                <p className="text-xs text-charcoal-400 mt-0.5">{s.status}</p>
+              </div>
+            ))}
           </div>
-          {otherCounts.map(s => (
-            <div key={s.status} className="rounded-lg bg-charcoal-50 p-3 text-center">
-              <p className="text-lg font-semibold text-charcoal-700">{s.count.toLocaleString()}</p>
-              <p className="text-xs text-charcoal-400 mt-0.5">{s.status}</p>
-            </div>
-          ))}
-        </div>
+        )}
 
         <div className="flex flex-wrap items-end gap-3">
           <div>
@@ -173,7 +163,7 @@ export default function ListingResultsPage() {
             <table className="w-full text-sm">
               <thead className="bg-charcoal-50 border-b border-charcoal-100 sticky top-0">
                 <tr>
-                  {['Address', 'Status', 'List Price', 'Close Price', 'Close Date', 'DOM', 'City', 'Office'].map(h => (
+                  {['Address', 'Status', 'List Price', 'DOM', 'City', 'Office'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-charcoal-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -192,8 +182,6 @@ export default function ListingResultsPage() {
                         <Badge variant={statusBadgeVariant(l.standardStatus)}>{l.standardStatus}</Badge>
                       </td>
                       <td className="px-4 py-3 text-charcoal-600">{l.listPrice != null ? formatPrice(l.listPrice) : '—'}</td>
-                      <td className="px-4 py-3 font-semibold text-charcoal-900">{l.closePrice != null ? formatPrice(l.closePrice) : '—'}</td>
-                      <td className="px-4 py-3 text-charcoal-500">{fmtDate(l.closeDate)}</td>
                       <td className="px-4 py-3 text-charcoal-500">{dom != null ? dom : '—'}</td>
                       <td className="px-4 py-3 text-charcoal-500">{l.city}</td>
                       <td className="px-4 py-3 text-charcoal-500">{l.listOfficeName ?? '—'}</td>

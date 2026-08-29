@@ -123,9 +123,12 @@ export async function register() {
     }
 
     console.log('[mls-sync] Interval elapsed — running scheduled sync')
-    const { syncIdxProperty, syncDlaProperty, syncVoxMember, syncVoxOffice, syncIdxMedia, syncClosedProperty, syncOffMarketProperty } = await import('./services/reso/sync')
+    // syncClosedProperty is intentionally not run here — confirmed (0/0 processed across a full
+    // history rescan) that this PropTx account's IDX feed never returns StandardStatus='Closed'
+    // records at all, so it's a wasted call every cycle. See services/reso/sync.ts for detail.
+    const { syncIdxProperty, syncDlaProperty, syncVoxMember, syncVoxOffice, syncIdxMedia, syncOffMarketProperty } = await import('./services/reso/sync')
     await Promise.all([syncIdxProperty(), syncVoxMember(), syncVoxOffice()])
-    await Promise.all([syncDlaProperty(), syncIdxMedia(), syncClosedProperty(), syncOffMarketProperty()])
+    await Promise.all([syncDlaProperty(), syncIdxMedia(), syncOffMarketProperty()])
     console.log('[mls-sync] Scheduled sync complete')
   }
 }
