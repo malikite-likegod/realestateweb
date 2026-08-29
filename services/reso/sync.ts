@@ -303,8 +303,10 @@ export async function syncIdxProperty(): Promise<ResoSyncResult> {
 }
 
 // ─── Closed Property Sync (currently dormant) ──────────────────────────────
-// Pulls sold/closed listings for the "top agents" leaderboard and a sale-price
-// results view. NOT called by the 'all' pipeline or the scheduled runner —
+// Pulls sold/closed listings (sale price/date, buyer-side agent). No feature
+// currently consumes this data — it's kept as a dormant capability in case
+// PropTx access changes later. NOT called by the 'all' pipeline or the
+// scheduled runner —
 // confirmed via a full-history rescan that this PropTx account's IDX feed
 // returns zero StandardStatus='Closed' records (0/0 processed), so this sync
 // currently has nothing to find no matter which field tier succeeds. Kept

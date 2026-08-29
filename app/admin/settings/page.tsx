@@ -17,7 +17,6 @@ import { AgentMlsNameCard }   from '@/components/admin/AgentMlsNameCard'
 import { AgentProfileCard }   from '@/components/admin/AgentProfileCard'
 import type { AgentProfileSettings } from '@/components/admin/AgentProfileCard'
 import { BrandLogoCard }      from '@/components/admin/BrandLogoCard'
-import { TopAgentsSettingsCard } from '@/components/admin/TopAgentsSettingsCard'
 import { MortgageRateSettingsCard } from '@/components/admin/MortgageRateSettingsCard'
 import { RentVsBuySignupSettingsCard } from '@/components/admin/RentVsBuySignupSettingsCard'
 import { DEFAULT_ASSUMPTIONS } from '@/lib/mortgage'
@@ -26,7 +25,7 @@ export default async function SettingsPage() {
   const session = await getSession()
   if (!session) redirect('/admin/login')
 
-  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, topAgentsRows, propertySubTypeGroups, mortgageRateRow, rentVsBuySignupRows] = await Promise.all([
+  const [syncLogs, apiKeyCount, commandLogCount, queueStats, tfaUser, gateSettingsRows, activeListings, mlsSyncIntervalRow, hotAlertRows, sigUser, agentMlsNameRow, agentProfileRows, brandLogoRow, mortgageRateRow, rentVsBuySignupRows] = await Promise.all([
     Promise.all([
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_property'       }, orderBy: { syncedAt: 'desc' } }),
       prisma.resoSyncLog.findFirst({ where: { syncType: 'idx_media'          }, orderBy: { syncedAt: 'desc' } }),
@@ -49,13 +48,6 @@ export default async function SettingsPage() {
       where: { key: { in: ['agent_name','agent_designation','agent_bio','agent_phone','agent_brokerage','office_address','agent_email','agent_image'] } },
     }),
     prisma.siteSettings.findUnique({ where: { key: 'brand_logo' } }),
-    prisma.siteSettings.findMany({
-      where: { key: { in: ['top_agents_price_min', 'top_agents_price_max', 'top_agents_property_types', 'top_agents_lookback_months'] } },
-    }),
-    prisma.resoProperty.groupBy({
-      by:     ['propertySubType'],
-      where:  { propertySubType: { not: null } },
-    }),
     prisma.siteSettings.findUnique({ where: { key: 'mortgage_current_rate_percent' } }),
     prisma.siteSettings.findMany({ where: { key: { in: ['rent_vs_buy_signup_prompt_enabled', 'rent_vs_buy_signup_prompt_uses'] } } }),
   ])
@@ -73,13 +65,6 @@ export default async function SettingsPage() {
     agent_email:       agentProfileMap['agent_email']       ?? process.env.AGENT_EMAIL ?? '',
     agent_image:       agentProfileMap['agent_image']       ?? '',
   }
-  const topAgentsMap: Record<string, string> = {}
-  for (const r of topAgentsRows) topAgentsMap[r.key] = r.value
-  const availablePropertyTypes = propertySubTypeGroups
-    .map(g => g.propertySubType)
-    .filter((t): t is string => !!t)
-    .sort()
-
   const totpEnabled = tfaUser?.totpEnabled ?? false
 
   const twilioConfigured  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
@@ -185,14 +170,6 @@ export default async function SettingsPage() {
         <RentVsBuySignupSettingsCard
           initialEnabled={rentVsBuySignupEnabled}
           initialUses={rentVsBuySignupUses}
-        />
-
-        <TopAgentsSettingsCard
-          initialPriceMin={topAgentsMap['top_agents_price_min'] ?? ''}
-          initialPriceMax={topAgentsMap['top_agents_price_max'] ?? ''}
-          initialPropertyTypes={topAgentsMap['top_agents_property_types'] ? topAgentsMap['top_agents_property_types'].split(',').filter(Boolean) : []}
-          initialLookbackMonths={topAgentsMap['top_agents_lookback_months'] ?? '12'}
-          availablePropertyTypes={availablePropertyTypes}
         />
 
         {/* AI */}
