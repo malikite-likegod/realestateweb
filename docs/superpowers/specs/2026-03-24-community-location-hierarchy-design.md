@@ -1,7 +1,13 @@
 # Community Location Hierarchy — Design Spec
 
 **Date:** 2026-03-24
-**Status:** Approved
+**Status:** Superseded (2026-08-29)
+
+> **Superseded:** The `municipality` and `neighbourhood` levels were removed. A
+> community is now just a public-facing **name** pinned to one **MLS area**
+> (`city`), chosen from a dropdown of distinct `ResoProperty.city` values. The
+> `Community.municipality` / `Community.neighbourhood` DB columns remain but are no
+> longer in the Prisma model or any code path.
 
 ---
 

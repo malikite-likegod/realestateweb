@@ -31,8 +31,6 @@ export async function PUT(request: Request, { params }: Props) {
       description?: string | null
       imageUrl?: string | null
       city: string
-      municipality?: string | null
-      neighbourhood?: string | null
       displayOrder?: number
     }
 
@@ -49,8 +47,6 @@ export async function PUT(request: Request, { params }: Props) {
         description:  body.description  ?? null,
         imageUrl:     body.imageUrl     ?? null,
         city:         body.city,
-        municipality:  body.municipality  ?? null,
-        neighbourhood: body.neighbourhood ?? null,
         displayOrder: body.displayOrder ?? 0,
       },
     })

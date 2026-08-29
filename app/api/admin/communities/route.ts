@@ -23,8 +23,6 @@ export async function POST(request: Request) {
       description?: string | null
       imageUrl?: string | null
       city: string
-      municipality?: string | null
-      neighbourhood?: string | null
       displayOrder?: number
     }
 
@@ -38,8 +36,6 @@ export async function POST(request: Request) {
         description:  body.description  ?? null,
         imageUrl:     body.imageUrl     ?? null,
         city:         body.city,
-        municipality:  body.municipality  ?? null,
-        neighbourhood: body.neighbourhood ?? null,
         displayOrder: body.displayOrder ?? 0,
       },
     })

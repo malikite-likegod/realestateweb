@@ -61,8 +61,8 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
       const commOpt = isRelationalDB ? { contains: commTerm, mode: 'insensitive' as const } : { contains: commTerm }
       const community = await prisma.community.findFirst({ where: { name: commOpt } })
       if (community) {
-        // municipality matches RESO city field; fall back to city if municipality not set
-        resolvedCity = community.municipality ?? community.city
+        // Community.city holds the canonical MLS area value
+        resolvedCity = community.city
       } else {
         resolvedCity = commTerm  // fall back to treating community name as city
       }
@@ -70,18 +70,8 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
 
     // Resolve explicit municipality filter → city
     // Municipality names (e.g. "Toronto", "Mississauga") typically match RESO city values directly.
-    // If no direct city match, look up communities by municipality to find their cities.
     if (filters.municipality && !filters.city && !filters.community) {
-      const munTerm = filters.municipality.trim()
-      const munOpt  = isRelationalDB ? { contains: munTerm, mode: 'insensitive' as const } : { contains: munTerm }
-      const cityCount = await prisma.resoProperty.count({ where: { standardStatus: 'Active', city: munOpt } })
-      if (cityCount > 0) {
-        resolvedCity = munTerm
-      } else {
-        const munCommunity = await prisma.community.findFirst({ where: { municipality: munOpt } })
-        if (munCommunity) resolvedCity = munCommunity.city
-        else resolvedCity = munTerm  // best-effort fallback
-      }
+      resolvedCity = filters.municipality.trim()  // best-effort — matched as a contains on city
     }
 
     if (filters.keyword && !filters.city && !filters.community && !filters.propertyType) {
@@ -110,7 +100,7 @@ export async function searchProperties(filters: SearchFilters, sessionId?: strin
           where: { name: containsOpt },
         })
         if (community) {
-          const communityCity = community.municipality ?? community.city
+          const communityCity = community.city
           const communityCount = await prisma.resoProperty.count({
             where: { standardStatus: 'Active', city: isRelationalDB ? { contains: communityCity, mode: 'insensitive' } : { contains: communityCity } },
           })

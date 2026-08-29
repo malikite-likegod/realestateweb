@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { DashboardLayout } from '@/components/dashboard'
 import { PageHeader, Card } from '@/components/layout'
 import { Input, Textarea, Button, Select, useToast } from '@/components/ui'
+import { getDisplayCity } from '@/lib/trreb-districts'
 
 interface CommunityData {
   id:           string
@@ -15,8 +16,6 @@ interface CommunityData {
   description:  string | null
   imageUrl:     string | null
   displayOrder: number
-  municipality:  string | null
-  neighbourhood: string | null
 }
 
 interface Props {
@@ -38,23 +37,13 @@ export function CommunityForm({ initial }: Props) {
     city:         initial?.city         ?? '',
     description:  initial?.description  ?? '',
     displayOrder: String(initial?.displayOrder ?? 0),
-    municipality:  initial?.municipality  ?? null,
-    neighbourhood: initial?.neighbourhood ?? null,
   })
-  const [imageUrl, setImageUrl]               = useState(initial?.imageUrl ?? '')
-  const [uploading, setUploading]             = useState(false)
-  const [loading, setLoading]                 = useState(false)
-  const [slugManuallyEdited, setSlugEdited]   = useState(isEdit)
+  const [imageUrl, setImageUrl]             = useState(initial?.imageUrl ?? '')
+  const [uploading, setUploading]           = useState(false)
+  const [loading, setLoading]               = useState(false)
+  const [slugManuallyEdited, setSlugEdited] = useState(isEdit)
 
-  const [areas, setAreas]                               = useState<string[]>([])
-  const [municipalityOptions, setMunicipalityOptions]   = useState<string[]>([])
-  const [neighbourhoodOptions, setNeighbourhoodOptions] = useState<string[]>([])
-  const [fetchingMunicipality, setFetchingMunicipality] = useState(false)
-  const [fetchingNeighbourhood, setFetchingNeighbourhood] = useState(false)
-  const [showSuggestions, setShowSuggestions]           = useState(false)
-
-  const cityMountRef         = useRef(true)
-  const municipalityMountRef = useRef(true)
+  const [areas, setAreas] = useState<string[]>([])
 
   // Auto-populate slug from name on create only
   useEffect(() => {
@@ -63,7 +52,7 @@ export function CommunityForm({ initial }: Props) {
     }
   }, [form.name, slugManuallyEdited])
 
-  // Fetch all areas on mount for the city combobox
+  // Fetch the distinct MLS areas for the City (Area) dropdown
   useEffect(() => {
     fetch('/api/admin/communities/locations')
       .then(r => r.json())
@@ -71,50 +60,14 @@ export function CommunityForm({ initial }: Props) {
       .catch(() => {})
   }, [])
 
-  // Fetch municipalities when city changes
-  useEffect(() => {
-    // Consume ref before early exit — ensures first non-empty value triggers reset
-    const isMount = cityMountRef.current
-    cityMountRef.current = false
-
-    if (!form.city) { setMunicipalityOptions([]); return }
-
-    if (!isMount) {
-      setForm(f => ({ ...f, municipality: null, neighbourhood: null }))
-      setNeighbourhoodOptions([])
-    }
-
-    setFetchingMunicipality(true)
-    fetch(`/api/admin/communities/locations?area=${encodeURIComponent(form.city)}`)
-      .then(r => r.json())
-      .then(d => setMunicipalityOptions(d.municipalities ?? []))
-      .catch(() => {})
-      .finally(() => setFetchingMunicipality(false))
-  }, [form.city])
-
-  // Fetch neighbourhoods when municipality changes
-  // form.city is in deps because it is used in the fetch URL — omitting it
-  // would capture a stale city value if the user changed city and municipality together.
-  useEffect(() => {
-    // Consume ref before early exit — same reason as cityMountRef above
-    const isMount = municipalityMountRef.current
-    municipalityMountRef.current = false
-
-    if (!form.municipality) { setNeighbourhoodOptions([]); return }
-
-    if (!isMount) {
-      setForm(f => ({ ...f, neighbourhood: null }))
-    }
-
-    setFetchingNeighbourhood(true)
-    fetch(
-      `/api/admin/communities/locations?area=${encodeURIComponent(form.city)}&municipality=${encodeURIComponent(form.municipality)}`
-    )
-      .then(r => r.json())
-      .then(d => setNeighbourhoodOptions(d.neighbourhoods ?? []))
-      .catch(() => {})
-      .finally(() => setFetchingNeighbourhood(false))
-  }, [form.municipality, form.city])
+  // Options sorted by their consumer-friendly label. If editing a community whose
+  // stored city is no longer in the feed, keep it selectable by prepending it.
+  const areaOptions = (() => {
+    const values = form.city && !areas.includes(form.city) ? [form.city, ...areas] : areas
+    return values
+      .map(city => ({ value: city, label: getDisplayCity(city) }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  })()
 
   const set = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -155,8 +108,6 @@ export function CommunityForm({ initial }: Props) {
           description:  form.description || null,
           displayOrder: Number(form.displayOrder) || 0,
           imageUrl:     imageUrl || null,
-          municipality:  form.municipality  || null,
-          neighbourhood: form.neighbourhood || null,
         }),
       })
       if (res.status === 409) {
@@ -175,10 +126,6 @@ export function CommunityForm({ initial }: Props) {
 
   // Client component has no session; match BlogPostForm pattern
   const user = { name: 'Admin', email: '', avatarUrl: null }
-
-  const filteredAreas = areas.filter(a =>
-    a.toLowerCase().includes(form.city.toLowerCase())
-  )
 
   return (
     <DashboardLayout user={user}>
@@ -203,83 +150,15 @@ export function CommunityForm({ initial }: Props) {
               onChange={e => { setSlugEdited(true); set('slug')(e) }}
               placeholder="auto-generated from name"
             />
-            <div className="relative">
-              <Input
-                label="City (Area) *"
-                required
-                value={form.city}
-                placeholder="e.g. Toronto"
-                onChange={(e) => {
-                  const value = e.target.value
-                  setForm(f => ({ ...f, city: value, municipality: null, neighbourhood: null }))
-                  setMunicipalityOptions([])
-                  setNeighbourhoodOptions([])
-                  setShowSuggestions(true)
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              />
-              {showSuggestions && filteredAreas.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full bg-white border border-charcoal-200 rounded-lg shadow-sm max-h-48 overflow-y-auto">
-                  {filteredAreas.map(suggestion => (
-                    <li
-                      key={suggestion}
-                      className="px-3 py-2 text-sm cursor-pointer hover:bg-charcoal-50"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        setForm(f => ({ ...f, city: suggestion, municipality: null, neighbourhood: null }))
-                        setMunicipalityOptions([])
-                        setNeighbourhoodOptions([])
-                        setShowSuggestions(false)
-                      }}
-                    >
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {municipalityOptions.length > 0 ? (
-              <Select
-                label="Municipality"
-                value={form.municipality ?? ''}
-                disabled={fetchingMunicipality}
-                placeholder="— select —"
-                options={municipalityOptions.map(m => ({ value: m, label: m }))}
-                onChange={(e) => {
-                  const v = (e.target as HTMLSelectElement).value || null
-                  setForm(f => ({ ...f, municipality: v, neighbourhood: null }))
-                  setNeighbourhoodOptions([])
-                }}
-              />
-            ) : (
-              <Input
-                label="Municipality"
-                value={form.municipality ?? ''}
-                disabled={fetchingMunicipality}
-                onChange={(e) => setForm(f => ({ ...f, municipality: e.target.value || null }))}
-                placeholder="e.g. Toronto C01"
-              />
-            )}
-
-            {neighbourhoodOptions.length > 0 ? (
-              <Select
-                label="Neighbourhood"
-                value={form.neighbourhood ?? ''}
-                disabled={fetchingNeighbourhood}
-                placeholder="— select —"
-                options={neighbourhoodOptions.map(n => ({ value: n, label: n }))}
-                onChange={(e) => setForm(f => ({ ...f, neighbourhood: (e.target as HTMLSelectElement).value || null }))}
-              />
-            ) : (
-              <Input
-                label="Neighbourhood"
-                value={form.neighbourhood ?? ''}
-                disabled={fetchingNeighbourhood}
-                onChange={(e) => setForm(f => ({ ...f, neighbourhood: e.target.value || null }))}
-                placeholder="e.g. Annex"
-              />
-            )}
+            <Select
+              label="City (Area) *"
+              required
+              value={form.city}
+              placeholder="— select an area —"
+              options={areaOptions}
+              hint="Areas come from the MLS feed. For-sale residential listings for this area are shown on the community page."
+              onChange={(e) => setForm(f => ({ ...f, city: (e.target as HTMLSelectElement).value }))}
+            />
             <Textarea
               label="Description"
               value={form.description}

@@ -1221,8 +1221,9 @@ model Community {
   description   String?
   imageUrl      String?
   city          String
-  municipality  String?
-  neighbourhood String?
+  // NOTE: the `municipality` and `neighbourhood` columns still exist in the DB but
+  // are no longer part of the model — the admin form now only captures name + MLS
+  // area (city). Left in place to avoid a production migration.
   displayOrder  Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

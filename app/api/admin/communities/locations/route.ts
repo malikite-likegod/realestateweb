@@ -2,41 +2,25 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
-export async function GET(request: Request) {
+/**
+ * Distinct MLS areas for the community admin form's City (Area) dropdown.
+ *
+ * The MLS feed does not expose selectable neighbourhoods/municipalities, so a
+ * community is just a public-facing name pinned to one MLS area. Areas are the
+ * distinct `city` values on active RESO listings — same source as
+ * `GET /api/search/geo?level=areas`.
+ *
+ * Response: `{ areas: string[] }` (sorted A→Z, raw feed values).
+ */
+export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { searchParams } = new URL(request.url)
-  const area         = searchParams.get('area')
-  const municipality = searchParams.get('municipality')
-
-  // Level 3: neighbourhoods for a given area + municipality
-  if (area && municipality) {
-    const rows = await prisma.community.findMany({
-      where:    { city: area, municipality, neighbourhood: { not: null } },
-      select:   { neighbourhood: true },
-      distinct: ['neighbourhood'],
-      orderBy:  { neighbourhood: 'asc' },
-    })
-    return NextResponse.json({ neighbourhoods: rows.map(r => r.neighbourhood as string) })
-  }
-
-  // Level 2: municipalities for a given area
-  if (area) {
-    const rows = await prisma.community.findMany({
-      where:    { city: area, municipality: { not: null } },
-      select:   { municipality: true },
-      distinct: ['municipality'],
-      orderBy:  { municipality: 'asc' },
-    })
-    return NextResponse.json({ municipalities: rows.map(r => r.municipality as string) })
-  }
-
-  // Level 1: all distinct areas (city is non-nullable — no null filter needed)
-  const rows = await prisma.community.findMany({
+  const rows = await prisma.resoProperty.findMany({
+    where:    { standardStatus: 'Active' },
     select:   { city: true },
     distinct: ['city'],
     orderBy:  { city: 'asc' },
   })
-  return NextResponse.json({ areas: rows.map(r => r.city) })
+  return NextResponse.json({ areas: rows.map(r => r.city).filter(Boolean) })
 }

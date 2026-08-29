@@ -21,18 +21,22 @@ export default async function CommunitiesPage() {
     // SQLite does not support mode: 'insensitive'; PostgreSQL requires it.
     const isRelationalDB = !process.env.DATABASE_URL?.startsWith('file:')
 
-    // Fetch listing counts in parallel
+    // Fetch listing counts in parallel — active residential for-sale MLS listings
+    // for the area, matching what the community detail page shows.
     const counts = await Promise.all(
       communities.map(c => {
         // Use Record<string, unknown> to avoid Prisma's mode type restriction on SQLite schemas
         const cityFilter: Record<string, unknown> = isRelationalDB
           ? { contains: c.city, mode: 'insensitive' }
           : { contains: c.city }
-        return prisma.property.count({
+        const classFilter: Record<string, unknown> = isRelationalDB
+          ? { contains: 'Residential', mode: 'insensitive' }
+          : { contains: 'Residential' }
+        return prisma.resoProperty.count({
           where: {
-            city:     cityFilter as { contains: string },
-            status:   'active',
-            listings: { some: { publishedAt: { not: null } } },
+            standardStatus: 'Active',
+            city:         cityFilter as { contains: string },
+            propertyType: classFilter as { contains: string },
           },
         })
       })
